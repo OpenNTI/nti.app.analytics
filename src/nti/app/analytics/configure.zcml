@@ -8,7 +8,7 @@
 	<include package="zope.component" />
 	<include package="zope.security" />
 
-	<adapter name="hypatia"
+	<adapter name="analyticsdb"
 			 for="nti.dataserver.interfaces.IDataserverFolder pyramid.interfaces.IRequest"
 			 factory=".views.AnalyticsPathAdapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />
