@@ -18,7 +18,7 @@ setup(
     name='nti.app.analytics',
     version=VERSION,
     author='Josh Zuech',
-    author_email='jason@nextthought.com',
+    author_email='josh.zuech@nextthought.com',
     description="NTI Analytics App",
     long_description=codecs.open('README.rst', encoding='utf-8').read(),
     license='Proprietary',
