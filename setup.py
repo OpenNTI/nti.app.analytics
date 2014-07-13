@@ -17,7 +17,7 @@ IS_PYPY = py_impl() == 'PyPy'
 setup(
     name='nti.app.analytics',
     version=VERSION,
-    author='Jason Madden',
+    author='Josh Zuech',
     author_email='jason@nextthought.com',
     description="NTI Analytics App",
     long_description=codecs.open('README.rst', encoding='utf-8').read(),
