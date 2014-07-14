@@ -34,7 +34,7 @@ setup(
         ],
 	packages=find_packages('src'),
 	package_dir={'': 'src'},
-	namespace_packages=['nti'],
+	namespace_packages=['nti', 'nti.app'],
 	install_requires=[
 		'setuptools',
         'nti.analytics',
