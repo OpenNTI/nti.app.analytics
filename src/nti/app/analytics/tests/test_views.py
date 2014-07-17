@@ -18,7 +18,7 @@ from nti.analytics.database.database import AnalyticsDB
 from nti.analytics.database import interfaces as analytic_interfaces
 
 from nti.analytics.model import ResourceEvent
-from nti.analytics.model import VideoEvent
+from nti.analytics.model import SkipVideoEvent
 from nti.analytics.model import BatchResourceEvents
 
 from nti.externalization.externalization import toExternalObject
@@ -46,24 +46,26 @@ class TestBatchEvents( ApplicationLayerTest ):
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
  	def test_batch_event(self):
+ 		# Clean slate
+ 		empty_queue_url = '/dataserver2/analyticsdb/@@empty_queue'
+		res = self.testapp.post_json( empty_queue_url, status=200 )
+
  		timestamp = time.mktime( datetime.utcnow().timetuple() )
 		user = 'josh.zuech@nextthought.com'
 		course = 'CS1300'
 		context_path = 'ntiid:lesson1'
 		resource_id = 'ntiid:lesson1_chapter1'
 		time_length = 30
-		event_type = 'WATCH'
 		video_start_time = 13
 		video_end_time = 39
 		with_transcript = True
 
-		video_event = VideoEvent(user=user,
+		video_event = SkipVideoEvent(user=user,
 						timestamp=timestamp,
 						course=course,
 						context_path=context_path,
 						resource_id=resource_id,
 						time_length=time_length,
-						event_type=event_type,
 						video_start_time=video_start_time,
 						video_end_time=video_end_time,
 						with_transcript=with_transcript)
@@ -84,19 +86,10 @@ class TestBatchEvents( ApplicationLayerTest ):
 										ext_obj,
 										status=200 )
 
-# 		extra_env = self.testapp.extra_environ or {}
-# 		extra_env.update( {b'HTTP_ORIGIN': b'http://janux.ou.edu'} )
-# 		self.testapp.extra_environ = extra_env
-#
-# 		instructor_environ = self._make_extra_environ(username='harp4162')
-# 		instructor_environ.update( {b'HTTP_ORIGIN': b'http://janux.ou.edu'} )
-
 		# Verify queued objects
-		# FIXME this returns 3
-		# -probably a user creation event.
-# 		queue_info_url = '/dataserver2/analyticsdb/@@queue_info'
-# 		res = self.testapp.get( queue_info_url, status=200 )
-# 		assert_that( res.json_body, has_entry( 'size', '2'))
+		queue_info_url = '/dataserver2/analyticsdb/@@queue_info'
+		res = self.testapp.get( queue_info_url, status=200 )
+		assert_that( res.json_body, has_entry( 'size', 2 ))
 
 		# Run processor
 		# TODO Verify in db
