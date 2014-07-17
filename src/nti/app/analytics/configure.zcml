@@ -9,7 +9,7 @@
 	<include package="zope.security" />
 
 	<include package="nti.analytics" />
-	
+
 	<adapter name="analyticsdb"
 			 for="nti.dataserver.interfaces.IDataserverFolder pyramid.interfaces.IRequest"
 			 factory=".views.AnalyticsPathAdapter"

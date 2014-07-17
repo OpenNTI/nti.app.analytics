@@ -21,13 +21,22 @@ from zope.traversing.interfaces import IPathAdapter
 from pyramid.view import view_config
 
 from nti.analytics import get_job_queue
+
 from nti.analytics.utils import all_objects_iids
+
+from nti.analytics.resource_views import handle_events
+
 from nti.analytics.interfaces import IObjectProcessor
+from nti.analytics.interfaces import IBatchResourceEvents
 
 from nti.dataserver import authorization as nauth
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
 
+from nti.app.base.abstract_views import AbstractAuthenticatedView
+from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
+
+from nti.externalization import internalization
 from nti.externalization.interfaces import LocatedExternalDict
 
 from nti.utils.maps import CaseInsensitiveDict
@@ -85,14 +94,15 @@ def init_db( usernames=() ):
 def init_analytics_db(request):
 	values = json.loads(unicode(request.body, request.charset)) if request.body else {}
 	values = CaseInsensitiveDict(values)
-	# usernames = values.get('usernames', values.get('username', None))
+	# FIXME clean this up
+	#usernames = values.get('usernames', values.get('username', None))
 	usernames = 'josh.zuech@nextthought.com,student1'
-	
+
 	if usernames:
 		usernames = usernames.split(',')
 	else:
 		usernames = ()
-	
+
 	now = time.time()
 	total = init_db(usernames)
 	elapsed = time.time() - now
@@ -128,3 +138,28 @@ def empty_queue(request):
 	result['Elapsed'] = time.time() - now
 	result['Total'] = done
 	return result
+
+
+# TODO Permissioning?  These are batched, so I'm not sure what user we would have.
+@view_config(route_name='objects.generic.traversal',
+			 name='batch_events',
+			 renderer='rest',
+			 request_method='POST',
+			 permission=nauth.ACT_MODERATE)
+class BatchEvents(	AbstractAuthenticatedView,
+					ModeledContentUploadRequestUtilsMixin ):
+
+	content_predicate = IBatchResourceEvents.providedBy
+
+	def _do_call(self):
+		external_input = self.readInput()
+		factory = internalization.find_factory_for(external_input)
+		batch_events = factory()
+		internalization.update_from_external_object(batch_events, external_input)
+
+		# TODO If our events are batched, we won't have any session
+		# information (because the user may be long gone).
+		event_count = handle_events( batch_events )
+		return event_count
+
+
