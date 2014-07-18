@@ -10,7 +10,7 @@
 
 	<include package="nti.analytics" />
 
-	<adapter name="analyticsdb"
+	<adapter name="analytics"
 			 for="nti.dataserver.interfaces.IDataserverFolder pyramid.interfaces.IRequest"
 			 factory=".views.AnalyticsPathAdapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />

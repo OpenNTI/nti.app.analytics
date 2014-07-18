@@ -44,7 +44,7 @@ from nti.utils.maps import CaseInsensitiveDict
 @interface.implementer(IPathAdapter, IContained)
 class AnalyticsPathAdapter(zcontained.Contained):
 
-	__name__ = 'analyticsdb'
+	__name__ = 'analytics'
 
 	def __init__(self, context, request):
 		self.context = context
@@ -95,8 +95,8 @@ def init_analytics_db(request):
 	values = json.loads(unicode(request.body, request.charset)) if request.body else {}
 	values = CaseInsensitiveDict(values)
 	# FIXME clean this up
-	#usernames = values.get('usernames', values.get('username', None))
-	usernames = 'josh.zuech@nextthought.com,student1'
+	usernames = values.get('usernames', values.get('username', None))
+	#usernames = 'josh.zuech@nextthought.com,student1'
 
 	if usernames:
 		usernames = usernames.split(',')
@@ -160,6 +160,7 @@ class BatchEvents(	AbstractAuthenticatedView,
 		# TODO If our events are batched, we won't have any session
 		# information (because the user may be long gone).
 		event_count = handle_events( batch_events )
+		logger.info( 'Received batched analytic events (size=%s)', event_count )
 		return event_count
 
 
