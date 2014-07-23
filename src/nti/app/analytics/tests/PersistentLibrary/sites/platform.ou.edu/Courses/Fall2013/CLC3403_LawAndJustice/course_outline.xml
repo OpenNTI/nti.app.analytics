@@ -1,0 +1,58 @@
+<course
+    courseInfo="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.course_info"
+    courseName="CLC 3403"
+    discussionBoard="tag:nextthought.com,2011-10:CLC3403.ou.nextthought.com-Board:GeneralCommunity-DiscussionBoard"
+    instructorForum="tag:nextthought.com,2011-10:CLC3403.ou.nextthought.com-Forum:GeneralCommunity-In_Class_Announcements
+                     tag:nextthought.com,2011-10:CLC3403.ou.nextthought.com-Forum:GeneralCommunity-Open_Announcements"
+    label="Law and Justice"
+    ntiid="tag:nextthought.com,2011-10:OU-NTICourse-CLC3403_LawAndJustice.course.1">
+    <unit label="Introduction" ntiid="tag:nextthought.com,2011-10:OU-NTICourseUnit-CLC3403_LawAndJustice.course.unit.1">
+		<lesson
+			date="2013-08-19T05:00:00+00:00,2013-08-22T04:59:59.999999+00:00"
+			topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:01_LESSON"
+			title="1. Defining Law and Justice">
+			<lesson topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-DNE" />
+		</lesson>
+		<lesson isOutlineStubOnly='true' date="2013-08-21T05:00:00+00:00,2013-08-27T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:02_LESSON"/>
+    </unit>
+
+    <unit label="The Age of Polis" ntiid="tag:nextthought.com,2011-10:OU-NTICourseUnit-CLC3403_LawAndJustice.course.unit.2">
+		<lesson date="2013-08-26T05:00:00+00:00,2013-08-29T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:03_LESSON"/>
+		<lesson date="2013-08-28T05:00:00+00:00,2013-09-03T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:04_LESSON"/>
+		<lesson date="2013-09-02T05:00:00+00:00,2013-09-05T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:05_LESSON"/>
+		<lesson date="2013-09-04T05:00:00+00:00,2013-09-10T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:06_LESSON"/>
+		<lesson date="2013-09-09T05:00:00+00:00,2013-09-12T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:07a_LESSON"/>
+		<lesson date="2013-09-11T05:00:00+00:00,2013-09-17T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:07b_LESSON"/>
+		<lesson date="2013-09-16T05:00:00+00:00,2013-09-19T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:08a_LESSON"/>
+		<lesson date="2013-09-18T05:00:00+00:00,2013-09-24T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:08b_LESSON"/>
+    </unit>
+    <unit label="The Legacy of Rome" ntiid="tag:nextthought.com,2011-10:OU-NTICourseUnit-CLC3403_LawAndJustice.course.unit.3">
+		<lesson date="2013-09-23T05:00:00+00:00,2013-09-26T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:09_LESSON"/>
+		<lesson date="2013-09-25T05:00:00+00:00,2013-10-01T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:10_LESSON"/>
+		<lesson date="2013-09-30T05:00:00+00:00,2013-10-03T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:11_LESSON"/>
+		<lesson date="2013-10-02T05:00:00+00:00,2013-10-15T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:12_LESSON"/>
+		<lesson date="2013-10-14T05:00:00+00:00,2013-10-17T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:13_LESSON"/>
+		<lesson date="2013-10-16T05:00:00+00:00,2013-10-22T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:14_LESSON"/>
+		<lesson date="2013-10-21T05:00:00+00:00,2013-10-24T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:15_LESSON"/>
+		<lesson date="2013-10-23T05:00:00+00:00,2013-10-29T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:16_LESSON"/>
+    </unit>
+    <unit label="The Age of Enlightenment" ntiid="tag:nextthought.com,2011-10:OU-NTICourseUnit-CLC3403_LawAndJustice.course.unit.4">
+		<lesson date="2013-10-28T05:00:00+00:00,2013-10-31T04:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:17_LESSON"/>
+		<lesson date="2013-10-30T05:00:00+00:00,2013-11-05T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:18_LESSON"/>
+		<lesson date="2013-11-04T06:00:00+00:00,2013-11-07T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:19_LESSON"/>
+		<lesson date="2013-11-06T06:00:00+00:00,2013-11-12T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:20_LESSON"/>
+		<lesson date="2013-11-11T06:00:00+00:00,2013-11-14T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:21_LESSON"/>
+    </unit>
+    <unit label="The Age of Markets" ntiid="tag:nextthought.com,2011-10:OU-NTICourseUnit-CLC3403_LawAndJustice.course.unit.5">
+		<lesson date="2013-11-13T06:00:00+00:00,2013-11-19T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:22_LESSON"/>
+		<lesson date="2013-11-18T06:00:00+00:00,2013-11-21T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:23_LESSON"/>
+		<lesson date="2013-11-20T06:00:00+00:00,2013-11-26T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:24_LESSON"/>
+		<lesson date="2013-11-25T06:00:00+00:00,2013-12-01T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:25_LESSON"/>
+    </unit>
+    <unit label="Learning Resources" ntiid="tag:nextthought.com,2011-10:OU-NTICourseUnit-CLC3403_LawAndJustice.course.unit.6">
+		<lesson date="2014-01-01T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:REQUIRED_READINGS"/>
+		<lesson date="2014-01-01T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:DEBATES"/>
+		<lesson date="2014-01-01T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:QUIZZES"/>
+		<lesson date="2014-01-01T05:59:59.999999+00:00" topic-ntiid="tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:ADDITIONAL_RESOURCES"/>
+    </unit>
+</course>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<toc NTIRelativeScrollHeight="16"
+	 background="images/backgrounds/default.png"
+	 href="index.html"
+	 icon="icons/chapters/generic_book.png"
+	 isCourse="true"
+	 label="ENGR 1510-901 Introduction to Water"
+	 level="root"
+	 levelnum="0"
+	 ntiid="tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_to_Water.engr_1510_901_introduction_to_water"
+	 renderVersion="2">
+	<topic NTIRelativeScrollHeight="592"
+		   href="tag_nextthought_com_2011-10_OU-HTML-ENGR1510_Intro_to_Water_course_info.html"
+		   label="Course Info"
+		   level="part"
+		   levelnum="1"
+		   ntiid="tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_to_Water.course_info">
+	   <topic
+		   href="tag_nextthought_com_2011-10_OU-HTML-ENGR1510_Intro_to_Water_course_info.html#a0000000002"
+		   label="Course Summary"
+		   level="chapter"
+		   levelnum="2"
+		   ntiid="tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_to_Water.course_summary"/>
+	</topic>
+	<course
+		courseInfo="tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_to_Water.course_info"
+		courseName="ENGR 1510-901"
+		discussionBoard="tag:nextthought.com,2011-10:ENGR1510.ou.nextthought.com-Board:GeneralCommunity-DiscussionBoard"
+		instructorForum="tag:nextthought.com,2011-10:ENGR1510.ou.nextthought.com-Forum:GeneralCommunity-In_Class_Announcements
+						 tag:nextthought.com,2011-10:ENGR1510.ou.nextthought.com-Forum:GeneralCommunity-Forum"
+		label="Introduction to Water"
+		ntiid="tag:nextthought.com,2011-10:OU-NTICourse-ENGR1510_Intro_to_Water.course.1">
+		<info src="course_info.json"/>
+		<scope type="public">
+			<entry>ENGR1510.ou.nextthought.com</entry>
+		</scope>
+		<scope type="restricted">
+			<entry>ENGR1510Spring2014.ou.nextthought.com</entry>
+		</scope>
+	</course>
+</toc>

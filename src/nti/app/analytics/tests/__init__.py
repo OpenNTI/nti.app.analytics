@@ -1,61 +1,209 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+
+
+.. $Id$
+"""
 
 from __future__ import print_function, unicode_literals, absolute_import, division
 __docformat__ = "restructuredtext en"
 
-# disable: accessing protected members, too many methods
-# pylint: disable=W0212,R0904
+logger = __import__('logging').getLogger(__name__)
 
-import unittest
+from zope import component
+from nti.app.testing.application_webtest import ApplicationTestLayer
+import os
+import os.path
 
+import ZODB
 from nti.dataserver.tests.mock_dataserver import WithMockDS
 from nti.dataserver.tests.mock_dataserver import mock_db_trans
 
-from nti.app.testing.application_webtest import ApplicationTestLayer
+from nti.dataserver import users
+from zope.component.interfaces import IComponents
+from nti.contenttypes.courses.interfaces import ICourseCatalog
+from nti.contentlibrary.interfaces import IContentPackageLibrary
 
-from nti.testing.layers import GCLayerMixin
-from nti.testing.layers import ZopeComponentLayer
-from nti.testing.layers import ConfiguringLayerMixin
-from nti.testing.layers import find_test
+def publish_ou_course_entries():
+	lib = component.getUtility(IContentPackageLibrary)
+	try:
+		del lib.contentPackages
+	except AttributeError:
+		pass
 
-from nti.dataserver.tests.mock_dataserver import DSInjectorMixin
+	lib.syncContentPackages()
 
-import zope.testing.cleanup
 
-class SharedConfiguringTestLayer(ZopeComponentLayer,
-                                 GCLayerMixin,
-                                 ConfiguringLayerMixin,
-                                 DSInjectorMixin):
-    set_up_packages = ('nti.appserver', 'nti.app.analytics')
+def _do_then_enumerate_library(do, sync_libs=False):
 
-    @classmethod
-    def setUp(cls):
-        cls.setUpPackages()
+	database = ZODB.DB( ApplicationTestLayer._storage_base,
+						database_name='Users')
+	@WithMockDS(database=database)
+	def _create():
+		with mock_db_trans():
+			do()
+			publish_ou_course_entries()
+			if sync_libs:
+				from nti.app.contentlibrary.admin_views import _SyncAllLibrariesView
+				_SyncAllLibrariesView(None)()
 
-    @classmethod
-    def tearDown(cls):
-        cls.tearDownPackages()
-        zope.testing.cleanup.cleanUp()
 
-    @classmethod
-    def testSetUp(cls, test=None):
-        test = test or find_test()
-        cls.setUpTestDS(test)
+	_create()
 
-    @classmethod
-    def testTearDown(cls):
-        pass
+class LegacyInstructedCourseApplicationTestLayer(ApplicationTestLayer):
 
-class AnalyticsLayerTest(unittest.TestCase):
-    layer = SharedConfiguringTestLayer
-    
-class AnalyticsApplicationTestLayer(ApplicationTestLayer):
+	_library_path = 'Library'
 
-    @classmethod
-    def setUp(cls):
-        pass
+	@staticmethod
+	def _setup_library( cls, *args, **kwargs ):
+		from nti.contentlibrary.filesystem import CachedNotifyingStaticFilesystemLibrary as Library
+		lib = Library(
+			paths=(
+				os.path.join(
+					os.path.dirname(__file__),
+					cls._library_path,
+					'IntroWater'),
+				os.path.join(
+					os.path.dirname(__file__),
+					cls._library_path,
+					'CLC3403_LawAndJustice')) )
+		return lib
 
-    @classmethod
-    def tearDown(cls):
-        pass
+	@classmethod
+	def setUp(cls):
+		# Must implement!
+		cls.__old_library = component.getUtility(IContentPackageLibrary)
+		component.provideUtility(cls._setup_library(cls), IContentPackageLibrary)
+
+		_do_then_enumerate_library(lambda: users.User.create_user( username='harp4162', password='temp001') )
+
+	@classmethod
+	def tearDown(cls):
+		# Must implement!
+		# Clean up any side effects of these content packages being
+		# registered
+		def cleanup():
+			del component.getUtility(IContentPackageLibrary).contentPackages
+			try:
+				del cls.__old_library.contentPackages
+			except AttributeError:
+				pass
+			component.provideUtility(cls.__old_library, IContentPackageLibrary)
+			users.User.delete_user('harp4162')
+			component.getGlobalSiteManager().getUtility(ICourseCatalog).clear()
+			component.getUtility(IComponents,name='platform.ou.edu').getUtility(ICourseCatalog).clear()
+
+		_do_then_enumerate_library(cleanup)
+		del cls.__old_library
+
+
+
+class RestrictedInstructedCourseApplicationTestLayer(ApplicationTestLayer):
+
+	_library_path = 'RestrictedLibrary'
+
+	@classmethod
+	def setUp(cls):
+		# Must implement!
+		cls.__old_library = component.getUtility(IContentPackageLibrary)
+		component.provideUtility(LegacyInstructedCourseApplicationTestLayer._setup_library(cls), IContentPackageLibrary)
+
+		_do_then_enumerate_library(lambda: users.User.create_user( username='harp4162', password='temp001') )
+
+	@classmethod
+	def tearDown(cls):
+		# Must implement!
+		# Clean up any side effects of these content packages being
+		# registered
+		def cleanup():
+			del component.getUtility(IContentPackageLibrary).contentPackages
+			try:
+				del cls.__old_library.contentPackages
+			except AttributeError:
+				pass
+			component.provideUtility(cls.__old_library, IContentPackageLibrary)
+			users.User.delete_user('harp4162')
+			component.getGlobalSiteManager().getUtility(ICourseCatalog).clear()
+			component.getUtility(IComponents,name='platform.ou.edu').getUtility(ICourseCatalog).clear()
+
+		_do_then_enumerate_library(cleanup)
+		del cls.__old_library
+
+
+class PersistentInstructedCourseApplicationTestLayer(ApplicationTestLayer):
+	# A mix of new and old-style courses
+
+	_library_path = 'PersistentLibrary'
+
+	@classmethod
+	def setUp(cls):
+		# Must implement!
+		cls.__old_library = component.getUtility(IContentPackageLibrary)
+		component.provideUtility(LegacyInstructedCourseApplicationTestLayer._setup_library(cls), IContentPackageLibrary)
+		_do_then_enumerate_library(lambda: users.User.create_user( username='harp4162', password='temp001'),
+								   sync_libs=True)
+
+
+	@classmethod
+	def tearDown(cls):
+		# Must implement!
+		# Clean up any side effects of these content packages being
+		# registered
+		def cleanup():
+			del component.getUtility(IContentPackageLibrary).contentPackages
+			try:
+				del cls.__old_library.contentPackages
+			except AttributeError:
+				pass
+			component.provideUtility(cls.__old_library, IContentPackageLibrary)
+			users.User.delete_user('harp4162')
+			component.getGlobalSiteManager().getUtility(ICourseCatalog).clear()
+			component.getUtility(IComponents,name='platform.ou.edu').getUtility(ICourseCatalog).clear()
+
+			from nti.site.site import get_site_for_site_names
+			site = get_site_for_site_names(('platform.ou.edu',))
+			cc = site.getSiteManager().getUtility(ICourseCatalog)
+			for x in list(cc):
+				del cc[x]
+
+		_do_then_enumerate_library(cleanup)
+		del cls.__old_library
+
+# Export the new-style stuff as default
+InstructedCourseApplicationTestLayer = PersistentInstructedCourseApplicationTestLayer
+
+class _ImmediateQueueRunner(object):
+	"""A queue that immediately runs the given job."""
+	def put( self, job ):
+		job()
+
+def _get_job_queue():
+	return _ImmediateQueueRunner()
+
+from nti.analytics import common
+common.get_job_queue = _get_job_queue
+
+from six import integer_types
+
+DEFAULT_INTID = 101
+
+class TestIDLookup(common.IDLookup):
+
+	def __init__(self):
+		self.default_intid = DEFAULT_INTID
+
+	def get_id_for_object( self, obj ):
+		result = None
+		if isinstance( obj, integer_types ):
+			result = obj
+		elif hasattr( obj, 'intid' ):
+			result = getattr( obj, 'intid', None )
+
+		if result is None:
+			result = self.default_intid
+			self.default_intid += 1
+		return result
+
+""" Override id lookup for testing purposes. """
+common.IDLookup = TestIDLookup

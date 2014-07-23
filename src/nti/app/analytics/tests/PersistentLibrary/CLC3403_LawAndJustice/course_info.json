@@ -1,0 +1,18 @@
+{
+	"ntiid": "tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.course_info",
+	"id": "CLC 3403",
+	"school": "Department of Classics and Letters at the University of Oklahoma",
+	"title": "Law and Justice",
+	"description": "What makes a law just? In this course we explore fundamental questions about the nature of law and justice through engagement with the great texts of the western tradition. The course covers the sweep of documented history in five units: classical Greece, ancient Rome, early Christianity, the Enlightenment, and the age of market capitalism. The focus of this course is on law, because law is the meeting point between the theory and practice of justice. With  Aristotle's Politics as our principal guide, we will participate in an ancient and enduring conversation about the nature of law and justice.",
+	"prerequisites": [],
+	"instructors": [
+		{
+			"defaultphoto": "images/Harper.png",
+			"name":"Dr. Kyle Harper",
+			"title": "Associate Professor of Classics",
+			"username": "harp4162"
+		}
+	],
+    "startDate": "2013-08-13T06:00:00+00:00",
+    "duration": "16 Weeks"
+}

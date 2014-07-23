@@ -1,0 +1,41 @@
+{
+	"ntiid": "tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_to_Water.course_info",
+	"id": "ENGR 1510-901",
+	"school": "Civil Engineering and Environmental Science",
+	"video": "kaltura://1500101/0_6d00mec6/",
+	"title": "Introduction to Water",
+	"credit": [
+		{
+			"hours": 1,
+			"enrollment": {
+				"label":"Enroll with Ozone.",
+				"url":"http://ozone.ou.edu/"
+			}
+		}
+	],
+	"startDate": "2014-01-13T06:00:00+00:00",
+	"duration": "16 Weeks",
+	"schedule": {
+		"days": ["W"],
+		"times": [
+			"16:30:00-06:00",
+			"17:20:00-06:00"
+		]
+	},
+	"description": "This course is an introductory course on the significance of water in our world. The title of the course makes reference to (1) water as a global and local natural resource (Water), (2) water as a chemical compound with important properties and characteristics (H20), and (3) the science and technology of bringing clean water to peoples in need (WaTER, an acronym for “Water Technologies for Emerging Regions”). The course is designed to generate awareness of water’s beneficial uses as well as the challenges associated with water quality, degradation, scarcity, over-abundance (flooding), and inequities in access to clean water. It will also introduce the students to the need to consider both technological options and cultural context in determining sustainable solutions to water problems.",
+	"prerequisites": [],
+	"instructors": [
+		{
+			"defaultphoto":"images/Sabatini.png",
+			"username":"saba1234",
+			"name":"David Sabatini, PhD",
+			"title": "David Ross Boyd Professor and Sun Oil Company Endowed Chair, School of Civil Engineer & Environmental Science"
+		},
+		{
+			"defaultphoto":"images/Chamberlain.png",
+			"username":"cham1234",
+			"name":"Jim Chamberlain, PhD",
+			"title": "OU WaTER Center Staff Researcher"
+		}
+	]
+}

@@ -33,7 +33,14 @@ from hamcrest import has_entry
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
+from nti.analytics.database.metadata import VideoEvents
+from nti.analytics.database.metadata import CourseResourceViews
+
+from . import LegacyInstructedCourseApplicationTestLayer
+
 class TestBatchEvents( ApplicationLayerTest ):
+
+	layer = LegacyInstructedCourseApplicationTestLayer
 
 	def setUp(self):
 		self.db = AnalyticsDB( dburi='sqlite://' )
@@ -46,15 +53,16 @@ class TestBatchEvents( ApplicationLayerTest ):
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
  	def test_batch_event(self):
- 		# Clean slate
- 		empty_queue_url = '/dataserver2/analytics/@@empty_queue'
-		res = self.testapp.post_json( empty_queue_url, status=200 )
+ 		from nti.contenttypes.courses.interfaces import ICourseCatalog
+ 		from zope.component.interfaces import IComponents
+		components = component.getUtility(IComponents, name='platform.ou.edu')
+		catalog = components.getUtility(ICourseCatalog)
 
  		timestamp = time.mktime( datetime.utcnow().timetuple() )
-		user = 'josh.zuech@nextthought.com'
-		course = 'CS1300'
-		context_path = 'ntiid:lesson1'
-		resource_id = 'ntiid:lesson1_chapter1'
+		user = 'sjohnson@nextthought.com'
+		course = 'tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_to_Water.course_info'
+		context_path = 'tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_path1'
+		resource_id = 'tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_lesson1'
 		time_length = 30
 		video_start_time = 13
 		video_end_time = 39
@@ -81,36 +89,14 @@ class TestBatchEvents( ApplicationLayerTest ):
 
 		ext_obj = toExternalObject(io)
 
+ 		# Upload our events
  		batch_url = '/dataserver2/analytics/@@batch_events'
 		res = self.testapp.post_json( 	batch_url,
 										ext_obj,
 										status=200 )
 
-		# Verify queued objects
-		queue_info_url = '/dataserver2/analytics/@@queue_info'
-		res = self.testapp.get( queue_info_url, status=200 )
-		assert_that( res.json_body, has_entry( 'size', 2 ))
+		results = self.session.query( VideoEvents ).all()
+		assert_that( results, has_length( 1 ) )
 
-		# Run processor
-# 		import subprocess
-# 		import sys
-# 		import os
-# 		import pkg_resources
-# 		file_name = pkg_resources.resource_filename( 'nti.analytics.utils', 'constructor.py' )
-# 		p1 = subprocess.Popen( [sys.executable, file_name, '--no_sleep'], env=os.environ.copy() )
-# 		start_time = time.time()
-#
-# 		def check_size():
-# 				res = self.testapp.get( queue_info_url, status=200 )
-# 				return res.json_body.get( 'size' )
-#
-# 		# 30s at most
-# 		while 	p1.poll() is None \
-# 			and check_size() > 0 \
-# 			and time.time() < start_time + 30:
-# 			time.sleep( 1 )
-# 		p1.kill()
-#
-# 		assert_that( check_size(), is_( 0 ))
-
-		# TODO Verify in db
+		results = self.session.query( CourseResourceViews ).all()
+		assert_that( results, has_length( 1 ) )
