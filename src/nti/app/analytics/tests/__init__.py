@@ -173,37 +173,11 @@ class PersistentInstructedCourseApplicationTestLayer(ApplicationTestLayer):
 # Export the new-style stuff as default
 InstructedCourseApplicationTestLayer = PersistentInstructedCourseApplicationTestLayer
 
-class _ImmediateQueueRunner(object):
-	"""A queue that immediately runs the given job."""
-	def put( self, job ):
-		job()
-
-def _get_job_queue():
-	return _ImmediateQueueRunner()
-
 from nti.analytics import common
+from nti.analytics.tests import _get_job_queue
+# So jobs will run inline.
 common.get_job_queue = _get_job_queue
 
-from six import integer_types
-
-DEFAULT_INTID = 101
-
-class TestIDLookup(common.IDLookup):
-
-	def __init__(self):
-		self.default_intid = DEFAULT_INTID
-
-	def get_id_for_object( self, obj ):
-		result = None
-		if isinstance( obj, integer_types ):
-			result = obj
-		elif hasattr( obj, 'intid' ):
-			result = getattr( obj, 'intid', None )
-
-		if result is None:
-			result = self.default_intid
-			self.default_intid += 1
-		return result
-
 # Override id lookup for testing purposes.
+from nti.analytics.tests import TestIDLookup
 common.IDLookup = TestIDLookup
