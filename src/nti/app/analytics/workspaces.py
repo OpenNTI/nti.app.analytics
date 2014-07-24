@@ -50,14 +50,12 @@ class _AnalyticsWorkspace(contained.Contained):
 
 	__parent__ = None
 
+	collections = ()
+
 	def __init__(self, parent=None):
 		super(_AnalyticsWorkspace,self).__init__()
 		if parent:
 			self.__parent__ = parent
-
-	@Lazy
-	def collections(self):
-		return []
 
 	@property
 	def links(self):
