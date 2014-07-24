@@ -6,8 +6,9 @@
 from __future__ import print_function, unicode_literals, absolute_import, division
 __docformat__ = "restructuredtext en"
 
-logger = __import__('logging').getLogger(__name__)
+from nti.appserver.interfaces import IWorkspace
 
-ANALYTICS = 'analytics'
-ANALYTICS_TITLE = 'Analytics'
-BATCH_EVENTS = 'batch_events'
+class IAnalyticsWorkspace(IWorkspace):
+	"""
+	A workspace containing data for analytics.
+	"""

@@ -41,10 +41,13 @@ from nti.externalization.interfaces import LocatedExternalDict
 
 from nti.utils.maps import CaseInsensitiveDict
 
+from . import ANALYTICS
+from . import BATCH_EVENTS
+
 @interface.implementer(IPathAdapter, IContained)
 class AnalyticsPathAdapter(zcontained.Contained):
 
-	__name__ = 'analytics'
+	__name__ = ANALYTICS
 
 	def __init__(self, context, request):
 		self.context = context
@@ -142,7 +145,7 @@ def empty_queue(request):
 
 # TODO Permissioning?  These are batched, so I'm not sure what user we would have.
 @view_config(route_name='objects.generic.traversal',
-			 name='batch_events',
+			 name=BATCH_EVENTS,
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_MODERATE)

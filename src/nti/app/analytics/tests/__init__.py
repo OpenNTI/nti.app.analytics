@@ -205,5 +205,5 @@ class TestIDLookup(common.IDLookup):
 			self.default_intid += 1
 		return result
 
-""" Override id lookup for testing purposes. """
+# Override id lookup for testing purposes.
 common.IDLookup = TestIDLookup

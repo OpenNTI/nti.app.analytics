@@ -48,16 +48,11 @@ class TestBatchEvents( ApplicationLayerTest ):
 		self.session = self.db.session
 
 	def tearDown(self):
-		component.getGlobalSiteManager().unregisterUtility ( self.db, provided=analytic_interfaces.IAnalyticsDB )
+		component.getGlobalSiteManager().unregisterUtility( self.db, provided=analytic_interfaces.IAnalyticsDB )
 		self.session.close()
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
  	def test_batch_event(self):
- 		from nti.contenttypes.courses.interfaces import ICourseCatalog
- 		from zope.component.interfaces import IComponents
-		components = component.getUtility(IComponents, name='platform.ou.edu')
-		catalog = components.getUtility(ICourseCatalog)
-
  		timestamp = time.mktime( datetime.utcnow().timetuple() )
 		user = 'sjohnson@nextthought.com'
 		course = 'tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_to_Water.course_info'
@@ -90,7 +85,7 @@ class TestBatchEvents( ApplicationLayerTest ):
 		ext_obj = toExternalObject(io)
 
  		# Upload our events
- 		batch_url = '/dataserver2/analytics/@@batch_events'
+ 		batch_url = '/dataserver2/analytics/batch_events'
 		res = self.testapp.post_json( 	batch_url,
 										ext_obj,
 										status=200 )

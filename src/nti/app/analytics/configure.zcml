@@ -10,9 +10,19 @@
 
 	<include package="nti.analytics" />
 
+	<!-- Expose analytics views -->
 	<adapter name="analytics"
 			 for="nti.dataserver.interfaces.IDataserverFolder pyramid.interfaces.IRequest"
 			 factory=".views.AnalyticsPathAdapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />
+
+	<!-- Workspaces -->
+	<!-- Attach to user-service workspaces -->
+	<subscriber factory=".workspaces.AnalyticsWorkspace"
+				provides=".interfaces.IAnalyticsWorkspace" />
+
+	<!-- And an adapter for direct access -->
+	<adapter factory=".workspaces.AnalyticsWorkspace"
+			 provides=".interfaces.IAnalyticsWorkspace" />
 
 </configure>
