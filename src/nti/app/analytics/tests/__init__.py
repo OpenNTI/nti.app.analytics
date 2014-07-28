@@ -179,5 +179,7 @@ from nti.analytics.tests import _get_job_queue
 common.get_job_queue = _get_job_queue
 
 # Override id lookup for testing purposes.
-from nti.analytics.tests import TestIDLookup
-common.IDLookup = TestIDLookup
+from nti.analytics import identifier
+from nti.analytics.tests import TestIdentifier
+identifier._DSIdentifier.get_id = identifier._NtiidIdentifier.get_id \
+= identifier.SessionId.get_id = TestIdentifier().get_id

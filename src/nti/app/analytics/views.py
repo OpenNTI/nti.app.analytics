@@ -98,8 +98,9 @@ def init_analytics_db(request):
 	values = json.loads(unicode(request.body, request.charset)) if request.body else {}
 	values = CaseInsensitiveDict(values)
 	# FIXME clean this up
-	usernames = values.get('usernames', values.get('username', None))
+	#usernames = values.get('usernames', values.get('username', None))
 	#usernames = 'josh.zuech@nextthought.com,student1'
+	usernames = 'koth1321'
 
 	if usernames:
 		usernames = usernames.split(',')
