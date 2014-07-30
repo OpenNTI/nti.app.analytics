@@ -173,11 +173,6 @@ class PersistentInstructedCourseApplicationTestLayer(ApplicationTestLayer):
 # Export the new-style stuff as default
 InstructedCourseApplicationTestLayer = PersistentInstructedCourseApplicationTestLayer
 
-from nti.analytics import common
-from nti.analytics.tests import _get_job_queue
-# So jobs will run inline.
-common.get_job_queue = _get_job_queue
-
 # Override id lookup for testing purposes.
 from nti.analytics import identifier
 from nti.analytics.tests import TestIdentifier
