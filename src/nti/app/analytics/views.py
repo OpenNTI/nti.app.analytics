@@ -86,6 +86,7 @@ def init_db( usernames=() ):
 		if init( obj ):
 			count += 1
 			if count % 10000 == 0:
+				logger.info( 'Processed %s objects...', count)
 				transaction.savepoint()
 	return count
 
@@ -95,12 +96,12 @@ def init_db( usernames=() ):
 			 request_method='POST',
 			 permission=nauth.ACT_MODERATE)
 def init_analytics_db(request):
+	logger.info("Migrating objects to analytics processing queue")
 	values = json.loads(unicode(request.body, request.charset)) if request.body else {}
 	values = CaseInsensitiveDict(values)
 	# FIXME clean this up
 	#usernames = values.get('usernames', values.get('username', None))
-	#usernames = 'josh.zuech@nextthought.com,student1'
-	usernames = 'koth1321'
+	usernames = 'josh.zuech@nextthought.com,student1'
 
 	if usernames:
 		usernames = usernames.split(',')
@@ -111,7 +112,7 @@ def init_analytics_db(request):
 	total = init_db(usernames)
 	elapsed = time.time() - now
 
-	logger.info("Total objects processed %s(%s)", total, elapsed)
+	logger.info("Total objects processed (size=%s) (time=%s)", total, elapsed)
 
 	result = LocatedExternalDict()
 	result['Elapsed'] = elapsed
@@ -135,12 +136,15 @@ def queue_info(request):
 			 request_method='POST',
 			 permission=nauth.ACT_MODERATE)
 def empty_queue(request):
+	logger.info( 'Emptying analytics processing queue' )
 	queue = get_job_queue()
 	now = time.time()
 	done = queue.empty()
 	result = LocatedExternalDict()
-	result['Elapsed'] = time.time() - now
+	elapsed = time.time() - now
+	result['Elapsed'] = elapsed
 	result['Total'] = done
+	logger.info( 'Emptied analytics processing queue (size=%s) (time=%s)', done, elapsed )
 	return result
 
 
