@@ -87,7 +87,7 @@ def init_db( usernames=() ):
 			count += 1
 			if count % 10000 == 0:
 				logger.info( 'Processed %s objects...', count)
-				transaction.savepoint()
+				transaction.savepoint( optimistic=True )
 	return count
 
 @view_config(route_name='objects.generic.traversal',
@@ -100,8 +100,8 @@ def init_analytics_db(request):
 	values = json.loads(unicode(request.body, request.charset)) if request.body else {}
 	values = CaseInsensitiveDict(values)
 	# FIXME clean this up
-	#usernames = values.get('usernames', values.get('username', None))
-	usernames = 'josh.zuech@nextthought.com,student1'
+	usernames = values.get('usernames', values.get('username', None))
+	#usernames = 'josh.zuech@nextthought.com,student1'
 
 	if usernames:
 		usernames = usernames.split(',')
