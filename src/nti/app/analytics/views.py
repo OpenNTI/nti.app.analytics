@@ -148,12 +148,11 @@ def empty_queue(request):
 	return result
 
 
-# TODO Permissioning?  These are batched, so I'm not sure what user we would have.
 @view_config(route_name='objects.generic.traversal',
 			 name=BATCH_EVENTS,
 			 renderer='rest',
 			 request_method='POST',
-			 permission=nauth.ACT_MODERATE)
+			 permission=nauth.ACT_READ)
 class BatchEvents(	AbstractAuthenticatedView,
 					ModeledContentUploadRequestUtilsMixin ):
 
