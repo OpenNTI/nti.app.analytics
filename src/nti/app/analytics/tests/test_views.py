@@ -17,6 +17,7 @@ from zope import component
 from nti.analytics.database.database import AnalyticsDB
 from nti.analytics.database import interfaces as analytic_interfaces
 
+from nti.analytics.model import CourseCatalogViewEvent
 from nti.analytics.model import ResourceEvent
 from nti.analytics.model import SkipVideoEvent
 from nti.analytics.model import BatchResourceEvents
@@ -33,6 +34,7 @@ from hamcrest import has_entry
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
+from nti.analytics.database.enrollments import CourseCatalogViews
 from nti.analytics.database.resource_views import VideoEvents
 from nti.analytics.database.resource_views import CourseResourceViews
 
@@ -63,6 +65,11 @@ class TestBatchEvents( ApplicationLayerTest ):
 		video_end_time = 39
 		with_transcript = True
 
+		course_catalog_event = CourseCatalogViewEvent(user=user,
+						timestamp=timestamp,
+						course=course,
+						time_length=time_length)
+
 		video_event = SkipVideoEvent(user=user,
 						timestamp=timestamp,
 						course=course,
@@ -80,7 +87,7 @@ class TestBatchEvents( ApplicationLayerTest ):
 							resource_id=resource_id,
 							time_length=time_length)
 
-		io = BatchResourceEvents( events=[ video_event, resource_event ] )
+		io = BatchResourceEvents( events=[ video_event, resource_event, course_catalog_event ] )
 
 		ext_obj = toExternalObject(io)
 
@@ -91,6 +98,9 @@ class TestBatchEvents( ApplicationLayerTest ):
 										status=200 )
 
 		results = self.session.query( VideoEvents ).all()
+		assert_that( results, has_length( 1 ) )
+
+		results = self.session.query( CourseCatalogViews ).all()
 		assert_that( results, has_length( 1 ) )
 
 		results = self.session.query( CourseResourceViews ).all()

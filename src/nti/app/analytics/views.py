@@ -164,8 +164,8 @@ class BatchEvents(	AbstractAuthenticatedView,
 		batch_events = factory()
 		internalization.update_from_external_object(batch_events, external_input)
 
-		# TODO If our events are batched, we won't have any session
-		# information (because the user may be long gone).
+		# TODO These calls may be associated with only a single user.
+		# If so, we can attempt to get the session.
 		event_count = handle_events( batch_events )
 		logger.info( 'Received batched analytic events (size=%s)', event_count )
 		return event_count
