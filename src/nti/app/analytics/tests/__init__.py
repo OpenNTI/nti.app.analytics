@@ -20,6 +20,8 @@ import ZODB
 from nti.dataserver.tests.mock_dataserver import WithMockDS
 from nti.dataserver.tests.mock_dataserver import mock_db_trans
 
+from nti.analytics.database.tests import MockParent
+
 from nti.dataserver import users
 from zope.component.interfaces import IComponents
 from nti.contenttypes.courses.interfaces import ICourseCatalog
@@ -178,3 +180,13 @@ from nti.analytics import identifier
 from nti.analytics.tests import TestIdentifier
 identifier._DSIdentifier.get_id = identifier._NtiidIdentifier.get_id \
 = identifier.SessionId.get_id = TestIdentifier().get_id
+
+def _get_object( obj ):
+	try:
+		result = int( obj )
+	except ValueError:
+		result = MockParent( intid=101, parent=201, containerId=333 )
+	return result
+
+from nti.analytics import resource_views
+resource_views._get_object = _get_object

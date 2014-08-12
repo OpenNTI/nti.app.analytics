@@ -19,6 +19,9 @@ from nti.analytics.database import interfaces as analytic_interfaces
 
 from nti.analytics.model import CourseCatalogViewEvent
 from nti.analytics.model import ResourceEvent
+from nti.analytics.model import BlogViewEvent
+from nti.analytics.model import NoteViewEvent
+from nti.analytics.model import TopicViewEvent
 from nti.analytics.model import SkipVideoEvent
 from nti.analytics.model import BatchResourceEvents
 
@@ -34,6 +37,9 @@ from hamcrest import has_entry
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
+from nti.analytics.database.boards import TopicsViewed
+from nti.analytics.database.blogs import BlogsViewed
+from nti.analytics.database.resource_tags import NotesViewed
 from nti.analytics.database.enrollments import CourseCatalogViews
 from nti.analytics.database.resource_views import VideoEvents
 from nti.analytics.database.resource_views import CourseResourceViews
@@ -57,13 +63,34 @@ class TestBatchEvents( ApplicationLayerTest ):
  	def test_batch_event(self):
  		timestamp = time.mktime( datetime.utcnow().timetuple() )
 		user = 'sjohnson@nextthought.com'
-		course = 'tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_to_Water.course_info'
-		context_path = 'tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_path1'
+		course = '0000'
+		context_path = 'DASHBOARD'
 		resource_id = 'tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_lesson1'
 		time_length = 30
 		video_start_time = 13
 		video_end_time = 39
 		with_transcript = True
+
+		blog_id='1111'
+		note_id='with_container'
+		topic_id='with_parent'
+
+		blog_event = BlogViewEvent(user=user,
+						timestamp=timestamp,
+						blog_id=blog_id,
+						time_length=time_length)
+
+		note_event = NoteViewEvent(user=user,
+						timestamp=timestamp,
+						course=course,
+						note_id=note_id,
+						time_length=time_length)
+
+		topic_event = TopicViewEvent(user=user,
+						timestamp=timestamp,
+						course=course,
+						topic_id=topic_id,
+						time_length=time_length)
 
 		course_catalog_event = CourseCatalogViewEvent(user=user,
 						timestamp=timestamp,
@@ -87,7 +114,8 @@ class TestBatchEvents( ApplicationLayerTest ):
 							resource_id=resource_id,
 							time_length=time_length)
 
-		io = BatchResourceEvents( events=[ video_event, resource_event, course_catalog_event ] )
+		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event,
+											blog_event, note_event, topic_event ] )
 
 		ext_obj = toExternalObject(io)
 
@@ -104,4 +132,13 @@ class TestBatchEvents( ApplicationLayerTest ):
 		assert_that( results, has_length( 1 ) )
 
 		results = self.session.query( CourseResourceViews ).all()
+		assert_that( results, has_length( 1 ) )
+
+		results = self.session.query( BlogsViewed ).all()
+		assert_that( results, has_length( 1 ) )
+
+		results = self.session.query( NotesViewed ).all()
+		assert_that( results, has_length( 1 ) )
+
+		results = self.session.query( TopicsViewed ).all()
 		assert_that( results, has_length( 1 ) )
