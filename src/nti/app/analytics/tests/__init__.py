@@ -181,12 +181,3 @@ from nti.analytics.tests import TestIdentifier
 identifier._DSIdentifier.get_id = identifier._NtiidIdentifier.get_id \
 = identifier.SessionId.get_id = TestIdentifier().get_id
 
-def _get_object( obj ):
-	try:
-		result = int( obj )
-	except ValueError:
-		result = MockParent( intid=101, parent=201, containerId=333 )
-	return result
-
-from nti.analytics import resource_views
-resource_views._get_object = _get_object

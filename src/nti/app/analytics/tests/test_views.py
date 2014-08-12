@@ -9,6 +9,7 @@ __docformat__ = "restructuredtext en"
 logger = __import__('logging').getLogger(__name__)
 
 import unittest
+import fudge
 
 import time
 from datetime import datetime
@@ -60,7 +61,12 @@ class TestBatchEvents( ApplicationLayerTest ):
 		self.session.close()
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
- 	def test_batch_event(self):
+	@fudge.patch( 'nti.analytics.resource_views._get_object' )
+ 	def test_batch_event( self, mock_get_object ):
+ 		mock_parent = mock_get_object.is_callable().returns_fake()
+ 		mock_parent.has_attr( __parent__=201 )
+ 		mock_parent.has_attr( containerId=333 )
+
  		timestamp = time.mktime( datetime.utcnow().timetuple() )
 		user = 'sjohnson@nextthought.com'
 		course = '0000'
