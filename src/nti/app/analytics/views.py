@@ -9,8 +9,6 @@ __docformat__ = "restructuredtext en"
 logger = __import__('logging').getLogger(__name__)
 
 import time
-import transaction
-import simplejson as json
 
 from zope import component
 from zope import interface
@@ -22,11 +20,8 @@ from pyramid.view import view_config
 
 from nti.analytics import get_job_queue
 
-from nti.analytics.utils import all_objects_iids
-
 from nti.analytics.resource_views import handle_events
 
-from nti.analytics.interfaces import IObjectProcessor
 from nti.analytics.interfaces import IBatchResourceEvents
 
 from nti.dataserver import authorization as nauth
@@ -38,8 +33,6 @@ from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtils
 
 from nti.externalization import internalization
 from nti.externalization.interfaces import LocatedExternalDict
-
-from nti.utils.maps import CaseInsensitiveDict
 
 from . import ANALYTICS
 from . import BATCH_EVENTS
@@ -74,51 +67,6 @@ def username_search(search_term):
 	usernames = list(_users.iterkeys(min_inclusive, max_exclusive, excludemax=True))
 	return usernames
 
-def init( obj ):
-	result = False
-	for _, module in component.getUtilitiesFor(IObjectProcessor):
-		result = module.init( obj ) or result
-	return result
-
-def init_db( usernames=() ):
-	count = 0
-	for _, obj in all_objects_iids(usernames):
-		if init( obj ):
-			count += 1
-			if count % 10000 == 0:
-				logger.info( 'Processed %s objects...', count)
-				transaction.savepoint( optimistic=True )
-	return count
-
-@view_config(route_name='objects.generic.traversal',
-			 name='init_analytics_db',
-			 renderer='rest',
-			 request_method='POST',
-			 permission=nauth.ACT_MODERATE)
-def init_analytics_db(request):
-	logger.info("Migrating objects to analytics processing queue")
-	values = json.loads(unicode(request.body, request.charset)) if request.body else {}
-	values = CaseInsensitiveDict(values)
-	# FIXME clean this up
-	usernames = values.get('usernames', values.get('username', None))
-	#usernames = 'josh.zuech@nextthought.com,student1'
-
-	if usernames:
-		usernames = usernames.split(',')
-	else:
-		usernames = ()
-
-	now = time.time()
-	total = init_db(usernames)
-	elapsed = time.time() - now
-
-	logger.info("Total objects processed (size=%s) (time=%s)", total, elapsed)
-
-	result = LocatedExternalDict()
-	result['Elapsed'] = elapsed
-	result['Total'] = total
-	return result
-
 @view_config(route_name='objects.generic.traversal',
 			 name='queue_info',
 			 renderer='rest',
@@ -136,6 +84,7 @@ def queue_info(request):
 			 request_method='POST',
 			 permission=nauth.ACT_MODERATE)
 def empty_queue(request):
+	# TODO probably need this in a standalone process too
 	logger.info( 'Emptying analytics processing queue' )
 	queue = get_job_queue()
 	now = time.time()
