@@ -18,7 +18,8 @@ from zope.traversing.interfaces import IPathAdapter
 
 from pyramid.view import view_config
 
-from nti.analytics import get_job_queue
+from nti.analytics import QUEUE_NAMES
+from nti.analytics import get_factory
 
 from nti.analytics.resource_views import handle_events
 
@@ -75,7 +76,11 @@ def username_search(search_term):
 def queue_info(request):
 	queue = get_job_queue()
 	result = LocatedExternalDict()
-	result['size'] = len(queue)
+	factory = get_factory()
+
+	for name in queue_names:
+		queue = factory.get_queue( name )
+		result[ name ] = len(queue)
 	return result
 
 @view_config(route_name='objects.generic.traversal',
@@ -84,7 +89,7 @@ def queue_info(request):
 			 request_method='POST',
 			 permission=nauth.ACT_MODERATE)
 def empty_queue(request):
-	# TODO probably need this in a standalone process too
+	# TODO Need name or 'ALL'; no assumptions
 	logger.info( 'Emptying analytics processing queue' )
 	queue = get_job_queue()
 	now = time.time()
