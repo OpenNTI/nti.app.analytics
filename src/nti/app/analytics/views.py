@@ -18,6 +18,7 @@ from zope.traversing.interfaces import IPathAdapter
 
 from pyramid.view import view_config
 
+from nti.analytics import FAIL_QUEUE
 from nti.analytics import QUEUE_NAMES
 from nti.analytics import get_factory
 
@@ -74,13 +75,15 @@ def username_search(search_term):
 			 request_method='GET',
 			 permission=nauth.ACT_MODERATE)
 def queue_info(request):
-	queue = get_job_queue()
 	result = LocatedExternalDict()
 	factory = get_factory()
 
-	for name in queue_names:
+	for name in QUEUE_NAMES:
 		queue = factory.get_queue( name )
 		result[ name ] = len(queue)
+
+	fail_q = factory.get_queue( FAIL_QUEUE )
+	result[ FAIL_QUEUE ] = len( fail_q )
 	return result
 
 @view_config(route_name='objects.generic.traversal',
