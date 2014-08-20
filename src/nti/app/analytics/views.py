@@ -92,16 +92,23 @@ def queue_info(request):
 			 request_method='POST',
 			 permission=nauth.ACT_MODERATE)
 def empty_queue(request):
-	# TODO Need name or 'ALL'; no assumptions
-	logger.info( 'Emptying analytics processing queue' )
-	queue = get_job_queue()
-	now = time.time()
-	done = queue.empty()
 	result = LocatedExternalDict()
-	elapsed = time.time() - now
-	result['Elapsed'] = elapsed
-	result['Total'] = done
-	logger.info( 'Emptied analytics processing queue (size=%s) (time=%s)', done, elapsed )
+	factory = get_factory()
+	queue_names = QUEUE_NAMES + [FAIL_QUEUE]
+
+	for name in queue_names:
+		logger.info( 'Emptying analytics processing queue (%s)', name )
+		now = time.time()
+		queue = factory.get_queue( name )
+		done = queue.empty()
+		elapsed = time.time() - now
+
+		queue_stat = LocatedExternalDict()
+		queue_stat['Elapsed'] = elapsed
+		queue_stat['Total'] = done
+		result[ name ] = queue_stat
+
+	logger.info( 'Emptied analytics processing queue (time=%s)', elapsed )
 	return result
 
 
