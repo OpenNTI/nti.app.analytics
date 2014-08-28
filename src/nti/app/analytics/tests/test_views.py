@@ -74,7 +74,7 @@ class TestBatchEvents( ApplicationLayerTest ):
  		timestamp = time.mktime( datetime.utcnow().timetuple() )
 		user = 'sjohnson@nextthought.com'
 		course = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.course_info'
-		context_path = 'DASHBOARD'
+		context_path = ['DASHBOARD', 'ntiid:tag_blah']
 		resource_id = 'tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_lesson1'
 		time_length = 30
 		video_start_time = 13
