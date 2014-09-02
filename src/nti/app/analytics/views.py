@@ -95,21 +95,27 @@ def empty_queue(request):
 	result = LocatedExternalDict()
 	factory = get_factory()
 	queue_names = QUEUE_NAMES
+	now = time.time()
 
 	for name in queue_names:
-		logger.info( 'Emptying analytics processing queue (%s)', name )
-		now = time.time()
 		queue = factory.get_queue( name )
-		# TODO This probably empties out the failure queue as well.  Is that intended?
-		done = len( queue )
+		queue_count = len( queue )
 		queue.empty()
-		elapsed = time.time() - now
+
+		fail_queue = queue.get_failed_queue()
+		failed_count = len( fail_queue )
+		fail_queue.empty()
+
+		if queue_count or failed_count:
+			logger.info( 	'Emptied analytics processing queue (%s) (count=%s) (fail_count=%s)',
+							name, queue_count, failed_count )
 
 		queue_stat = LocatedExternalDict()
-		queue_stat['Elapsed'] = elapsed
-		queue_stat['Total'] = done
+		queue_stat['Total'] = queue_count
+		queue_stat['Failed total'] = failed_count
 		result[ name ] = queue_stat
 
+	elapsed = time.time() - now
 	logger.info( 'Emptied analytics processing queue (time=%s)', elapsed )
 	return result
 
