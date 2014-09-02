@@ -18,7 +18,6 @@ from zope.traversing.interfaces import IPathAdapter
 
 from pyramid.view import view_config
 
-from nti.analytics import FAIL_QUEUE
 from nti.analytics import QUEUE_NAMES
 from nti.analytics import get_factory
 
@@ -79,11 +78,12 @@ def queue_info(request):
 	factory = get_factory()
 
 	for name in QUEUE_NAMES:
+		queue_info = LocatedExternalDict()
+		result[ name ] = queue_info
 		queue = factory.get_queue( name )
-		result[ name ] = len(queue)
+		queue_info[ 'queue_length' ] = len(queue)
+		queue_info[ 'failed_length' ] = len(queue.get_failed_queue())
 
-	fail_q = factory.get_queue( FAIL_QUEUE )
-	result[ FAIL_QUEUE ] = len( fail_q )
 	return result
 
 @view_config(route_name='objects.generic.traversal',
@@ -94,13 +94,15 @@ def queue_info(request):
 def empty_queue(request):
 	result = LocatedExternalDict()
 	factory = get_factory()
-	queue_names = QUEUE_NAMES + [FAIL_QUEUE]
+	queue_names = QUEUE_NAMES
 
 	for name in queue_names:
 		logger.info( 'Emptying analytics processing queue (%s)', name )
 		now = time.time()
 		queue = factory.get_queue( name )
-		done = queue.empty()
+		# TODO This probably empties out the failure queue as well.  Is that intended?
+		done = len( queue )
+		queue.empty()
 		elapsed = time.time() - now
 
 		queue_stat = LocatedExternalDict()
