@@ -10,6 +10,8 @@ logger = __import__('logging').getLogger(__name__)
 
 import time
 
+import pyramid.httpexceptions as hexc
+
 from zope import component
 from zope import interface
 from zope.location.interfaces import IContained
@@ -20,6 +22,8 @@ from pyramid.view import view_config
 
 from nti.analytics import QUEUE_NAMES
 from nti.analytics import get_factory
+
+from nti.analytics.sessions import handle_new_session
 
 from nti.analytics.resource_views import handle_events
 
@@ -37,6 +41,7 @@ from nti.externalization.interfaces import LocatedExternalDict
 
 from . import ANALYTICS
 from . import BATCH_EVENTS
+from . import ANALYTICS_SESSION
 
 @interface.implementer(IPathAdapter, IContained)
 class AnalyticsPathAdapter(zcontained.Contained):
@@ -135,11 +140,21 @@ class BatchEvents(	AbstractAuthenticatedView,
 		factory = internalization.find_factory_for(external_input)
 		batch_events = factory()
 		internalization.update_from_external_object(batch_events, external_input)
-
-		# TODO These calls may be associated with only a single user.
-		# If so, we can attempt to get the session.
 		event_count = handle_events( batch_events )
 		logger.info( 'Received batched analytic events (size=%s)', event_count )
 		return event_count
 
+
+@view_config(route_name='objects.generic.traversal',
+			 name=ANALYTICS_SESSION,
+			 renderer='rest',
+			 request_method='POST',
+			 permission=nauth.ACT_READ)
+class AnalyticsSession( AbstractAuthenticatedView ):
+
+	def __call__(self):
+		request = self.request
+		user = request.remote_user
+		handle_new_session( user, request )
+		return hexc.HTTPNoContent()
 

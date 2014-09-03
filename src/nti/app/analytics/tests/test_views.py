@@ -15,8 +15,10 @@ import time
 from datetime import datetime
 
 from zope import component
-from nti.analytics.database.database import AnalyticsDB
-from nti.analytics.database import interfaces as analytic_interfaces
+
+from nti.dataserver.tests import mock_dataserver
+
+from nti.dataserver.users import User
 
 from nti.analytics.model import CourseCatalogViewEvent
 from nti.analytics.model import ResourceEvent
@@ -38,12 +40,18 @@ from hamcrest import has_entry
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
+from nti.analytics.sessions import get_current_session_id
+
+from nti.analytics.database.database import AnalyticsDB
+from nti.analytics.database import interfaces as analytic_interfaces
 from nti.analytics.database.boards import TopicsViewed
 from nti.analytics.database.blogs import BlogsViewed
 from nti.analytics.database.resource_tags import NotesViewed
 from nti.analytics.database.enrollments import CourseCatalogViews
 from nti.analytics.database.resource_views import VideoEvents
 from nti.analytics.database.resource_views import CourseResourceViews
+from nti.analytics.database.sessions import Sessions
+from nti.analytics.database.sessions import CurrentSessions
 
 from . import LegacyInstructedCourseApplicationTestLayer
 
@@ -153,3 +161,55 @@ class TestBatchEvents( ApplicationLayerTest ):
 #
 # 		results = self.session.query( TopicsViewed ).all()
 # 		assert_that( results, has_length( 1 ) )
+
+
+class TestAnalyticsSession( ApplicationLayerTest ):
+
+	layer = LegacyInstructedCourseApplicationTestLayer
+
+	def setUp(self):
+		self.db = AnalyticsDB( dburi='sqlite://' )
+		component.getGlobalSiteManager().registerUtility( self.db, analytic_interfaces.IAnalyticsDB )
+		self.session = self.db.session
+
+	def tearDown(self):
+		component.getGlobalSiteManager().unregisterUtility( self.db, provided=analytic_interfaces.IAnalyticsDB )
+		self.session.close()
+
+	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
+ 	def test_session( self ):
+ 		results = self.session.query( Sessions ).all()
+		assert_that( results, has_length( 0 ) )
+		results = self.session.query( CurrentSessions ).all()
+		assert_that( results, has_length( 0 ) )
+
+ 		# New session
+ 		session_url = '/dataserver2/analytics/analytics_session'
+		self.testapp.post_json( session_url,
+								None,
+								status=204 )
+
+		results = self.session.query( Sessions ).all()
+		assert_that( results, has_length( 1 ) )
+		results = self.session.query( CurrentSessions ).all()
+		assert_that( results, has_length( 1 ) )
+
+		with mock_dataserver.mock_db_trans(self.ds):
+			user = User.get_user( self.extra_environ_default_user )
+			current_session_id = get_current_session_id( user )
+			assert_that( current_session_id, is_( 1 ))
+
+		# New session #2
+		self.testapp.post_json( session_url,
+								None,
+								status=204 )
+
+		results = self.session.query( Sessions ).all()
+		assert_that( results, has_length( 2 ) )
+		results = self.session.query( CurrentSessions ).all()
+		assert_that( results, has_length( 1 ) )
+
+		with mock_dataserver.mock_db_trans(self.ds):
+			user = User.get_user( self.extra_environ_default_user )
+			current_session_id = get_current_session_id( user )
+			assert_that( current_session_id, is_( 2 ))
