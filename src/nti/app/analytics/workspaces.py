@@ -27,6 +27,7 @@ from nti.utils.property import alias
 from . import ANALYTICS
 from . import ANALYTICS_TITLE
 from . import BATCH_EVENTS
+from . import ANALYTICS_SESSION
 
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
 
@@ -59,11 +60,14 @@ class _AnalyticsWorkspace(contained.Contained):
 
 	@property
 	def links(self):
+		link_names = [BATCH_EVENTS, ANALYTICS_SESSION]
+
 		result = []
-		#ds2/analytics/@@batch_events
-		link = links.Link(ANALYTICS, rel=BATCH_EVENTS, elements=(BATCH_EVENTS,))
-		link.__name__ = link.target
-		link.__parent__ = self.__parent__
-		interface.alsoProvides(link, loc_interfaces.ILocation)
-		result.append(link)
+		for name in link_names:
+			#ds2/analytics/@@batch_events
+			link = links.Link(ANALYTICS, rel=name, elements=(name,))
+			link.__name__ = link.target
+			link.__parent__ = self.__parent__
+			interface.alsoProvides(link, loc_interfaces.ILocation)
+			result.append(link)
 		return result
