@@ -17,6 +17,7 @@ from zope import interface
 from zope.location.interfaces import IContained
 from zope.container import contained as zcontained
 from zope.traversing.interfaces import IPathAdapter
+from zope.schema.interfaces import ValidationError
 
 from pyramid.view import view_config
 
@@ -137,11 +138,29 @@ class BatchEvents(	AbstractAuthenticatedView,
 
 	def _do_call(self):
 		external_input = self.readInput()
-		factory = internalization.find_factory_for(external_input)
-		batch_events = factory()
-		internalization.update_from_external_object(batch_events, external_input)
+
+		# Ok, lets hand-internalize these objects one-by-one so that we
+		# can exclude any malformed objects and process the proper events.
+		batch_events = []
+		events = external_input['events']
+		total_count = len( events )
+		malformed_count = 0
+
+		for event in events:
+			factory = internalization.find_factory_for(event)
+			new_event = factory()
+			try:
+				internalization.update_from_external_object(new_event, event)
+				batch_events.append( new_event )
+			except ValidationError as e:
+				# TODO Should we capture a more generic exception?
+				# The app may resend events on error.
+				logger.warn( 'Malformed events received (event=%s) (%s)', event, e )
+				malformed_count += 1
+
 		event_count = handle_events( batch_events )
-		logger.info( 'Received batched analytic events (size=%s)', event_count )
+		logger.info( 	'Received batched analytic events (count=%s) (total_count=%s) (malformed=%s)',
+						event_count, total_count, malformed_count )
 		return event_count
 
 
