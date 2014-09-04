@@ -21,7 +21,6 @@ import nti.appserver.interfaces as app_interfaces
 from nti.dataserver import links
 from nti.dataserver import interfaces as nti_interfaces
 
-from nti.utils.property import Lazy
 from nti.utils.property import alias
 
 from . import ANALYTICS
