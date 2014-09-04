@@ -8,8 +8,8 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
-import unittest
 import fudge
+from fudge import patch_object
 
 import time
 from datetime import datetime
@@ -32,13 +32,12 @@ from nti.externalization.externalization import toExternalObject
 
 from hamcrest import assert_that
 from hamcrest import has_length
-from hamcrest import none
-from hamcrest import not_none
 from hamcrest import is_
-from hamcrest import has_entry
 
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
+
+from nti.analytics import identifier
 
 from nti.analytics.sessions import get_current_session_id
 
@@ -52,6 +51,8 @@ from nti.analytics.database.resource_views import VideoEvents
 from nti.analytics.database.resource_views import CourseResourceViews
 from nti.analytics.database.sessions import Sessions
 from nti.analytics.database.sessions import CurrentSessions
+
+from nti.analytics.tests import TestIdentifier
 
 from . import LegacyInstructedCourseApplicationTestLayer
 
@@ -117,31 +118,41 @@ class TestBatchEvents( ApplicationLayerTest ):
 		component.getGlobalSiteManager().registerUtility( self.db, analytic_interfaces.IAnalyticsDB )
 		self.session = self.db.session
 
+		self.patches = [
+				patch_object( identifier.SessionId, 'get_id', TestIdentifier.get_id ),
+				patch_object( identifier._DSIdentifier, 'get_id', TestIdentifier.get_id ),
+				patch_object( identifier._NtiidIdentifier, 'get_id', TestIdentifier.get_id ),
+				patch_object( identifier._DSIdentifier, 'get_object', TestIdentifier.get_object ),
+				patch_object( identifier._NtiidIdentifier, 'get_object', TestIdentifier.get_object ) ]
+
 	def tearDown(self):
 		component.getGlobalSiteManager().unregisterUtility( self.db, provided=analytic_interfaces.IAnalyticsDB )
 		self.session.close()
 
+		for patch in self.patches:
+			patch.restore()
+
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.resource_views._get_object' )
 	@fudge.patch( 'nti.analytics.resource_views._get_course' )
- 	def test_batch_event( self, mock_get_object, mock_get_course ):
- 		mock_parent = mock_get_object.is_callable().returns_fake()
- 		mock_parent.has_attr( __parent__=201 )
- 		mock_parent.has_attr( containerId=333 )
+	def test_batch_event( self, mock_get_object, mock_get_course ):
+		mock_parent = mock_get_object.is_callable().returns_fake()
+		mock_parent.has_attr( __parent__=201 )
+		mock_parent.has_attr( containerId=333 )
 
- 		mock_course = mock_get_course.is_callable().returns_fake()
- 		mock_course.has_attr( intid=999 )
+		mock_course = mock_get_course.is_callable().returns_fake()
+		mock_course.has_attr( intid=999 )
 
 		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event,
 											blog_event, note_event, topic_event ] )
 
 		ext_obj = toExternalObject(io)
 
- 		# Upload our events
- 		batch_url = '/dataserver2/analytics/batch_events'
-		res = self.testapp.post_json( 	batch_url,
-										ext_obj,
-										status=200 )
+		# Upload our events
+		batch_url = '/dataserver2/analytics/batch_events'
+		self.testapp.post_json( batch_url,
+								ext_obj,
+								status=200 )
 
 		results = self.session.query( VideoEvents ).all()
 		assert_that( results, has_length( 1 ) )
@@ -165,24 +176,24 @@ class TestBatchEvents( ApplicationLayerTest ):
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.resource_views._get_object' )
 	@fudge.patch( 'nti.analytics.resource_views._get_course' )
- 	def test_malformed_event( self, mock_get_object, mock_get_course ):
- 		mock_parent = mock_get_object.is_callable().returns_fake()
- 		mock_parent.has_attr( __parent__=201 )
- 		mock_parent.has_attr( containerId=333 )
+	def test_malformed_event( self, mock_get_object, mock_get_course ):
+		mock_parent = mock_get_object.is_callable().returns_fake()
+		mock_parent.has_attr( __parent__=201 )
+		mock_parent.has_attr( containerId=333 )
 
- 		mock_course = mock_get_course.is_callable().returns_fake()
- 		mock_course.has_attr( intid=999 )
+		mock_course = mock_get_course.is_callable().returns_fake()
+		mock_course.has_attr( intid=999 )
 
- 		# This event is now malformed
- 		resource_event.course = None
+		# This event is now malformed
+		resource_event.course = None
 
 		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event ] )
 
 		ext_obj = toExternalObject(io)
 
- 		# Upload our events
- 		batch_url = '/dataserver2/analytics/batch_events'
-		res = self.testapp.post_json( 	batch_url,
+		# Upload our events
+		batch_url = '/dataserver2/analytics/batch_events'
+		self.testapp.post_json( 	batch_url,
 										ext_obj,
 										status=200 )
 
@@ -210,14 +221,14 @@ class TestAnalyticsSession( ApplicationLayerTest ):
 		self.session.close()
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
- 	def test_session( self ):
- 		results = self.session.query( Sessions ).all()
+	def test_session( self ):
+		results = self.session.query( Sessions ).all()
 		assert_that( results, has_length( 0 ) )
 		results = self.session.query( CurrentSessions ).all()
 		assert_that( results, has_length( 0 ) )
 
- 		# New session
- 		session_url = '/dataserver2/analytics/analytics_session'
+		# New session
+		session_url = '/dataserver2/analytics/analytics_session'
 		self.testapp.post_json( session_url,
 								None,
 								status=204 )

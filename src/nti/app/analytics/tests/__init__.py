@@ -175,9 +175,3 @@ class PersistentInstructedCourseApplicationTestLayer(ApplicationTestLayer):
 # Export the new-style stuff as default
 InstructedCourseApplicationTestLayer = PersistentInstructedCourseApplicationTestLayer
 
-# Override id lookup for testing purposes.
-from nti.analytics import identifier
-from nti.analytics.tests import TestIdentifier
-identifier._DSIdentifier.get_id = identifier._NtiidIdentifier.get_id \
-= identifier.SessionId.get_id = TestIdentifier().get_id
-
