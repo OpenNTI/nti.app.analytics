@@ -114,7 +114,7 @@ class TestBatchEvents( ApplicationLayerTest ):
 	layer = LegacyInstructedCourseApplicationTestLayer
 
 	def setUp(self):
-		self.db = AnalyticsDB( dburi='sqlite://' )
+		self.db = AnalyticsDB( dburi='sqlite://', testmode=True, defaultSQLite=True )
 		component.getGlobalSiteManager().registerUtility( self.db, analytic_interfaces.IAnalyticsDB )
 		self.session = self.db.session
 
