@@ -33,6 +33,8 @@ from nti.externalization.externalization import toExternalObject
 from hamcrest import assert_that
 from hamcrest import has_length
 from hamcrest import is_
+from hamcrest import none
+from hamcrest import not_none
 
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
@@ -257,3 +259,21 @@ class TestAnalyticsSession( ApplicationLayerTest ):
 			user = User.get_user( self.extra_environ_default_user )
 			current_session_id = get_current_session_id( user )
 			assert_that( current_session_id, is_( 2 ))
+
+		# End our session
+		end_session_url = '/dataserver2/analytics/end_analytics_session'
+
+		self.testapp.post_json( end_session_url,
+								{ 'session_id' : 2 },
+								status=204 )
+
+		results = self.session.query( CurrentSessions ).all()
+		assert_that( results, has_length( 0 ) )
+		session_record = self.session.query( Sessions ).filter( Sessions.session_id == 2 ).first()
+		assert_that( session_record, not_none() )
+		assert_that( session_record.end_time, not_none() )
+
+		with mock_dataserver.mock_db_trans(self.ds):
+			user = User.get_user( self.extra_environ_default_user )
+			current_session_id = get_current_session_id( user )
+			assert_that( current_session_id, none() )

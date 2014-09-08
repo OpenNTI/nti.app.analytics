@@ -21,10 +21,13 @@ from zope.schema.interfaces import ValidationError
 
 from pyramid.view import view_config
 
+from nti.utils.maps import CaseInsensitiveDict
+
 from nti.analytics import QUEUE_NAMES
 from nti.analytics import get_factory
 
 from nti.analytics.sessions import handle_new_session
+from nti.analytics.sessions import handle_end_session
 
 from nti.analytics.resource_views import handle_events
 
@@ -43,6 +46,7 @@ from nti.externalization.interfaces import LocatedExternalDict
 from . import ANALYTICS
 from . import BATCH_EVENTS
 from . import ANALYTICS_SESSION
+from . import END_ANALYTICS_SESSION
 
 @interface.implementer(IPathAdapter, IContained)
 class AnalyticsPathAdapter(zcontained.Contained):
@@ -175,5 +179,25 @@ class AnalyticsSession( AbstractAuthenticatedView ):
 		request = self.request
 		user = request.remote_user
 		handle_new_session( user, request )
+		return hexc.HTTPNoContent()
+
+@view_config(route_name='objects.generic.traversal',
+			 name=END_ANALYTICS_SESSION,
+			 renderer='rest',
+			 request_method='POST',
+			 permission=nauth.ACT_READ)
+class EndAnalyticsSession( AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin ):
+
+	def __call__(self):
+		vals = {}
+		if self.request.body:
+			values = self.readInput()
+			vals = CaseInsensitiveDict( values )
+
+		session_id = vals.get( 'session_id' )
+
+		request = self.request
+		user = request.remote_user
+		handle_end_session( user, session_id )
 		return hexc.HTTPNoContent()
 
