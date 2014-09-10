@@ -137,13 +137,22 @@ class TestBatchEvents( ApplicationLayerTest ):
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.resource_views._get_object' )
 	@fudge.patch( 'nti.analytics.resource_views._get_course' )
-	def test_batch_event( self, mock_get_object, mock_get_course ):
+	@fudge.patch( 'nti.analytics.database.blogs._get_blog_id' )
+	@fudge.patch( 'nti.analytics.database.resource_tags._get_note_id' )
+	@fudge.patch( 'nti.analytics.database.boards._get_forum_id_from_forum' )
+	@fudge.patch( 'nti.analytics.database.boards._get_topic_id_from_topic' )
+	def test_batch_event( self, mock_get_object, mock_get_course, mock_get_blog, mock_get_note, mock_get_forum, mock_get_topic ):
 		mock_parent = mock_get_object.is_callable().returns_fake()
 		mock_parent.has_attr( __parent__=201 )
 		mock_parent.has_attr( containerId=333 )
 
 		mock_course = mock_get_course.is_callable().returns_fake()
 		mock_course.has_attr( intid=999 )
+
+		mock_get_blog.is_callable().returns( 1 )
+		mock_get_note.is_callable().returns( 2 )
+		mock_get_forum.is_callable().returns( 3 )
+		mock_get_topic.is_callable().returns( 4 )
 
 		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event,
 											blog_event, note_event, topic_event ] )
@@ -165,15 +174,14 @@ class TestBatchEvents( ApplicationLayerTest ):
 		results = self.session.query( CourseResourceViews ).all()
 		assert_that( results, has_length( 1 ) )
 
-		# TODO Broken until we mock up parent ref lookups.
-# 		results = self.session.query( BlogsViewed ).all()
-# 		assert_that( results, has_length( 1 ) )
-#
-# 		results = self.session.query( NotesViewed ).all()
-# 		assert_that( results, has_length( 1 ) )
-#
-# 		results = self.session.query( TopicsViewed ).all()
-# 		assert_that( results, has_length( 1 ) )
+		results = self.session.query( BlogsViewed ).all()
+		assert_that( results, has_length( 1 ) )
+
+		results = self.session.query( NotesViewed ).all()
+		assert_that( results, has_length( 1 ) )
+
+		results = self.session.query( TopicsViewed ).all()
+		assert_that( results, has_length( 1 ) )
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.resource_views._get_object' )
@@ -214,7 +222,7 @@ class TestAnalyticsSession( ApplicationLayerTest ):
 	layer = LegacyInstructedCourseApplicationTestLayer
 
 	def setUp(self):
-		self.db = AnalyticsDB( dburi='sqlite://' )
+		self.db = AnalyticsDB( dburi='sqlite://', testmode=True )
 		component.getGlobalSiteManager().registerUtility( self.db, analytic_interfaces.IAnalyticsDB )
 		self.session = self.db.session
 
