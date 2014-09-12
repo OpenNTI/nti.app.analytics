@@ -10,46 +10,41 @@ logger = __import__('logging').getLogger(__name__)
 
 import time
 
-import pyramid.httpexceptions as hexc
-
 from zope import component
 from zope import interface
-from zope.location.interfaces import IContained
-from zope.container import contained as zcontained
-from zope.traversing.interfaces import IPathAdapter
+from zope.container.contained import Contained
 from zope.schema.interfaces import ValidationError
+from zope.traversing.interfaces import IPathAdapter
 
 from pyramid.view import view_config
+from pyramid import httpexceptions as hexc
 
-from nti.utils.maps import CaseInsensitiveDict
+from nti.app.base.abstract_views import AbstractAuthenticatedView
+from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
-from nti.analytics import QUEUE_NAMES
 from nti.analytics import get_factory
-
+from nti.analytics import QUEUE_NAMES
 from nti.analytics.sessions import handle_new_session
 from nti.analytics.sessions import handle_end_session
-
 from nti.analytics.resource_views import handle_events
-
 from nti.analytics.interfaces import IBatchResourceEvents
 
 from nti.dataserver import authorization as nauth
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
 
-from nti.app.base.abstract_views import AbstractAuthenticatedView
-from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
-
 from nti.externalization import internalization
 from nti.externalization.interfaces import LocatedExternalDict
+
+from nti.utils.maps import CaseInsensitiveDict
 
 from . import ANALYTICS
 from . import BATCH_EVENTS
 from . import ANALYTICS_SESSION
 from . import END_ANALYTICS_SESSION
 
-@interface.implementer(IPathAdapter, IContained)
-class AnalyticsPathAdapter(zcontained.Contained):
+@interface.implementer(IPathAdapter)
+class AnalyticsPathAdapter(Contained):
 
 	__name__ = ANALYTICS
 
@@ -129,7 +124,6 @@ def empty_queue(request):
 	logger.info( 'Emptied analytics processing queue (time=%s)', elapsed )
 	return result
 
-
 @view_config(route_name='objects.generic.traversal',
 			 name=BATCH_EVENTS,
 			 renderer='rest',
@@ -142,13 +136,12 @@ class BatchEvents(	AbstractAuthenticatedView,
 
 	def _do_call(self):
 		external_input = self.readInput()
-
 		# Ok, lets hand-internalize these objects one-by-one so that we
 		# can exclude any malformed objects and process the proper events.
 		batch_events = []
-		events = external_input['events']
-		total_count = len( events )
 		malformed_count = 0
+		events = external_input['events']
+		total_count = len(events)
 
 		for event in events:
 			factory = internalization.find_factory_for(event)
@@ -159,14 +152,13 @@ class BatchEvents(	AbstractAuthenticatedView,
 			except ValidationError as e:
 				# TODO Should we capture a more generic exception?
 				# The app may resend events on error.
-				logger.warn( 'Malformed events received (event=%s) (%s)', event, e )
+				logger.warn('Malformed events received (event=%s) (%s)', event, e)
 				malformed_count += 1
 
 		event_count = handle_events( batch_events )
-		logger.info( 	'Received batched analytic events (count=%s) (total_count=%s) (malformed=%s)',
-						event_count, total_count, malformed_count )
+		logger.info('Received batched analytic events (count=%s) (total_count=%s) (malformed=%s)',
+					event_count, total_count, malformed_count )
 		return event_count
-
 
 @view_config(route_name='objects.generic.traversal',
 			 name=ANALYTICS_SESSION,
@@ -178,7 +170,7 @@ class AnalyticsSession( AbstractAuthenticatedView ):
 	def __call__(self):
 		request = self.request
 		user = request.remote_user
-		handle_new_session( user, request )
+		handle_new_session(user, request)
 		return hexc.HTTPNoContent()
 
 @view_config(route_name='objects.generic.traversal',
@@ -186,7 +178,7 @@ class AnalyticsSession( AbstractAuthenticatedView ):
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
-class EndAnalyticsSession( AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin ):
+class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
 
 	def __call__(self):
 		vals = {}
