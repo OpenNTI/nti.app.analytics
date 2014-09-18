@@ -203,9 +203,9 @@ class TestBatchEvents( ApplicationLayerTest ):
 
 		# Upload our events
 		batch_url = '/dataserver2/analytics/batch_events'
-		self.testapp.post_json( 	batch_url,
-										ext_obj,
-										status=200 )
+		self.testapp.post_json( batch_url,
+								ext_obj,
+								status=200 )
 
 		results = self.session.query( VideoEvents ).all()
 		assert_that( results, has_length( 1 ) )
