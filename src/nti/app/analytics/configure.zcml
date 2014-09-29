@@ -13,7 +13,7 @@
 	<!-- Expose analytics views -->
 	<adapter name="analytics"
 			 for="nti.dataserver.interfaces.IDataserverFolder pyramid.interfaces.IRequest"
-			 factory=".views.AnalyticsPathAdapter"
+			 factory=".admin_views.AnalyticsPathAdapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
 	<!-- Workspaces -->
