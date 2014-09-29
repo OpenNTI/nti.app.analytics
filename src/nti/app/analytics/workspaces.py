@@ -13,7 +13,7 @@ logger = __import__('logging').getLogger(__name__)
 
 from zope import interface
 from zope import component
-from zope.container import contained
+from zope.container.contained import Contained
 from zope.location.interfaces import ILocation
 
 from nti.appserver.interfaces import IWorkspace
@@ -40,7 +40,7 @@ def AnalyticsWorkspace(user_service):
 
 @interface.implementer(IAnalyticsWorkspace)
 @component.adapter(IDataserverFolder)
-class _AnalyticsWorkspace(contained.Contained):
+class _AnalyticsWorkspace(Contained):
 	"""
 	A workspace that currently, does not have any collections, but
 	exposes links that may be useful to analytics clients.

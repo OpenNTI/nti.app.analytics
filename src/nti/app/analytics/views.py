@@ -24,10 +24,14 @@ from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtils
 
 from nti.analytics import get_factory
 from nti.analytics import QUEUE_NAMES
+
 from nti.analytics.sessions import handle_new_session
 from nti.analytics.sessions import handle_end_session
+from nti.analytics.sessions import handle_sessions
+
 from nti.analytics.resource_views import handle_events
 from nti.analytics.interfaces import IBatchResourceEvents
+from nti.analytics.interfaces import IAnalyticsSessions
 
 from nti.dataserver import authorization as nauth
 from nti.dataserver.interfaces import IDataserver
@@ -42,6 +46,7 @@ from . import ANALYTICS
 from . import BATCH_EVENTS
 from . import ANALYTICS_SESSION
 from . import END_ANALYTICS_SESSION
+from . import ANALYTICS_SESSIONS
 
 @interface.implementer(IPathAdapter)
 class AnalyticsPathAdapter(Contained):
@@ -160,6 +165,7 @@ class BatchEvents(	AbstractAuthenticatedView,
 					event_count, total_count, malformed_count )
 		return event_count
 
+# TODO What permission?
 @view_config(route_name='objects.generic.traversal',
 			 name=ANALYTICS_SESSION,
 			 renderer='rest',
@@ -193,3 +199,30 @@ class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequest
 		handle_end_session( user, session_id )
 		return hexc.HTTPNoContent()
 
+@view_config(route_name='objects.generic.traversal',
+			 name=ANALYTICS_SESSIONS,
+			 renderer='rest',
+			 request_method='POST',
+			 permission=nauth.ACT_READ)
+class ResolveAnalyticsSessions(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
+
+	content_predicate = IAnalyticsSessions.providedBy
+
+	def __call__(self):
+		"""
+		Will accept one or many IAnalyticsSession objects, which we will synchronously
+		resolve the session_id for before returning.
+		"""
+		request = self.request
+		user = request.remote_user
+
+		external_input = self.readInput()
+		factory = internalization.find_factory_for( external_input )
+		sessions = factory()
+		internalization.update_from_external_object( sessions, external_input )
+
+		ip_addr = getattr( request, 'remote_addr' , None )
+		user_agent = getattr( request, 'user_agent', None )
+
+		handle_sessions( sessions.sessions, user, user_agent=user_agent, ip_addr=ip_addr )
+		return sessions

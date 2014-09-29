@@ -28,6 +28,7 @@ from nti.analytics.model import TopicViewEvent
 from nti.analytics.model import SkipVideoEvent
 from nti.analytics.model import BatchResourceEvents
 
+from nti.externalization import internalization
 from nti.externalization.externalization import toExternalObject
 
 from hamcrest import assert_that
@@ -40,6 +41,9 @@ from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
 from nti.analytics import identifier
+
+from nti.analytics.model import AnalyticsSessions
+from nti.analytics.model import AnalyticsSession
 
 from nti.analytics.sessions import get_current_session_id
 
@@ -217,6 +221,8 @@ class TestBatchEvents( ApplicationLayerTest ):
 		results = self.session.query( CourseResourceViews ).all()
 		assert_that( results, has_length( 0 ) )
 
+
+
 class TestAnalyticsSession( ApplicationLayerTest ):
 
 	layer = LegacyInstructedCourseApplicationTestLayer
@@ -285,3 +291,35 @@ class TestAnalyticsSession( ApplicationLayerTest ):
 			user = User.get_user( self.extra_environ_default_user )
 			current_session_id = get_current_session_id( user )
 			assert_that( current_session_id, none() )
+
+	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
+	def test_sessions( self ):
+		results = self.session.query( Sessions ).all()
+		assert_that( results, has_length( 0 ) )
+		results = self.session.query( CurrentSessions ).all()
+		assert_that( results, has_length( 0 ) )
+
+		session = AnalyticsSession( SessionStartTime=timestamp,
+									session_end_time=timestamp + 1 )
+		sessions = [ session, session, session ]
+
+		session_count = len( sessions )
+		io = AnalyticsSessions( sessions=sessions )
+		ext_obj = toExternalObject(io)
+
+		# Send our sessions over
+		session_url = '/dataserver2/analytics/sessions'
+		result = self.testapp.post_json( session_url,
+										ext_obj,
+										status=200 )
+
+		factory = internalization.find_factory_for( result.json_body )
+		sessions = factory()
+		internalization.update_from_external_object( sessions, result.json_body )
+
+		assert_that( sessions.sessions, has_length( session_count ))
+
+		results = self.session.query( Sessions ).all()
+		assert_that( results, has_length( 3 ) )
+		results = self.session.query( CurrentSessions ).all()
+		assert_that( results, has_length( 1 ) )
