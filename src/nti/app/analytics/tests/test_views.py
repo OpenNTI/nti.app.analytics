@@ -300,7 +300,7 @@ class TestAnalyticsSession( ApplicationLayerTest ):
 		assert_that( results, has_length( 0 ) )
 
 		session = AnalyticsSession( SessionStartTime=timestamp,
-									session_end_time=timestamp + 1 )
+									SessionEndTime=timestamp + 1 )
 		sessions = [ session, session, session ]
 
 		session_count = len( sessions )

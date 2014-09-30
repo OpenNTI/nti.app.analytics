@@ -28,6 +28,7 @@ from . import ANALYTICS
 from . import BATCH_EVENTS
 from . import ANALYTICS_TITLE
 from . import ANALYTICS_SESSION
+from . import ANALYTICS_SESSIONS
 
 from .interfaces import IAnalyticsWorkspace
 
@@ -61,7 +62,7 @@ class _AnalyticsWorkspace(Contained):
 	@property
 	def links(self):
 		result = []
-		link_names = [BATCH_EVENTS, ANALYTICS_SESSION]
+		link_names = [BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS]
 		for name in link_names:
 			link = Link(ANALYTICS, rel=name, elements=(name,))
 			link.__name__ = link.target
