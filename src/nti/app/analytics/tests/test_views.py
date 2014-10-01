@@ -369,6 +369,15 @@ class TestAnalyticsSession( _AbstractTestViews ):
 										ext_obj,
 										status=200 )
 
+		factory = internalization.find_factory_for( result.json_body )
+		sessions = factory()
+		internalization.update_from_external_object( sessions, result.json_body )
+
+		new_sessions = sessions.sessions
+		session_ids = [x.SessionID for x in new_sessions]
+		assert_that( session_ids, has_length( 1 ))
+		assert_that( session_ids[0], is_( session_id ))
+
 		db_session = self.session.query( Sessions ).filter( Sessions.session_id == session_id ).one()
 		assert_that( db_session, not_none() )
 		assert_that( db_session.end_time, not_none() )
