@@ -36,6 +36,8 @@ from hamcrest import has_length
 from hamcrest import is_
 from hamcrest import none
 from hamcrest import not_none
+from hamcrest import contains_inanyorder
+from hamcrest import less_than
 
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
@@ -45,6 +47,7 @@ from nti.analytics import identifier
 from nti.analytics.model import AnalyticsSessions
 from nti.analytics.model import AnalyticsSession
 
+from nti.analytics.sessions import _get_cookie_id
 from nti.analytics.sessions import get_current_session_id
 
 from nti.analytics.database.database import AnalyticsDB
@@ -115,7 +118,7 @@ resource_event = ResourceEvent(user=user,
 					resource_id=resource_id,
 					time_length=time_length)
 
-class TestBatchEvents( ApplicationLayerTest ):
+class _AbstractTestViews( ApplicationLayerTest ):
 
 	layer = LegacyInstructedCourseApplicationTestLayer
 
@@ -137,6 +140,8 @@ class TestBatchEvents( ApplicationLayerTest ):
 
 		for patch in self.patches:
 			patch.restore()
+
+class TestBatchEvents( _AbstractTestViews ):
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.resource_views._get_object' )
@@ -223,18 +228,7 @@ class TestBatchEvents( ApplicationLayerTest ):
 
 
 
-class TestAnalyticsSession( ApplicationLayerTest ):
-
-	layer = LegacyInstructedCourseApplicationTestLayer
-
-	def setUp(self):
-		self.db = AnalyticsDB( dburi='sqlite://', testmode=True )
-		component.getGlobalSiteManager().registerUtility( self.db, analytic_interfaces.IAnalyticsDB )
-		self.session = self.db.session
-
-	def tearDown(self):
-		component.getGlobalSiteManager().unregisterUtility( self.db, provided=analytic_interfaces.IAnalyticsDB )
-		self.session.close()
+class TestAnalyticsSession( _AbstractTestViews ):
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	def test_session( self ):
@@ -247,7 +241,10 @@ class TestAnalyticsSession( ApplicationLayerTest ):
 		session_url = '/dataserver2/analytics/analytics_session'
 		self.testapp.post_json( session_url,
 								None,
-								status=204 )
+								status=200 )
+
+		cookie_id = _get_cookie_id( self.testapp )
+		assert_that( cookie_id, is_( 1 ))
 
 		results = self.session.query( Sessions ).all()
 		assert_that( results, has_length( 1 ) )
@@ -257,22 +254,26 @@ class TestAnalyticsSession( ApplicationLayerTest ):
 		with mock_dataserver.mock_db_trans(self.ds):
 			user = User.get_user( self.extra_environ_default_user )
 			current_session_id = get_current_session_id( user )
-			assert_that( current_session_id, is_( 1 ))
+			assert_that( current_session_id, none() )
 
 		# New session #2
 		self.testapp.post_json( session_url,
 								None,
-								status=204 )
+								status=200 )
+
+		cookie_id = _get_cookie_id( self.testapp )
+		assert_that( cookie_id, is_( 2 ))
 
 		results = self.session.query( Sessions ).all()
 		assert_that( results, has_length( 2 ) )
+		# This last call implicitly ends the previous session.
 		results = self.session.query( CurrentSessions ).all()
 		assert_that( results, has_length( 1 ) )
 
 		with mock_dataserver.mock_db_trans(self.ds):
 			user = User.get_user( self.extra_environ_default_user )
 			current_session_id = get_current_session_id( user )
-			assert_that( current_session_id, is_( 2 ))
+			assert_that( current_session_id, none() )
 
 		# End our session
 		end_session_url = '/dataserver2/analytics/end_analytics_session'
@@ -280,6 +281,11 @@ class TestAnalyticsSession( ApplicationLayerTest ):
 		self.testapp.post_json( end_session_url,
 								{ 'session_id' : 2 },
 								status=204 )
+
+		# This cookie is set to expire.
+		# TODO How to test that?
+# 		cookie_id = _get_cookie_id( self.testapp )
+# 		assert_that( cookie_id, none() )
 
 		results = self.session.query( CurrentSessions ).all()
 		assert_that( results, has_length( 0 ) )
@@ -317,9 +323,16 @@ class TestAnalyticsSession( ApplicationLayerTest ):
 		sessions = factory()
 		internalization.update_from_external_object( sessions, result.json_body )
 
-		assert_that( sessions.sessions, has_length( session_count ))
+		new_sessions = sessions.sessions
+		session_ids = [x.SessionID for x in new_sessions]
+		assert_that( new_sessions, has_length( session_count ))
+		assert_that( session_ids, contains_inanyorder( 1, 2, 3 ))
 
 		results = self.session.query( Sessions ).all()
 		assert_that( results, has_length( 3 ) )
 		results = self.session.query( CurrentSessions ).all()
-		assert_that( results, has_length( 1 ) )
+		assert_that( results, has_length( 3 ) )
+
+		# This is header driven.
+		current_session_id = get_current_session_id( user )
+		assert_that( current_session_id, none() )

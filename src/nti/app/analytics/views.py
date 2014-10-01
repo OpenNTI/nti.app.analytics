@@ -28,8 +28,6 @@ from nti.dataserver import authorization as nauth
 
 from nti.externalization import internalization
 
-from nti.utils.maps import CaseInsensitiveDict
-
 from . import BATCH_EVENTS
 from . import ANALYTICS_SESSION
 from . import END_ANALYTICS_SESSION
@@ -79,10 +77,14 @@ class BatchEvents(	AbstractAuthenticatedView,
 class AnalyticsSession( AbstractAuthenticatedView ):
 
 	def __call__(self):
+		"""
+		Create a new analytics session and place it in a cookie.
+		"""
 		request = self.request
 		user = request.remote_user
-		handle_new_session(user, request)
-		return hexc.HTTPNoContent()
+		if user is not None:
+			handle_new_session(user, request)
+		return request.response
 
 @view_config(route_name='objects.generic.traversal',
 			 name=END_ANALYTICS_SESSION,
@@ -92,16 +94,12 @@ class AnalyticsSession( AbstractAuthenticatedView ):
 class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
 
 	def __call__(self):
-		vals = {}
-		if self.request.body:
-			values = self.readInput()
-			vals = CaseInsensitiveDict( values )
-
-		session_id = vals.get( 'session_id' )
-
+		"""
+		End the current analytics session.
+		"""
 		request = self.request
 		user = request.remote_user
-		handle_end_session( user, session_id )
+		handle_end_session( user, request )
 		return hexc.HTTPNoContent()
 
 @view_config(route_name='objects.generic.traversal',
