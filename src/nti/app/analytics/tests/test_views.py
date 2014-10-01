@@ -48,6 +48,7 @@ from nti.analytics.model import AnalyticsSession
 
 from nti.analytics.sessions import _get_cookie_id
 from nti.analytics.sessions import get_current_session_id
+from nti.analytics.sessions import ANALYTICS_SESSION_HEADER
 
 from nti.analytics.database.database import AnalyticsDB
 from nti.analytics.database import interfaces as analytic_interfaces
@@ -127,7 +128,6 @@ class _AbstractTestViews( ApplicationLayerTest ):
 		self.session = self.db.session
 
 		self.patches = [
-				patch_object( identifier.SessionId, 'get_id', TestIdentifier.get_id ),
 				patch_object( identifier._DSIdentifier, 'get_id', TestIdentifier.get_id ),
 				patch_object( identifier._NtiidIdentifier, 'get_id', TestIdentifier.get_id ),
 				patch_object( identifier._DSIdentifier, 'get_object', TestIdentifier.get_object ),
@@ -167,29 +167,40 @@ class TestBatchEvents( _AbstractTestViews ):
 
 		ext_obj = toExternalObject(io)
 
+		# Add a session header
+		session_id = 9999
+		headers = { ANALYTICS_SESSION_HEADER : str( session_id ) }
+
 		# Upload our events
 		batch_url = '/dataserver2/analytics/batch_events'
 		self.testapp.post_json( batch_url,
 								ext_obj,
+								headers=headers,
 								status=200 )
 
 		results = self.session.query( VideoEvents ).all()
 		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
 
 		results = self.session.query( CourseCatalogViews ).all()
 		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
 
 		results = self.session.query( CourseResourceViews ).all()
 		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
 
 		results = self.session.query( BlogsViewed ).all()
 		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
 
 		results = self.session.query( NotesViewed ).all()
 		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
 
 		results = self.session.query( TopicsViewed ).all()
 		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.resource_views._get_object' )
