@@ -107,14 +107,15 @@ class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequest
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
-class ResolveAnalyticsSessions(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
+class UpdateAnalyticsSessions(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
 
 	content_predicate = IAnalyticsSessions.providedBy
 
 	def __call__(self):
 		"""
 		Will accept one or many IAnalyticsSession objects, which we will synchronously
-		resolve the session_id for before returning.
+		resolve the session_id for before returning.  If there is already a session_id,
+		we'll update the state (end_time) of the given session object.
 		"""
 		request = self.request
 		user = request.remote_user

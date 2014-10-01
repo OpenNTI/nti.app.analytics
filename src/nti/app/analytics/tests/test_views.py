@@ -37,7 +37,6 @@ from hamcrest import is_
 from hamcrest import none
 from hamcrest import not_none
 from hamcrest import contains_inanyorder
-from hamcrest import less_than
 
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
@@ -283,7 +282,7 @@ class TestAnalyticsSession( _AbstractTestViews ):
 								status=204 )
 
 		# This cookie is set to expire.
-		# TODO How to test that?
+		# How to test that?
 # 		cookie_id = _get_cookie_id( self.testapp )
 # 		assert_that( cookie_id, none() )
 
@@ -305,8 +304,8 @@ class TestAnalyticsSession( _AbstractTestViews ):
 		results = self.session.query( CurrentSessions ).all()
 		assert_that( results, has_length( 0 ) )
 
-		session = AnalyticsSession( SessionStartTime=timestamp,
-									SessionEndTime=timestamp + 1 )
+		# No end time
+		session = AnalyticsSession( SessionStartTime=timestamp )
 		sessions = [ session, session, session ]
 
 		session_count = len( sessions )
@@ -336,3 +335,32 @@ class TestAnalyticsSession( _AbstractTestViews ):
 		# This is header driven.
 		current_session_id = get_current_session_id( user )
 		assert_that( current_session_id, none() )
+
+		# Now update with an endtime
+		session = new_sessions[0]
+		session_id = session.SessionID
+
+		db_session = self.session.query( Sessions ).filter( Sessions.session_id == session_id ).one()
+		assert_that( db_session, not_none() )
+		assert_that( db_session.end_time, none() )
+
+		db_session = self.session.query( CurrentSessions ).filter( CurrentSessions.session_id == session_id ).one()
+		assert_that( db_session, not_none() )
+
+		end_time = timestamp + 1
+		session.SessionEndTime = end_time
+		sessions = [ session ]
+		io = AnalyticsSessions( sessions=sessions )
+		ext_obj = toExternalObject(io)
+
+		session_url = '/dataserver2/analytics/sessions'
+		result = self.testapp.post_json( session_url,
+										ext_obj,
+										status=200 )
+
+		db_session = self.session.query( Sessions ).filter( Sessions.session_id == session_id ).one()
+		assert_that( db_session, not_none() )
+		assert_that( db_session.end_time, not_none() )
+
+		db_session = self.session.query( CurrentSessions ).filter( CurrentSessions.session_id == session_id ).first()
+		assert_that( db_session, none() )
