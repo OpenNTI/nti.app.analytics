@@ -18,7 +18,7 @@ from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtils
 
 from nti.analytics.sessions import handle_new_session
 from nti.analytics.sessions import handle_end_session
-from nti.analytics.sessions import handle_sessions
+from nti.analytics.sessions import update_session
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.interfaces import IBatchResourceEvents
@@ -128,5 +128,14 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView, ModeledContentUploadReq
 		ip_addr = getattr( request, 'remote_addr' , None )
 		user_agent = getattr( request, 'user_agent', None )
 
-		handle_sessions( sessions.sessions, user, user_agent=user_agent, ip_addr=ip_addr )
-		return sessions
+		results = []
+		for session in sessions.sessions:
+			try:
+				result = update_session( session, user, user_agent=user_agent, ip_addr=ip_addr )
+				results.append( result )
+			except ValueError as e:
+				# Append invalid session information.  We still return a 200 though.
+				val = dict()
+				val['Error'] = e.message
+				results.append( val )
+		return results

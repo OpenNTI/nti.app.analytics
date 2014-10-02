@@ -37,6 +37,7 @@ from hamcrest import is_
 from hamcrest import none
 from hamcrest import not_none
 from hamcrest import contains_inanyorder
+from hamcrest import has_key
 
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
@@ -117,6 +118,12 @@ resource_event = ResourceEvent(user=user,
 					context_path=context_path,
 					resource_id=resource_id,
 					time_length=time_length)
+
+def _internalize( ext ):
+	factory = internalization.find_factory_for( ext )
+	_object = factory()
+	internalization.update_from_external_object( _object, ext )
+	return _object
 
 class _AbstractTestViews( ApplicationLayerTest ):
 
@@ -329,11 +336,7 @@ class TestAnalyticsSession( _AbstractTestViews ):
 										ext_obj,
 										status=200 )
 
-		factory = internalization.find_factory_for( result.json_body )
-		sessions = factory()
-		internalization.update_from_external_object( sessions, result.json_body )
-
-		new_sessions = sessions.sessions
+		new_sessions = [ _internalize( x ) for x in result.json_body ]
 		session_ids = [x.SessionID for x in new_sessions]
 		assert_that( new_sessions, has_length( session_count ))
 		assert_that( session_ids, contains_inanyorder( 1, 2, 3 ))
@@ -369,11 +372,7 @@ class TestAnalyticsSession( _AbstractTestViews ):
 										ext_obj,
 										status=200 )
 
-		factory = internalization.find_factory_for( result.json_body )
-		sessions = factory()
-		internalization.update_from_external_object( sessions, result.json_body )
-
-		new_sessions = sessions.sessions
+		new_sessions = [ _internalize( x ) for x in result.json_body ]
 		session_ids = [x.SessionID for x in new_sessions]
 		assert_that( session_ids, has_length( 1 ))
 		assert_that( session_ids[0], is_( session_id ))
@@ -384,3 +383,35 @@ class TestAnalyticsSession( _AbstractTestViews ):
 
 		db_session = self.session.query( CurrentSessions ).filter( CurrentSessions.session_id == session_id ).first()
 		assert_that( db_session, none() )
+
+	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
+	def test_update_session_with_invalid( self ):
+		end_time = timestamp + 1
+
+		new_session = AnalyticsSession( SessionStartTime=timestamp )
+		session_with_made_up_id = AnalyticsSession(
+							SessionID=99999, SessionStartTime=timestamp, SessionEndTime=end_time )
+		sessions = [ new_session, session_with_made_up_id ]
+
+		session_count = len( sessions )
+		io = AnalyticsSessions( sessions=sessions )
+		ext_obj = toExternalObject(io)
+
+		# Send our sessions over
+		session_url = '/dataserver2/analytics/sessions'
+		result = self.testapp.post_json( session_url,
+										ext_obj,
+										status=200 )
+
+		results = result.json_body
+		assert_that( results, has_length( session_count ))
+
+		# First session is valid
+		valid_session = _internalize( results[0] )
+		assert_that( valid_session, not_none() )
+		assert_that( valid_session.SessionID, is_( 1 ))
+
+		# Next is an error
+		key = 'Error'
+		assert_that( results[1], has_key( key ))
+
