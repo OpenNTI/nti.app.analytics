@@ -83,41 +83,41 @@ topic_id='with_parent'
 blog_event = BlogViewEvent(user=user,
 				timestamp=timestamp,
 				blog_id=blog_id,
-				time_length=time_length)
+				Duration=time_length)
 
 note_event = NoteViewEvent(user=user,
 				timestamp=timestamp,
-				course=course,
+				RootContextID=course,
 				note_id=note_id,
-				time_length=time_length)
+				Duration=time_length)
 
 topic_event = TopicViewEvent(user=user,
 				timestamp=timestamp,
-				course=course,
+				RootContextID=course,
 				topic_id=topic_id,
-				time_length=time_length)
+				Duration=time_length)
 
 course_catalog_event = CourseCatalogViewEvent(user=user,
 				timestamp=timestamp,
-				course=course,
-				time_length=time_length)
+				RootContextID=course,
+				Duration=time_length)
 
 video_event = SkipVideoEvent(user=user,
 				timestamp=timestamp,
-				course=course,
+				RootContextID=course,
 				context_path=context_path,
 				resource_id=resource_id,
-				time_length=time_length,
+				Duration=time_length,
 				video_start_time=video_start_time,
 				video_end_time=video_end_time,
 				with_transcript=with_transcript)
 
 resource_event = ResourceEvent(user=user,
 					timestamp=timestamp,
-					course=course,
+					RootContextID=course,
 					context_path=context_path,
 					resource_id=resource_id,
-					time_length=time_length)
+					Duration=time_length)
 
 def _internalize( ext ):
 	factory = internalization.find_factory_for( ext )
@@ -221,7 +221,7 @@ class TestBatchEvents( _AbstractTestViews ):
 		mock_course.has_attr( intid=999 )
 
 		# This event is now malformed
-		resource_event.course = None
+		resource_event.RootContextID = None
 
 		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event ] )
 

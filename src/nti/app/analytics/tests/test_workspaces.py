@@ -38,6 +38,7 @@ class TestWorkspaces(ApplicationLayerTest):
 
 		ext_object = toExternalObject( service )
 		__traceback_info__ = ext_object
+
 		assert_that( ext_object['Items'], has_item(
 											has_entries( 'Title', ANALYTICS_TITLE,
 														'Links', has_item(
