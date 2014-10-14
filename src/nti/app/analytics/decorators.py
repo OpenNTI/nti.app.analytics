@@ -47,6 +47,8 @@ class _CourseOutlineAssignmentProgressNodeDecorator(AbstractAuthenticatedRequest
 			return
 
 		catalog = ICourseAssignmentCatalog( course )
+		# TODO Do we want to filter out unavailable assignments?
+		# Leaning towards no.
 		uber_filter = get_course_assignment_predicate_for_user( user, course )
 
 		content_ntiid_to_assignments = dict()
