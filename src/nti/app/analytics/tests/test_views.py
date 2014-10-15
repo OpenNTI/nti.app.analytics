@@ -209,6 +209,37 @@ class TestBatchEvents( _AbstractTestViews ):
 		assert_that( results, has_length( 1 ) )
 		assert_that( results[0].session_id, is_( session_id ))
 
+		# We should be able to send the same events without error or duplicates
+		# in database.
+		self.testapp.post_json( batch_url,
+								ext_obj,
+								headers=headers,
+								status=200 )
+
+		results = self.session.query( VideoEvents ).all()
+		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
+
+		results = self.session.query( CourseCatalogViews ).all()
+		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
+
+		results = self.session.query( CourseResourceViews ).all()
+		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
+
+		results = self.session.query( BlogsViewed ).all()
+		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
+
+		results = self.session.query( NotesViewed ).all()
+		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
+
+		results = self.session.query( TopicsViewed ).all()
+		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
+
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.resource_views._get_object' )
 	@fudge.patch( 'nti.analytics.resource_views._get_course' )
