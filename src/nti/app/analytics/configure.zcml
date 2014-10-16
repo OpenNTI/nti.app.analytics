@@ -17,11 +17,15 @@
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
 	<!-- decorators -->
+<!--
+JZ Disable for now to test performance.
 	<subscriber factory=".decorators._CourseOutlineAssignmentProgressNodeDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
 				for="nti.contenttypes.courses.interfaces.ICourseOutlineContentNode
 					 pyramid.interfaces.IRequest"  />
-					 
+-->
+
+
 	<!-- Workspaces -->
 	<!-- Attach to user-service workspaces -->
 	<subscriber factory=".workspaces.AnalyticsWorkspace"
