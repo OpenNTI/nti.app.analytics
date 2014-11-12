@@ -64,7 +64,7 @@ from nti.analytics.database.sessions import CurrentSessions
 
 from nti.analytics.tests import TestIdentifier
 
-from . import LegacyInstructedCourseApplicationTestLayer
+from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
 
 timestamp = time.mktime( datetime.utcnow().timetuple() )
 user = 'sjohnson@nextthought.com'
@@ -169,6 +169,10 @@ class TestBatchEvents( _AbstractTestViews ):
 		mock_get_forum.is_callable().returns( 3 )
 		mock_get_topic.is_callable().returns( 4 )
 
+		# Event specified session id
+		course_catalog_session_id = 11111
+		course_catalog_event.SessionID = course_catalog_session_id
+
 		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event,
 											blog_event, note_event, topic_event ] )
 
@@ -191,7 +195,7 @@ class TestBatchEvents( _AbstractTestViews ):
 
 		results = self.session.query( CourseCatalogViews ).all()
 		assert_that( results, has_length( 1 ) )
-		assert_that( results[0].session_id, is_( session_id ))
+		assert_that( results[0].session_id, is_( course_catalog_session_id ))
 
 		results = self.session.query( CourseResourceViews ).all()
 		assert_that( results, has_length( 1 ) )
@@ -222,7 +226,7 @@ class TestBatchEvents( _AbstractTestViews ):
 
 		results = self.session.query( CourseCatalogViews ).all()
 		assert_that( results, has_length( 1 ) )
-		assert_that( results[0].session_id, is_( session_id ))
+		assert_that( results[0].session_id, is_( course_catalog_session_id ))
 
 		results = self.session.query( CourseResourceViews ).all()
 		assert_that( results, has_length( 1 ) )
