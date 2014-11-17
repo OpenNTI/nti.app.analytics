@@ -16,15 +16,18 @@
 			 factory=".admin_views.AnalyticsPathAdapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
-	<!-- decorators -->
-<!--
-JZ Disable for now to test performance.
-	<subscriber factory=".decorators._CourseOutlineAssignmentProgressNodeDecorator"
+	<!-- Progress decorators -->
+<!-- Disable for now
+	<subscriber factory=".decorators._AssignmentProgressNodeDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
-				for="nti.contenttypes.courses.interfaces.ICourseOutlineContentNode
+				for="nti.assessment.interfaces.IQAssignment
+					 pyramid.interfaces.IRequest"  />
+
+	<subscriber factory=".decorators._AssignmentProgressNodeDecorator"
+				provides="nti.externalization.interfaces.IExternalObjectDecorator"
+				for="nti.assessment.interfaces.IQuestionSet
 					 pyramid.interfaces.IRequest"  />
 -->
-
 
 	<!-- Workspaces -->
 	<!-- Attach to user-service workspaces -->
