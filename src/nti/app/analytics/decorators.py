@@ -28,13 +28,11 @@ from nti.externalization.interfaces import IExternalObjectDecorator
 from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.interfaces import IExternalMappingDecorator
 
+from nti.externalization.externalization import to_external_object
+
 from nti.analytics.interfaces import IProgress
 
 LINKS = StandardExternalFields.LINKS
-
-PROGRESS_NAME = 'AbsoluteProgress'
-PROGRESS_MAX_NAME = 'MaxProgressPossible'
-HAS_PROGRESS = 'HasProgress'
 
 @component.adapter(IQAssignment)
 @component.adapter(IQuestionSet)
@@ -52,9 +50,7 @@ class _AssignmentProgressNodeDecorator(AbstractAuthenticatedRequestAwareDecorato
 		progress = component.queryMultiAdapter( (user, context), IProgress )
 
 		if progress:
-			result[PROGRESS_NAME] = progress.AbsoluteProgress
-			result[PROGRESS_MAX_NAME] = progress.MaxProgressPossible
-			result[HAS_PROGRESS] = progress.HasProgress
+			result['Progress'] = to_external_object( progress )
 
 @component.adapter(ICourseOutlineContentNode)
 @interface.implementer(IExternalMappingDecorator)
