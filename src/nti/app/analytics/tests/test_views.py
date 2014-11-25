@@ -14,6 +14,8 @@ from fudge import patch_object
 import time
 from datetime import datetime
 
+from webob.datetime_utils import serialize_date
+
 from zope import component
 
 from nti.dataserver.tests import mock_dataserver
@@ -486,6 +488,17 @@ class TestProgressView( _AbstractTestViews ):
 									course_id, context_path,
 									resource_val, time_length )
 
+	def _get_progress(self, status=200, response=None):
+		progress_url = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/Outline/2/1/Progress'
+		if response and response.last_modified:
+			response = self.testapp.get( progress_url,
+										headers={'If-Modified-Since':
+												serialize_date( response.last_modified )},
+										status=status )
+		else:
+			response = self.testapp.get( progress_url, status=status )
+		return response
+
 	@time_monotonically_increases
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	def test_progress( self ):
@@ -494,10 +507,9 @@ class TestProgressView( _AbstractTestViews ):
 		resource1 = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:10_LESSON'
 		#tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_10.01
 
-		progress_url = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/Outline/2/1/Progress'
-		result = self.testapp.get( progress_url, status=200 )
+		response = self._get_progress()
 
-		result = result.json_body['Items']
+		result = response.json_body['Items']
 		assert_that( result, has_length( 0 ))
 
 		user_id = 'sjohnson@nextthought.com'
@@ -505,9 +517,9 @@ class TestProgressView( _AbstractTestViews ):
 		# Now a video event
 		self._create_video_event( user_id=user_id, resource_val=video1 )
 
-		result = self.testapp.get( progress_url, status=200 )
+		response = self._get_progress( response=response )
 
-		result = result.json_body['Items']
+		result = response.json_body['Items']
 		assert_that( result, has_length( 1 ))
 		assert_that( result, contains( video1 ))
 
@@ -519,9 +531,9 @@ class TestProgressView( _AbstractTestViews ):
 		# Same video event
 		max_progress = 120
 		self._create_video_event( user_id=user_id, resource_val=video1, max_time_length=max_progress )
-		result = self.testapp.get( progress_url, status=200 )
+		response = self._get_progress( response=response )
 
-		result = result.json_body['Items']
+		result = response.json_body['Items']
 		assert_that( result, has_length( 1 ))
 		assert_that( result, has_key( video1 ))
 
@@ -532,9 +544,9 @@ class TestProgressView( _AbstractTestViews ):
 
 		# New video doesn't affect old video
 		self._create_video_event( user_id=user_id, resource_val=video2 )
-		result = self.testapp.get( progress_url, status=200 )
+		response = self._get_progress( response=response )
 
-		result = result.json_body['Items']
+		result = response.json_body['Items']
 		assert_that( result, has_length( 2 ))
 		assert_that( result, contains_inanyorder( video1, video2 ))
 
@@ -545,9 +557,9 @@ class TestProgressView( _AbstractTestViews ):
 
 		# Now a resource view
 		self._create_resource_view( user_id=user_id, resource_val=resource1 )
-		result = self.testapp.get( progress_url, status=200 )
+		response = self._get_progress( response=response )
 
-		result = result.json_body['Items']
+		result = response.json_body['Items']
 		assert_that( result, has_length( 3 ))
 		assert_that( result, contains_inanyorder( video1, video2, resource1 ))
 
@@ -555,4 +567,7 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( resource_progress, has_entry('MaxPossibleProgress', 1 ) )
 		assert_that( resource_progress, has_entry('AbsoluteProgress', 1 ) )
 		assert_that( resource_progress, has_entry('HasProgress', True ) )
+
+		# Now a 304
+		self._get_progress( response=response, status=304 )
 

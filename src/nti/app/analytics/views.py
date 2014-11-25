@@ -173,8 +173,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 
 	def __call__(self):
 		user = self.request.remote_user
-		# TODO ETAG
-		# TODO If_modified_since
+		# TODO Verify how expensive this is.
 		# - I do not think we can do this efficiently (etag or lastMod) without
 		# gathering all of the data we need. For this reason, maybe we need to send
 		# progress updates over a socket.
@@ -182,18 +181,11 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		# TODO Do we update assignments/self-assess underneath this node?
 		# - If not, we need another view to do so on-demand.
 
-		# Maybe we just check lastMod time since we'll have a diverse
-		# set of distinct results.  That may change if we're able to do this by ntiid.
 		# Do we want to check caching at the lesson level (harder to update, easier perhaps
 		# with caching, also results in more efficient calls) or at the individual ntiid
-		# level (easier to update, less efficient calls).  Knowing this, do we mark
-		# the last modified (by user, by ntiid) dirty everytime we see the ntiid on certain
-		# events (if_modified_since). Where do we store our last mod time (annotation)?
+		# level (easier to update, less efficient calls).
 
-		# Could cache this in resolvers.py ( content_package -> ntiids )
-		# We could adapt outlinecontentnode, if we allow nested progress indicators, which
-		# we may want to do.
-		# Would it be useful to just let the webapp send us ntiids to check progress on?
+		# Could cache this in resolvers.py ( content_package -> ntiids ), if expensive.
 		ntiid = self.context.ContentNTIID
 		content_unit = ntiids.find_object_with_ntiid( ntiid )
 
@@ -201,13 +193,21 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		recur_children_ntiid( content_unit, node_ntiids )
 		result = LocatedExternalDict()
 		result[StandardExternalFields.ITEMS] = item_dict = {}
-		# Now check each of these individually?
-		# If we had some object, we could pass the ntiid in
-		# The analytics level would know how to turn that into all its children ntiid.
-		# It would also know if the last modified had changed for a user.
+
+		node_last_modified = None
+
 		for node_ntiid in node_ntiids:
 			# Can we distinguish between video and other?
 			node_progress = get_progress_for_ntiid( user, node_ntiid )
+
 			if node_progress:
 				item_dict[node_ntiid] = to_external_object( node_progress )
+
+				if 		not node_last_modified \
+					or 	( 	node_progress.last_modified and \
+							node_progress.last_modified > node_last_modified ):
+					node_last_modified = node_progress.last_modified
+
+		# Setting this will enable the rendered to return a 304, if needed.
+		self.request.response.last_modified = node_last_modified
 		return result
