@@ -17,17 +17,24 @@
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
 	<!-- Progress decorators -->
-<!-- Disable for now
-	<subscriber factory=".decorators._AssignmentProgressNodeDecorator"
-				provides="nti.externalization.interfaces.IExternalObjectDecorator"
-				for="nti.assessment.interfaces.IQAssignment
-					 pyramid.interfaces.IRequest"  />
+	<!-- Only in test mode for now -->
+	<configure zcml:condition="have testmode">
+		<subscriber factory=".decorators._AssignmentProgressNodeDecorator"
+					provides="nti.externalization.interfaces.IExternalObjectDecorator"
+					for="nti.assessment.interfaces.IQAssignment
+						 pyramid.interfaces.IRequest"  />
 
-	<subscriber factory=".decorators._AssignmentProgressNodeDecorator"
-				provides="nti.externalization.interfaces.IExternalObjectDecorator"
-				for="nti.assessment.interfaces.IQuestionSet
-					 pyramid.interfaces.IRequest"  />
--->
+		<subscriber factory=".decorators._AssignmentProgressNodeDecorator"
+					provides="nti.externalization.interfaces.IExternalObjectDecorator"
+					for="nti.assessment.interfaces.IQuestionSet
+						 pyramid.interfaces.IRequest"  />
+
+		<subscriber factory=".decorators._CourseOutlineNodeProgressLinkDecorator"
+					provides="nti.externalization.interfaces.IExternalObjectDecorator"
+					for="nti.contenttypes.courses.interfaces.ICourseOutlineContentNode
+						 pyramid.interfaces.IRequest"  />
+
+	</configure>
 
 	<!-- Workspaces -->
 	<!-- Attach to user-service workspaces -->

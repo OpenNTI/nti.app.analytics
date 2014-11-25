@@ -11,21 +11,33 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
-from zope import component
-from nti.app.testing.application_webtest import ApplicationTestLayer
+import unittest
 import os
 import os.path
-
+import shutil
+import tempfile
 import ZODB
+
+import zope.testing.cleanup
+from zope import component
+from zope.component.interfaces import IComponents
+
+from nti.dataserver import users
 from nti.dataserver.tests.mock_dataserver import WithMockDS
 from nti.dataserver.tests.mock_dataserver import mock_db_trans
+from nti.dataserver.tests.mock_dataserver import DSInjectorMixin
 
 from nti.analytics.database.tests import MockParent
 
-from nti.dataserver import users
-from zope.component.interfaces import IComponents
 from nti.contenttypes.courses.interfaces import ICourseCatalog
 from nti.contentlibrary.interfaces import IContentPackageLibrary
+
+from nti.testing.layers import find_test
+from nti.testing.layers import GCLayerMixin
+from nti.testing.layers import ZopeComponentLayer
+from nti.testing.layers import ConfiguringLayerMixin
+
+from nti.app.testing.application_webtest import ApplicationTestLayer
 
 def publish_ou_course_entries():
 	lib = component.getUtility(IContentPackageLibrary)
@@ -175,3 +187,34 @@ class PersistentInstructedCourseApplicationTestLayer(ApplicationTestLayer):
 # Export the new-style stuff as default
 InstructedCourseApplicationTestLayer = PersistentInstructedCourseApplicationTestLayer
 
+class SharedConfiguringTestLayer(ZopeComponentLayer,
+                                 GCLayerMixin,
+                                 ConfiguringLayerMixin,
+                                 DSInjectorMixin):
+
+	set_up_packages = ('nti.dataserver', 'nti.analytics', 'nti.app.analytics')
+
+	@classmethod
+	def setUp(cls):
+		cls.setUpPackages()
+		cls.old_data_dir = os.getenv('DATASERVER_DATA_DIR')
+		cls.new_data_dir = tempfile.mkdtemp(dir="/tmp")
+		os.environ['DATASERVER_DATA_DIR'] = cls.new_data_dir
+
+	@classmethod
+	def tearDown(cls):
+		cls.tearDownPackages()
+		zope.testing.cleanup.cleanUp()
+
+	@classmethod
+	def testSetUp(cls, test=None):
+		cls.setUpTestDS(test)
+		shutil.rmtree(cls.new_data_dir, True)
+		os.environ['DATASERVER_DATA_DIR'] = cls.old_data_dir or '/tmp'
+
+	@classmethod
+	def testTearDown(cls):
+		pass
+
+class NTIAnalyticsTestCase(unittest.TestCase):
+	layer = SharedConfiguringTestLayer

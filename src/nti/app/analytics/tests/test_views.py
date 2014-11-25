@@ -20,14 +20,6 @@ from nti.dataserver.tests import mock_dataserver
 
 from nti.dataserver.users import User
 
-from nti.analytics.model import CourseCatalogViewEvent
-from nti.analytics.model import ResourceEvent
-from nti.analytics.model import BlogViewEvent
-from nti.analytics.model import NoteViewEvent
-from nti.analytics.model import TopicViewEvent
-from nti.analytics.model import SkipVideoEvent
-from nti.analytics.model import BatchResourceEvents
-
 from nti.externalization import internalization
 from nti.externalization.externalization import toExternalObject
 
@@ -37,13 +29,22 @@ from hamcrest import is_
 from hamcrest import none
 from hamcrest import not_none
 from hamcrest import contains_inanyorder
+from hamcrest import contains
 from hamcrest import has_key
+from hamcrest import has_entry
 
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
 from nti.analytics import identifier
 
+from nti.analytics.model import CourseCatalogViewEvent
+from nti.analytics.model import ResourceEvent
+from nti.analytics.model import BlogViewEvent
+from nti.analytics.model import NoteViewEvent
+from nti.analytics.model import TopicViewEvent
+from nti.analytics.model import SkipVideoEvent
+from nti.analytics.model import BatchResourceEvents
 from nti.analytics.model import AnalyticsSessions
 from nti.analytics.model import AnalyticsSession
 
@@ -59,12 +60,16 @@ from nti.analytics.database.resource_tags import NotesViewed
 from nti.analytics.database.enrollments import CourseCatalogViews
 from nti.analytics.database.resource_views import VideoEvents
 from nti.analytics.database.resource_views import CourseResourceViews
+from nti.analytics.database.resource_views import create_course_resource_view
+from nti.analytics.database.resource_views import create_video_event
 from nti.analytics.database.sessions import Sessions
 from nti.analytics.database.sessions import CurrentSessions
 
 from nti.analytics.tests import TestIdentifier
 
 from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
+
+from nti.testing.time import time_monotonically_increases
 
 timestamp = time.mktime( datetime.utcnow().timetuple() )
 user = 'sjohnson@nextthought.com'
@@ -449,4 +454,105 @@ class TestAnalyticsSession( _AbstractTestViews ):
 		# Next is an error
 		key = 'Error'
 		assert_that( results[1], has_key( key ))
+
+class TestProgressView( _AbstractTestViews ):
+
+	def _create_video_event(self, user_id, resource_val, max_time_length=None):
+		test_session_id = 1
+		time_length = 30
+		video_event_type = 'WATCH'
+		video_start_time = 30
+		video_end_time = 60
+		with_transcript = True
+		event_time = time.time()
+		course_id = 1
+		context_path = ['Blah', 'Bleh' ]
+		create_video_event( user_id,
+							test_session_id, event_time,
+							course_id, context_path,
+							resource_val, time_length, max_time_length,
+							video_event_type, video_start_time,
+							video_end_time,  with_transcript )
+
+
+	def _create_resource_view(self, user_id, resource_val):
+		test_session_id = 1
+		time_length = 30
+		event_time = time.time()
+		course_id = 1
+		context_path = ['Blah', 'Bleh' ]
+		create_course_resource_view( user_id,
+									test_session_id, event_time,
+									course_id, context_path,
+									resource_val, time_length )
+
+	@time_monotonically_increases
+	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
+	def test_progress( self ):
+		video1 = 'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.03'
+		video2 = 'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.02'
+		resource1 = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:10_LESSON'
+		#tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_10.01
+
+		progress_url = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/Outline/2/1/Progress'
+		result = self.testapp.get( progress_url, status=200 )
+
+		result = result.json_body['Items']
+		assert_that( result, has_length( 0 ))
+
+		user_id = 'sjohnson@nextthought.com'
+
+		# Now a video event
+		self._create_video_event( user_id=user_id, resource_val=video1 )
+
+		result = self.testapp.get( progress_url, status=200 )
+
+		result = result.json_body['Items']
+		assert_that( result, has_length( 1 ))
+		assert_that( result, contains( video1 ))
+
+		video_progress = result.get( video1 )
+		assert_that( video_progress, has_entry('MaxPossibleProgress', None ) )
+		assert_that( video_progress, has_entry('AbsoluteProgress', 30 ) )
+		assert_that( video_progress, has_entry('HasProgress', True ) )
+
+		# Same video event
+		max_progress = 120
+		self._create_video_event( user_id=user_id, resource_val=video1, max_time_length=max_progress )
+		result = self.testapp.get( progress_url, status=200 )
+
+		result = result.json_body['Items']
+		assert_that( result, has_length( 1 ))
+		assert_that( result, has_key( video1 ))
+
+		video_progress = result.get( video1 )
+		assert_that( video_progress, has_entry('MaxPossibleProgress', max_progress ) )
+		assert_that( video_progress, has_entry('AbsoluteProgress', 60 ) )
+		assert_that( video_progress, has_entry('HasProgress', True ) )
+
+		# New video doesn't affect old video
+		self._create_video_event( user_id=user_id, resource_val=video2 )
+		result = self.testapp.get( progress_url, status=200 )
+
+		result = result.json_body['Items']
+		assert_that( result, has_length( 2 ))
+		assert_that( result, contains_inanyorder( video1, video2 ))
+
+		video_progress = result.get( video1 )
+		assert_that( video_progress, has_entry('MaxPossibleProgress', max_progress ) )
+		assert_that( video_progress, has_entry('AbsoluteProgress', 60 ) )
+		assert_that( video_progress, has_entry('HasProgress', True ) )
+
+		# Now a resource view
+		self._create_resource_view( user_id=user_id, resource_val=resource1 )
+		result = self.testapp.get( progress_url, status=200 )
+
+		result = result.json_body['Items']
+		assert_that( result, has_length( 3 ))
+		assert_that( result, contains_inanyorder( video1, video2, resource1 ))
+
+		resource_progress = result.get( resource1 )
+		assert_that( resource_progress, has_entry('MaxPossibleProgress', 1 ) )
+		assert_that( resource_progress, has_entry('AbsoluteProgress', 1 ) )
+		assert_that( resource_progress, has_entry('HasProgress', True ) )
 
