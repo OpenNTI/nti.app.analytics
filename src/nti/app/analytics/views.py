@@ -230,8 +230,6 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 
 		# TODO Summarize progress for node
 
-		# TODO If last_mod is None, should we grab the current time? Could lead to
-		# race conditions if analytics processor is delayed.
 		# Setting this will enable the renderer to return a 304, if needed.
 		self.request.response.last_modified = node_last_modified
 		return result
