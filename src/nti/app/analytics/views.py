@@ -16,7 +16,6 @@ from zope import component
 from pyramid.view import view_config
 from pyramid import httpexceptions as hexc
 
-from nti.app.assessment.interfaces import ICourseAssignmentCatalog
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
@@ -27,6 +26,7 @@ from nti.analytics.sessions import update_session
 from nti.analytics.resolvers import recur_children_ntiid_for_unit
 from nti.analytics.resolvers import get_course_by_container_id
 from nti.analytics.resolvers import get_self_assessments_for_course
+from nti.analytics.resolvers import get_assignments_for_course
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
@@ -175,8 +175,8 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 
 	def __call__(self):
 		# - Locally, this is quick. ~1s (much less when cached) to get
-		# ntiids under node; ~.05s to get empty resource set.  Bumps up to ~.1s
-		# once the user starts accumulating events.  Assessments are fairly expensive at ~.4s.
+		# ntiids under node; ~.05s to get empty resource set.  Bumps up to ~.3s
+		# once the user starts accumulating events.
 		# If building the course ntiid cache (in analytics:resolvers.py), this call
 		# is extremely slow (~25s locally with 15 courses).  This is a one-time hit.
 
@@ -218,11 +218,11 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		else:
 			# Gathering all assignments/self-assessments for course.
 			# May be cheaper than finding just for our unit.
-			# Assignments are the expensive part here.
 			self_assessments = get_self_assessments_for_course( course )
-			assignment_catalog = ICourseAssignmentCatalog( course )
+			assignments = get_assignments_for_course( course )
 
-			for assessment_object in chain( assignment_catalog.iter_assignments(), self_assessments ):
+			for assessment_ntiid in chain( assignments, self_assessments ):
+				assessment_object = ntiids.find_object_with_ntiid( assessment_ntiid )
 				progress = component.queryMultiAdapter( (user, assessment_object), IProgress )
 				if progress:
 					item_dict[progress.progress_id] = to_external_object( progress )
