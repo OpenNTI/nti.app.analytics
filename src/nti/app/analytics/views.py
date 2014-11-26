@@ -8,11 +8,15 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
+from itertools import chain
+
 from zope.schema.interfaces import ValidationError
+from zope import component
 
 from pyramid.view import view_config
 from pyramid import httpexceptions as hexc
 
+from nti.app.assessment.interfaces import ICourseAssignmentCatalog
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
@@ -21,12 +25,15 @@ from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import update_session
 
 from nti.analytics.resolvers import recur_children_ntiid_for_unit
+from nti.analytics.resolvers import get_course_by_container_id
+from nti.analytics.resolvers import get_self_assessments_for_course
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
 
 from nti.analytics.interfaces import IBatchResourceEvents
 from nti.analytics.interfaces import IAnalyticsSessions
+from nti.analytics.interfaces import IProgress
 
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
@@ -160,50 +167,71 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView, ModeledContentUploadReq
 class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
 	"""
 	For the given content outline node, return the progress we have for the user
-	on each ntiid within the content node.
+	on each ntiid within the content node.  This will include self-assessments and
+	assignments for the course.  On return, the 'LastModified' header will be set, allowing
+	the client to specify the 'If-Modified-Since' header for future requests.  A 304 will be
+	returned if there is the results have not changed.
 	"""
 
 	def __call__(self):
+		# - Locally, this is quick. ~1s (much less when cached) to get
+		# ntiids under node; ~.05s to get empty resource set.  Bumps up to ~.1s
+		# once the user starts accumulating events.  Assessments are fairly expensive at ~.4s.
+		# If building the course ntiid cache (in analytics:resolvers.py), this call
+		# is extremely slow (~25s locally with 15 courses).  This is a one-time hit.
+
 		# TODO If these content nodes can be re-used in other courses, we should
 		# probably accept a course param to distinguish progress between courses.
 		user = self.getRemoteUser()
-		# - Locally, this is extremely quick. ~1s (much less when cached) to get
-		# ntiids under node; ~.05s to get empty resource set.  Bumps up to ~.1s
-		# once the user starts accumulating events.
 
-		# TODO Do we update assignments/self-assess underneath this node?
-		# - If not, we need another view to do so on-demand.
-		# - Or just place all assignment progress?
-		# - We would still need course (which we can access from resolvers.py)
-
-		# Do we want to check caching at the lesson level (harder to update, easier perhaps
-		# with caching, also results in more efficient calls) or at the individual ntiid
-		# level (easier to update, less efficient calls).
-
-		# Could cache this in resolvers.py ( content_package -> ntiids ), if expensive.
 		ntiid = self.context.ContentNTIID
 		content_unit = ntiids.find_object_with_ntiid( ntiid )
-
 		node_ntiids = recur_children_ntiid_for_unit( content_unit )
 
 		result = LocatedExternalDict()
 		result[StandardExternalFields.ITEMS] = item_dict = {}
 
 		node_last_modified = None
+		def _get_last_mod( progress, max_last_mod ):
+			result = max_last_mod
 
+			if 		not max_last_mod \
+				or 	( 	progress.last_modified and \
+						progress.last_modified > max_last_mod ):
+				result = progress.last_modified
+			return result
+
+		# Get progress for resource/videos
 		for node_ntiid in node_ntiids:
 			# Can we distinguish between video and other?
 			node_progress = get_progress_for_ntiid( user, node_ntiid )
 
 			if node_progress:
 				item_dict[node_ntiid] = to_external_object( node_progress )
+				node_last_modified = _get_last_mod( node_progress, node_last_modified )
 
-				if 		not node_last_modified \
-					or 	( 	node_progress.last_modified and \
-							node_progress.last_modified > node_last_modified ):
-					node_last_modified = node_progress.last_modified
+		# Get progress for self-assessments and assignments
+		# Expensive and slow if we're building our cache.
+		course = get_course_by_container_id( ntiid )
+		if course is None:
+			logger.warn( 'No course found for ntiid; cannot return progress (%s)', ntiid )
+		else:
+			# Gathering all assignments/self-assessments for course.
+			# May be cheaper than finding just for our unit.
+			# Assignments are the expensive part here.
+			self_assessments = get_self_assessments_for_course( course )
+			assignment_catalog = ICourseAssignmentCatalog( course )
+
+			for assessment_object in chain( assignment_catalog.iter_assignments(), self_assessments ):
+				progress = component.queryMultiAdapter( (user, assessment_object), IProgress )
+				if progress:
+					item_dict[progress.progress_id] = to_external_object( progress )
+					node_last_modified = _get_last_mod( progress, node_last_modified )
+
 		# TODO Summarize progress for node
-		# TODO If last_mod is None, should we grab the current time?
+
+		# TODO If last_mod is None, should we grab the current time? Could lead to
+		# race conditions if analytics processor is delayed.
 		# Setting this will enable the renderer to return a 304, if needed.
 		self.request.response.last_modified = node_last_modified
 		return result
