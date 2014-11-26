@@ -61,7 +61,6 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
 	"""
 
 	def _do_decorate_external(self, context, result):
-		# TODO Should I specify etag and last mod here?
 		links = result.setdefault(LINKS, [])
 		link = Link( context, rel="Progress", elements=('Progress',) )
 		interface.alsoProvides(link, ILocation)

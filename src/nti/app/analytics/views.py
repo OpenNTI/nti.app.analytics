@@ -20,6 +20,8 @@ from nti.analytics.sessions import handle_new_session
 from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import update_session
 
+from nti.analytics.resolvers import recur_children_ntiid_for_unit
+
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
 
@@ -149,16 +151,6 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView, ModeledContentUploadReq
 				results.append( val )
 		return results
 
-# This node is a ContentPackage
-def recur_children_ntiid( node, accum ):
-	#Get our embedded ntiids and recursively fetch our children's ntiids
-	ntiid = node.ntiid
-	accum.update( node.embeddedContainerNTIIDs )
-	if ntiid:
-		accum.add( ntiid )
-	for n in node.children:
-		recur_children_ntiid( n, accum )
-
 @view_config(route_name='objects.generic.traversal',
 			 renderer='rest',
 			 context=ICourseOutlineContentNode,
@@ -172,14 +164,17 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 	"""
 
 	def __call__(self):
-		user = self.request.remote_user
-		# TODO Verify how expensive this is.
-		# - I do not think we can do this efficiently (etag or lastMod) without
-		# gathering all of the data we need. For this reason, maybe we need to send
-		# progress updates over a socket.
+		# TODO If these content nodes can be re-used in other courses, we should
+		# probably accept a course param to distinguish progress between courses.
+		user = self.getRemoteUser()
+		# - Locally, this is extremely quick. ~1s (much less when cached) to get
+		# ntiids under node; ~.05s to get empty resource set.  Bumps up to ~.1s
+		# once the user starts accumulating events.
 
 		# TODO Do we update assignments/self-assess underneath this node?
 		# - If not, we need another view to do so on-demand.
+		# - Or just place all assignment progress?
+		# - We would still need course (which we can access from resolvers.py)
 
 		# Do we want to check caching at the lesson level (harder to update, easier perhaps
 		# with caching, also results in more efficient calls) or at the individual ntiid
@@ -189,8 +184,8 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		ntiid = self.context.ContentNTIID
 		content_unit = ntiids.find_object_with_ntiid( ntiid )
 
-		node_ntiids = set()
-		recur_children_ntiid( content_unit, node_ntiids )
+		node_ntiids = recur_children_ntiid_for_unit( content_unit )
+
 		result = LocatedExternalDict()
 		result[StandardExternalFields.ITEMS] = item_dict = {}
 
@@ -207,7 +202,8 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 					or 	( 	node_progress.last_modified and \
 							node_progress.last_modified > node_last_modified ):
 					node_last_modified = node_progress.last_modified
-
-		# Setting this will enable the rendered to return a 304, if needed.
+		# TODO Summarize progress for node
+		# TODO If last_mod is None, should we grab the current time?
+		# Setting this will enable the renderer to return a 304, if needed.
 		self.request.response.last_modified = node_last_modified
 		return result
