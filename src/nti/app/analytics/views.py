@@ -212,10 +212,13 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 
 		# Get progress for self-assessments and assignments
 		# Expensive and slow if we're building our cache.
-		course = get_course_by_container_id( ntiid )
-		if course is None:
+		try:
+			course = get_course_by_container_id( ntiid )
+		except TypeError:
 			logger.warn( 'No course found for ntiid; cannot return progress (%s)', ntiid )
-		else:
+			course = None
+
+		if course is not None:
 			# Gathering all assignments/self-assessments for course.
 			# May be cheaper than finding just for our unit.
 			self_assessments = get_self_assessments_for_course( course )

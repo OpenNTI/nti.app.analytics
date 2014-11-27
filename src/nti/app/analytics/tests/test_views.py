@@ -459,7 +459,7 @@ class TestAnalyticsSession( _AbstractTestViews ):
 
 class TestProgressView( _AbstractTestViews ):
 
-	def _create_video_event(self, user_id, resource_val, max_time_length=None):
+	def _create_video_event(self, user, resource_val, max_time_length=None):
 		test_session_id = 1
 		time_length = 30
 		video_event_type = 'WATCH'
@@ -469,7 +469,7 @@ class TestProgressView( _AbstractTestViews ):
 		event_time = time.time()
 		course_id = 1
 		context_path = ['Blah', 'Bleh' ]
-		create_video_event( user_id,
+		create_video_event( user,
 							test_session_id, event_time,
 							course_id, context_path,
 							resource_val, time_length, max_time_length,
@@ -477,13 +477,13 @@ class TestProgressView( _AbstractTestViews ):
 							video_end_time,  with_transcript )
 
 
-	def _create_resource_view(self, user_id, resource_val):
+	def _create_resource_view(self, user, resource_val):
 		test_session_id = 1
 		time_length = 30
 		event_time = time.time()
 		course_id = 1
 		context_path = ['Blah', 'Bleh' ]
-		create_course_resource_view( user_id,
+		create_course_resource_view( user,
 									test_session_id, event_time,
 									course_id, context_path,
 									resource_val, time_length )
@@ -513,9 +513,12 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( result, has_length( 0 ))
 
 		user_id = 'sjohnson@nextthought.com'
+		with mock_dataserver.mock_db_trans(self.ds):
+			user = User.get_user( user_id )
 
 		# Now a video event
-		self._create_video_event( user_id=user_id, resource_val=video1 )
+		with mock_dataserver.mock_db_trans(self.ds):
+			self._create_video_event( user=user, resource_val=video1 )
 
 		response = self._get_progress( response=response )
 
@@ -530,7 +533,8 @@ class TestProgressView( _AbstractTestViews ):
 
 		# Same video event
 		max_progress = 120
-		self._create_video_event( user_id=user_id, resource_val=video1, max_time_length=max_progress )
+		with mock_dataserver.mock_db_trans(self.ds):
+			self._create_video_event( user=user, resource_val=video1, max_time_length=max_progress )
 		response = self._get_progress( response=response )
 
 		result = response.json_body['Items']
@@ -543,7 +547,8 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( video_progress, has_entry('HasProgress', True ) )
 
 		# New video doesn't affect old video
-		self._create_video_event( user_id=user_id, resource_val=video2 )
+		with mock_dataserver.mock_db_trans(self.ds):
+			self._create_video_event( user=user, resource_val=video2 )
 		response = self._get_progress( response=response )
 
 		result = response.json_body['Items']
@@ -556,7 +561,8 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( video_progress, has_entry('HasProgress', True ) )
 
 		# Now a resource view
-		self._create_resource_view( user_id=user_id, resource_val=resource1 )
+		with mock_dataserver.mock_db_trans(self.ds):
+			self._create_resource_view( user=user, resource_val=resource1 )
 		response = self._get_progress( response=response )
 
 		result = response.json_body['Items']
