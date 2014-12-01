@@ -18,17 +18,7 @@
 
 	<!-- Progress decorators -->
 	<!-- Only in test mode for now -->
-	<configure zcml:condition="have testmode">
-		<subscriber factory=".decorators._AssignmentProgressNodeDecorator"
-					provides="nti.externalization.interfaces.IExternalObjectDecorator"
-					for="nti.assessment.interfaces.IQAssignment
-						 pyramid.interfaces.IRequest"  />
-
-		<subscriber factory=".decorators._AssignmentProgressNodeDecorator"
-					provides="nti.externalization.interfaces.IExternalObjectDecorator"
-					for="nti.assessment.interfaces.IQuestionSet
-						 pyramid.interfaces.IRequest"  />
-
+	<configure zcml:condition="have devmode">
 		<subscriber factory=".decorators._CourseOutlineNodeProgressLinkDecorator"
 					provides="nti.externalization.interfaces.IExternalObjectDecorator"
 					for="nti.contenttypes.courses.interfaces.ICourseOutlineContentNode

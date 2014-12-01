@@ -18,13 +18,6 @@ from webob.datetime_utils import serialize_date
 
 from zope import component
 
-from nti.dataserver.tests import mock_dataserver
-
-from nti.dataserver.users import User
-
-from nti.externalization import internalization
-from nti.externalization.externalization import toExternalObject
-
 from hamcrest import assert_that
 from hamcrest import has_length
 from hamcrest import is_
@@ -35,10 +28,21 @@ from hamcrest import contains
 from hamcrest import has_key
 from hamcrest import has_entry
 
+from nti.dataserver.tests import mock_dataserver
+
+from nti.dataserver.users import User
+
+from nti.externalization import internalization
+from nti.externalization.externalization import toExternalObject
+
+from nti.assessment.assignment import QAssignment
+
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
 from nti.analytics import identifier
+
+from nti.analytics.common import timestamp_type
 
 from nti.analytics.model import CourseCatalogViewEvent
 from nti.analytics.model import ResourceEvent
@@ -56,20 +60,24 @@ from nti.analytics.sessions import ANALYTICS_SESSION_HEADER
 
 from nti.analytics.database.database import AnalyticsDB
 from nti.analytics.database import interfaces as analytic_interfaces
+from nti.analytics.database.assessments import AssignmentsTaken
 from nti.analytics.database.boards import TopicsViewed
 from nti.analytics.database.blogs import BlogsViewed
-from nti.analytics.database.resource_tags import NotesViewed
 from nti.analytics.database.enrollments import CourseCatalogViews
+from nti.analytics.database.resource_tags import NotesViewed
 from nti.analytics.database.resource_views import VideoEvents
 from nti.analytics.database.resource_views import CourseResourceViews
 from nti.analytics.database.resource_views import create_course_resource_view
 from nti.analytics.database.resource_views import create_video_event
 from nti.analytics.database.sessions import Sessions
 from nti.analytics.database.sessions import CurrentSessions
+from nti.analytics.database.users import create_user
 
 from nti.analytics.tests import TestIdentifier
 
 from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
+
+from nti.ntiids.ntiids import find_object_with_ntiid
 
 from nti.testing.time import time_monotonically_increases
 
@@ -488,6 +496,30 @@ class TestProgressView( _AbstractTestViews ):
 									course_id, context_path,
 									resource_val, time_length )
 
+	def _get_assignment(self):
+		new_assignment = QAssignment()
+		new_assignment.ntiid = self.assignment_id = 'tag:ntiid1'
+		return new_assignment
+
+	def _install_user(self, user_id):
+		with mock_dataserver.mock_db_trans(self.ds):
+			self.user = User.get_user( user_id )
+			self.user_id = create_user( self.user ).user_id
+			return self.user
+
+	def _install_assignment(self, assignment_id):
+		db = self.db
+		new_object = AssignmentsTaken(
+									user_id=self.user_id,
+									session_id=2,
+									timestamp=timestamp_type( time.time() ),
+									course_id=1,
+									assignment_id=assignment_id,
+									submission_id=2,
+									time_length=10 )
+		db.session.add( new_object )
+		db.session.flush()
+
 	def _get_progress(self, status=200, response=None):
 		progress_url = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/Outline/2/1/Progress'
 		if response and response.last_modified:
@@ -501,11 +533,32 @@ class TestProgressView( _AbstractTestViews ):
 
 	@time_monotonically_increases
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
-	def test_progress( self ):
+	@fudge.patch( 	'nti.analytics.resolvers._get_course_from_ntiid_resolver',
+					'nti.ntiids.ntiids.find_object_with_ntiid',
+					'dm.zope.schema.schema.Object._validate' )
+	def test_progress( self, mock_resolver, mock_find_object, mock_validate ):
 		video1 = 'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.03'
 		video2 = 'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.02'
 		resource1 = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:10_LESSON'
-		#tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_10.01
+		assignment1 = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_10.01'
+
+		mock_validate.is_callable().returns( True )
+		mock_resolver = mock_resolver.is_callable().returns_fake()
+		mock_resolver.provides( 'get_course' ).returns( object() )
+		mock_resolver.provides( 'get_assignments_for_course' ).returns( (assignment1,) )
+		mock_resolver.provides( 'get_self_assessments_for_course' ).returns( [] )
+
+		def _get_assignment( key ):
+			"Get our assignment, or fallback to ntiids lookup."
+			if key == assignment1:
+				assignment_object = self._get_assignment()
+				assignment_object.ntiid = assignment1
+				return assignment_object
+			return find_object_with_ntiid( key )
+
+		assignment_object = self._get_assignment()
+		assignment_object.ntiid = assignment1
+		mock_find_object.is_callable().calls( _get_assignment )
 
 		response = self._get_progress()
 
@@ -513,8 +566,7 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( result, has_length( 0 ))
 
 		user_id = 'sjohnson@nextthought.com'
-		with mock_dataserver.mock_db_trans(self.ds):
-			user = User.get_user( user_id )
+		user = self._install_user( user_id )
 
 		# Now a video event
 		with mock_dataserver.mock_db_trans(self.ds):
@@ -577,3 +629,20 @@ class TestProgressView( _AbstractTestViews ):
 		# Now a 304
 		self._get_progress( response=response, status=304 )
 
+		# Now an assignment
+		with mock_dataserver.mock_db_trans(self.ds):
+			self._install_assignment( assignment1 )
+
+		response = self._get_progress( response=response )
+
+		result = response.json_body['Items']
+		assert_that( result, has_length( 4 ))
+		assert_that( result, contains_inanyorder( video1, video2, resource1, assignment1 ))
+
+		resource_progress = result.get( assignment1 )
+		assert_that( resource_progress, has_entry('MaxPossibleProgress', 1 ) )
+		assert_that( resource_progress, has_entry('AbsoluteProgress', 1 ) )
+		assert_that( resource_progress, has_entry('HasProgress', True ) )
+
+		# Now a 304 again
+		self._get_progress( response=response, status=304 )

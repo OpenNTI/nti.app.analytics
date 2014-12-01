@@ -17,40 +17,14 @@ from zope.location.interfaces import ILocation
 
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
 
-from nti.assessment.interfaces import IQAssignment
-from nti.assessment.interfaces import IQuestionSet
-
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
 from nti.dataserver.links import Link
 
-from nti.externalization.interfaces import IExternalObjectDecorator
 from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.interfaces import IExternalMappingDecorator
 
-from nti.externalization.externalization import to_external_object
-
-from nti.analytics.interfaces import IProgress
-
 LINKS = StandardExternalFields.LINKS
-
-@component.adapter(IQAssignment)
-@component.adapter(IQuestionSet)
-@interface.implementer(IExternalObjectDecorator)
-class _AssignmentProgressNodeDecorator(AbstractAuthenticatedRequestAwareDecorator):
-	"""
-	Decorate the context with the user's relative progress in said context.
-	"""
-
-	def _do_decorate_external(self, context, result):
-		user = self.remoteUser if self._is_authenticated else None
-		if not user:
-			return
-
-		progress = component.queryMultiAdapter( (user, context), IProgress )
-
-		if progress:
-			result['Progress'] = to_external_object( progress )
 
 @component.adapter(ICourseOutlineContentNode)
 @interface.implementer(IExternalMappingDecorator)
