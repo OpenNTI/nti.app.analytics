@@ -531,6 +531,25 @@ class TestProgressView( _AbstractTestViews ):
 			response = self.testapp.get( progress_url, status=status )
 		return response
 
+	def _setup_mocks( self, mock_resolver, mock_find_object, mock_validate, assignment_id ):
+		mock_validate.is_callable().returns( True )
+		mock_resolver = mock_resolver.is_callable().returns_fake()
+		mock_resolver.provides( 'get_course' ).returns( object() )
+		mock_resolver.provides( 'get_assignments_for_course' ).returns( (assignment_id,) )
+		mock_resolver.provides( 'get_self_assessments_for_course' ).returns( [] )
+
+		def _get_assignment( key ):
+			"Get our assignment, or fallback to ntiids lookup."
+			if key == assignment_id:
+				assignment_object = self._get_assignment()
+				assignment_object.ntiid = assignment_id
+				return assignment_object
+			return find_object_with_ntiid( key )
+
+		assignment_object = self._get_assignment()
+		assignment_object.ntiid = assignment_id
+		mock_find_object.is_callable().calls( _get_assignment )
+
 	@time_monotonically_increases
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 	'nti.analytics.resolvers._get_course_from_ntiid_resolver',
@@ -542,23 +561,7 @@ class TestProgressView( _AbstractTestViews ):
 		resource1 = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:10_LESSON'
 		assignment1 = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_10.01'
 
-		mock_validate.is_callable().returns( True )
-		mock_resolver = mock_resolver.is_callable().returns_fake()
-		mock_resolver.provides( 'get_course' ).returns( object() )
-		mock_resolver.provides( 'get_assignments_for_course' ).returns( (assignment1,) )
-		mock_resolver.provides( 'get_self_assessments_for_course' ).returns( [] )
-
-		def _get_assignment( key ):
-			"Get our assignment, or fallback to ntiids lookup."
-			if key == assignment1:
-				assignment_object = self._get_assignment()
-				assignment_object.ntiid = assignment1
-				return assignment_object
-			return find_object_with_ntiid( key )
-
-		assignment_object = self._get_assignment()
-		assignment_object.ntiid = assignment1
-		mock_find_object.is_callable().calls( _get_assignment )
+		self._setup_mocks(mock_resolver, mock_find_object, mock_validate, assignment1)
 
 		response = self._get_progress()
 
