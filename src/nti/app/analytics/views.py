@@ -4,6 +4,7 @@
 .. $Id$
 """
 from __future__ import print_function, unicode_literals, absolute_import, division
+from ZODB.interfaces import IBroken
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -22,6 +23,7 @@ from pyramid import httpexceptions as hexc
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
+from nti.analytics.model import delete_research_status
 from nti.analytics.model import UserResearchStatusEvent
 
 from nti.analytics.sessions import handle_new_session
@@ -272,6 +274,9 @@ class UserResearchStudyView(AbstractAuthenticatedView,
 		user = self.request.context
 
 		research_status = IUserResearchStatus(user)
+		if IBroken.providedBy(research_status):
+			delete_research_status(user)
+			research_status = IUserResearchStatus(user)
 		research_status.modified = datetime.utcnow()
 		research_status.allow_research = allow_research
 
