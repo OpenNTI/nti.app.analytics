@@ -10,6 +10,11 @@ logger = __import__('logging').getLogger(__name__)
 
 import time
 
+from datetime import datetime
+from datetime import timedelta
+
+from ZODB.POSException import POSError
+
 from zope import component
 from zope import interface
 from zope.container.contained import Contained
@@ -20,9 +25,15 @@ from pyramid.view import view_config
 from nti.analytics import get_factory
 from nti.analytics import QUEUE_NAMES
 
-from nti.dataserver import authorization as nauth
+from nti.analytics.interfaces import IUserResearchStatus
+
+from nti.app.base.abstract_views import AbstractAuthenticatedView
+
+from nti.dataserver.authorization import ACT_MODERATE
+from nti.dataserver.authorization import ACT_READ
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
+from nti.dataserver.interfaces import IUser
 
 from nti.externalization.interfaces import LocatedExternalDict
 
@@ -40,7 +51,7 @@ class AnalyticsPathAdapter(Contained):
 
 _view_defaults = dict(route_name='objects.generic.traversal',
 					  renderer='rest',
-					  permission=nauth.ACT_READ,
+					  permission=ACT_READ,
 					  context=AnalyticsPathAdapter,
 					  request_method='GET')
 _post_view_defaults = _view_defaults.copy()
@@ -62,7 +73,7 @@ def username_search(search_term):
 			 name='queue_info',
 			 renderer='rest',
 			 request_method='GET',
-			 permission=nauth.ACT_MODERATE)
+			 permission=ACT_MODERATE)
 def queue_info(request):
 	result = LocatedExternalDict()
 	factory = get_factory()
@@ -80,7 +91,7 @@ def queue_info(request):
 			 name='empty_queue',
 			 renderer='rest',
 			 request_method='POST',
-			 permission=nauth.ACT_MODERATE)
+			 permission=ACT_MODERATE)
 def empty_queue(request):
 	result = LocatedExternalDict()
 	factory = get_factory()
@@ -108,3 +119,50 @@ def empty_queue(request):
 	elapsed = time.time() - now
 	logger.info( 'Emptied analytics processing queue (time=%s)', elapsed )
 	return result
+
+
+@view_config(route_name='objects.generic.traversal',
+			 name='user_research_stats',
+			 renderer='rest',
+			 request_method='GET',
+			 permission=ACT_MODERATE,
+			 context=AnalyticsPathAdapter)
+class UserResearchStatsView(AbstractAuthenticatedView):
+
+	def __call__( self ):
+		result = LocatedExternalDict()
+
+		dataserver = component.getUtility(IDataserver)
+		users_folder = IShardLayout(dataserver).users_folder
+
+		allow_count = deny_count = neither_count = 0
+
+		now = datetime.utcnow()
+		year_ago = now - timedelta( days=365 )
+
+		# This is pretty slow.
+		for user in users_folder.values():
+			if not IUser.providedBy(user):
+				continue
+
+			try:
+				research_status = IUserResearchStatus( user )
+			except POSError:
+				continue
+
+			last_mod = research_status.lastModified
+			if last_mod is not None:
+				# First, find the year+ older entries; they are promptable.
+				if datetime.utcfromtimestamp( last_mod ) < year_ago:
+					neither_count +=1
+					continue
+
+			if research_status.allow_research:
+				allow_count += 1
+			else:
+				deny_count += 1
+
+		result['DenyResearchCount'] = deny_count
+		result['AllowResearchCount'] = allow_count
+		result['ToBePromptedCount'] = neither_count
+		return result

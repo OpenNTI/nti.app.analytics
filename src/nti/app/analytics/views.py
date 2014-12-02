@@ -8,16 +8,21 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
+from datetime import datetime
+
 from itertools import chain
 
-from zope.schema.interfaces import ValidationError
 from zope import component
+from zope.event import notify
+from zope.schema.interfaces import ValidationError
 
 from pyramid.view import view_config
 from pyramid import httpexceptions as hexc
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
+
+from nti.analytics.model import UserResearchStatusEvent
 
 from nti.analytics.sessions import handle_new_session
 from nti.analytics.sessions import handle_end_session
@@ -34,10 +39,12 @@ from nti.analytics.resource_views import get_progress_for_ntiid
 from nti.analytics.interfaces import IBatchResourceEvents
 from nti.analytics.interfaces import IAnalyticsSessions
 from nti.analytics.interfaces import IProgress
+from nti.analytics.interfaces import IUserResearchStatus
 
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
 from nti.dataserver import authorization as nauth
+from nti.dataserver.interfaces import IUser
 
 from nti.externalization import internalization
 from nti.externalization.interfaces import LocatedExternalDict
@@ -46,10 +53,18 @@ from nti.externalization.externalization import to_external_object
 
 from nti.ntiids import ntiids
 
+from nti.utils.maps import CaseInsensitiveDict
+
 from . import BATCH_EVENTS
 from . import ANALYTICS_SESSION
 from . import END_ANALYTICS_SESSION
 from . import ANALYTICS_SESSIONS
+
+def _is_true(t):
+	result = bool(t and str(t).lower() in ('1', 'y', 'yes', 't', 'true'))
+	return result
+
+SET_RESEARCH_VIEW = 'SetUserResearch'
 
 @view_config(route_name='objects.generic.traversal',
 			 name=BATCH_EVENTS,
@@ -238,3 +253,30 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		# Setting this will enable the renderer to return a 304, if needed.
 		self.request.response.last_modified = node_last_modified
 		return result
+
+@view_config( route_name='objects.generic.traversal',
+			  renderer='rest',
+			  context=IUser,
+			  request_method='POST',
+			  name=SET_RESEARCH_VIEW)
+class UserResearchStudyView(AbstractAuthenticatedView,
+							ModeledContentUploadRequestUtilsMixin ):
+	"""
+	Updates a user's research status.
+	"""
+
+	def __call__(self):
+		values = CaseInsensitiveDict(self.readInput())
+		allow_research = values.get('allow_research')
+		allow_research = _is_true(allow_research)
+		user = self.request.context
+
+		research_status = IUserResearchStatus(user)
+		research_status.modified = datetime.utcnow()
+		research_status.allow_research = allow_research
+
+		logger.info('Setting research status for user (user=%s) (allow_research=%s)',
+					user.username, allow_research )
+
+		notify(UserResearchStatusEvent(user, allow_research))
+		return hexc.HTTPNoContent()

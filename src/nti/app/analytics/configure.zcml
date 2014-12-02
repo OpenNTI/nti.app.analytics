@@ -17,7 +17,7 @@
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
 	<!-- Progress decorators -->
-	<!-- Only in test mode for now -->
+	<!-- Only in dev mode for now -->
 	<configure zcml:condition="have devmode">
 		<subscriber factory=".decorators._CourseOutlineNodeProgressLinkDecorator"
 					provides="nti.externalization.interfaces.IExternalObjectDecorator"
