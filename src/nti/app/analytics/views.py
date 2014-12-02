@@ -277,6 +277,7 @@ class UserResearchStudyView(AbstractAuthenticatedView,
 		if IBroken.providedBy(research_status):
 			delete_research_status(user)
 			research_status = IUserResearchStatus(user)
+		research_status.updateLastMod()
 		research_status.modified = datetime.utcnow()
 		research_status.allow_research = allow_research
 
