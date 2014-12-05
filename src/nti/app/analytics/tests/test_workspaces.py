@@ -27,6 +27,11 @@ from nti.externalization.externalization import toExternalObject
 
 from nti.dataserver.tests.mock_dataserver import WithMockDSTrans
 
+from nti.app.analytics.decorators import BATCH_EVENT_SIZE_NAME
+from nti.app.analytics.decorators import BATCH_EVENT_SIZE
+from nti.app.analytics.decorators import BATCH_EVENT_FREQUENCY_NAME
+from nti.app.analytics.decorators import BATCH_EVENT_FREQUENCY
+
 class TestWorkspaces(ApplicationLayerTest):
 
 	layer = NTIAnalyticsApplicationTestLayer
@@ -38,10 +43,12 @@ class TestWorkspaces(ApplicationLayerTest):
 
 		ext_object = toExternalObject( service )
 		__traceback_info__ = ext_object
-
+		toExternalObject( service.workspaces[0] )
 		assert_that( ext_object['Items'], has_item(
 											has_entries( 'Title', ANALYTICS_TITLE,
 														'Links', has_item(
 																	has_entries( 'rel', BATCH_EVENTS,
-																				'rel', ANALYTICS_SESSION ) ) ) ))
+																				'rel', ANALYTICS_SESSION ) ),
+														BATCH_EVENT_SIZE_NAME, BATCH_EVENT_SIZE,
+														BATCH_EVENT_FREQUENCY_NAME, BATCH_EVENT_FREQUENCY ) ))
 
