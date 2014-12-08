@@ -15,8 +15,6 @@ from zope import component
 from zope import interface
 from zope.location.interfaces import ILocation
 
-from nti.app.analytics.interfaces import IAnalyticsWorkspace
-
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
 
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
@@ -25,15 +23,8 @@ from nti.dataserver.links import Link
 
 from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.interfaces import IExternalMappingDecorator
-from nti.externalization.interfaces import IExternalObjectDecorator
-from nti.externalization.singleton import SingletonDecorator
 
 LINKS = StandardExternalFields.LINKS
-BATCH_EVENT_SIZE_NAME = 'RecommendedBatchEventsSize'
-BATCH_EVENT_SIZE = 100
-BATCH_EVENT_FREQUENCY_NAME = 'RecommendedBatchEventsSendFrequency'
-# In seconds
-BATCH_EVENT_FREQUENCY = 60
 
 @component.adapter(ICourseOutlineContentNode)
 @interface.implementer(IExternalMappingDecorator)
@@ -50,13 +41,3 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
 		link.__name__ = ''
 		link.__parent__ = context
 		links.append(link)
-
-@component.adapter(IAnalyticsWorkspace)
-@interface.implementer(IExternalObjectDecorator)
-class _AnalyticsMetaWorkspaceDecorator(object):
-
-	__metaclass__ = SingletonDecorator
-
-	def decorateExternalObject( self, original, external ):
-		external[BATCH_EVENT_SIZE_NAME] = BATCH_EVENT_SIZE
-		external[BATCH_EVENT_FREQUENCY_NAME] = BATCH_EVENT_FREQUENCY

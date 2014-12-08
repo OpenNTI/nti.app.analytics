@@ -73,6 +73,11 @@ from nti.analytics.database.sessions import Sessions
 from nti.analytics.database.sessions import CurrentSessions
 from nti.analytics.database.users import create_user
 
+from nti.app.analytics.views import BATCH_EVENT_SIZE_NAME
+from nti.app.analytics.views import BATCH_EVENT_SIZE
+from nti.app.analytics.views import BATCH_EVENT_FREQUENCY_NAME
+from nti.app.analytics.views import BATCH_EVENT_FREQUENCY
+
 from nti.analytics.tests import TestIdentifier
 
 from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
@@ -293,7 +298,13 @@ class TestBatchEvents( _AbstractTestViews ):
 		results = self.session.query( CourseResourceViews ).all()
 		assert_that( results, has_length( 0 ) )
 
-
+	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
+	def test_batch_params( self ):
+		batch_url = '/dataserver2/analytics/batch_event_params'
+		result = self.testapp.get( batch_url, status=200 )
+		result = result.json_body
+		assert_that( result, has_entry( BATCH_EVENT_SIZE_NAME, BATCH_EVENT_SIZE ) )
+		assert_that( result, has_entry( BATCH_EVENT_FREQUENCY_NAME, BATCH_EVENT_FREQUENCY ) )
 
 class TestAnalyticsSession( _AbstractTestViews ):
 

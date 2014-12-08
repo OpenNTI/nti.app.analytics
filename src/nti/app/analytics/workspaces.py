@@ -18,14 +18,17 @@ from zope.location.interfaces import ILocation
 
 from nti.appserver.interfaces import IWorkspace
 from nti.appserver.interfaces import IUserService
+from nti.appserver.interfaces import IContainerCollection
 
 from nti.dataserver.links import Link
 from nti.dataserver.interfaces import IDataserverFolder
 
 from nti.utils.property import alias
+from nti.utils.property import Lazy
 
 from . import ANALYTICS
 from . import BATCH_EVENTS
+from . import BATCH_EVENT_PARAMS
 from . import ANALYTICS_TITLE
 from . import ANALYTICS_SESSION
 from . import ANALYTICS_SESSIONS
@@ -52,12 +55,15 @@ class _AnalyticsWorkspace(Contained):
 
 	__parent__ = None
 
-	collections = ()
-
 	def __init__(self, parent=None):
 		super(_AnalyticsWorkspace,self).__init__()
 		if parent:
 			self.__parent__ = parent
+
+	@property
+	def collections(self):
+		return ( BatchEventsCollection(self), )
+
 
 	@property
 	def links(self):
@@ -70,3 +76,32 @@ class _AnalyticsWorkspace(Contained):
 			interface.alsoProvides(link, ILocation)
 			result.append(link)
 		return result
+
+
+@interface.implementer(IContainerCollection)
+class BatchEventsCollection(object):
+
+	__name__ = 'BatchEvents'
+	name = alias('__name__', __name__)
+
+	accepts = ()
+
+	def __init__(self, parent):
+		self.__parent__ = parent
+
+	@Lazy
+	def container(self):
+		return ()
+
+	@property
+	def links(self):
+		result = []
+		link_names = [BATCH_EVENT_PARAMS]
+		for name in link_names:
+			link = Link( name, rel=name )
+			link.__name__ = link.target
+			link.__parent__ = self.__parent__
+			interface.alsoProvides(link, ILocation)
+			result.append(link)
+		return result
+

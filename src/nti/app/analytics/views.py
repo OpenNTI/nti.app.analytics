@@ -58,15 +58,22 @@ from nti.ntiids import ntiids
 from nti.utils.maps import CaseInsensitiveDict
 
 from . import BATCH_EVENTS
+from . import BATCH_EVENT_PARAMS
 from . import ANALYTICS_SESSION
 from . import END_ANALYTICS_SESSION
 from . import ANALYTICS_SESSIONS
 
+BATCH_EVENT_SIZE_NAME = 'RecommendedBatchEventsSize'
+BATCH_EVENT_SIZE = 100
+BATCH_EVENT_FREQUENCY_NAME = 'RecommendedBatchEventsSendFrequency'
+# In seconds
+BATCH_EVENT_FREQUENCY = 60
+
+SET_RESEARCH_VIEW = 'SetUserResearch'
+
 def _is_true(t):
 	result = bool(t and str(t).lower() in ('1', 'y', 'yes', 't', 'true'))
 	return result
-
-SET_RESEARCH_VIEW = 'SetUserResearch'
 
 @view_config(route_name='objects.generic.traversal',
 			 name=BATCH_EVENTS,
@@ -103,6 +110,18 @@ class BatchEvents(	AbstractAuthenticatedView,
 		logger.info('Received batched analytic events (count=%s) (total_count=%s) (malformed=%s)',
 					event_count, total_count, malformed_count )
 		return event_count
+
+@view_config(route_name='objects.generic.traversal',
+			 name=BATCH_EVENT_PARAMS,
+			 renderer='rest',
+			 request_method='GET')
+class BatchEventParams( AbstractAuthenticatedView ):
+
+	def __call__(self):
+		result = LocatedExternalDict()
+		result[BATCH_EVENT_SIZE_NAME] = BATCH_EVENT_SIZE
+		result[BATCH_EVENT_FREQUENCY_NAME] = BATCH_EVENT_FREQUENCY
+		return result
 
 @view_config(route_name='objects.generic.traversal',
 			 name=ANALYTICS_SESSION,

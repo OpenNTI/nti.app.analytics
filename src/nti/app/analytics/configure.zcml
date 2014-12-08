@@ -26,10 +26,6 @@
 
 	</configure>
 
-	<!-- Meta analytics workspace decorating -->
-	<subscriber factory=".decorators._AnalyticsMetaWorkspaceDecorator"
-					provides="nti.externalization.interfaces.IExternalObjectDecorator" />
-
 	<!-- Workspaces -->
 	<!-- Attach to user-service workspaces -->
 	<subscriber factory=".workspaces.AnalyticsWorkspace"

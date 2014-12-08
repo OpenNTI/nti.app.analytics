@@ -8,9 +8,9 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
-ANALYTICS = 'analytics'
-ANALYTICS_TITLE = 'Analytics'
+ANALYTICS = ANALYTICS_TITLE = 'analytics'
 BATCH_EVENTS = 'batch_events'
+BATCH_EVENT_PARAMS = 'batch_event_params'
 ANALYTICS_SESSION = 'analytics_session'
 END_ANALYTICS_SESSION = 'end_analytics_session'
 ANALYTICS_SESSIONS = 'sessions'
