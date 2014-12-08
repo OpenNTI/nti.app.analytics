@@ -27,6 +27,7 @@ from hamcrest import contains_inanyorder
 from hamcrest import contains
 from hamcrest import has_key
 from hamcrest import has_entry
+from hamcrest import has_entries
 
 from nti.dataserver.tests import mock_dataserver
 
@@ -43,6 +44,9 @@ from nti.app.testing.application_webtest import ApplicationLayerTest
 from nti.analytics import identifier
 
 from nti.analytics.common import timestamp_type
+
+from nti.analytics.interfaces import DEFAULT_ANALYTICS_BATCH_SIZE
+from nti.analytics.interfaces import DEFAULT_ANALYTICS_FREQUENCY
 
 from nti.analytics.model import CourseCatalogViewEvent
 from nti.analytics.model import ResourceEvent
@@ -72,11 +76,6 @@ from nti.analytics.database.resource_views import create_video_event
 from nti.analytics.database.sessions import Sessions
 from nti.analytics.database.sessions import CurrentSessions
 from nti.analytics.database.users import create_user
-
-from nti.app.analytics.views import BATCH_EVENT_SIZE_NAME
-from nti.app.analytics.views import BATCH_EVENT_SIZE
-from nti.app.analytics.views import BATCH_EVENT_FREQUENCY_NAME
-from nti.app.analytics.views import BATCH_EVENT_FREQUENCY
 
 from nti.analytics.tests import TestIdentifier
 
@@ -303,8 +302,12 @@ class TestBatchEvents( _AbstractTestViews ):
 		batch_url = '/dataserver2/analytics/batch_event_params'
 		result = self.testapp.get( batch_url, status=200 )
 		result = result.json_body
-		assert_that( result, has_entry( BATCH_EVENT_SIZE_NAME, BATCH_EVENT_SIZE ) )
-		assert_that( result, has_entry( BATCH_EVENT_FREQUENCY_NAME, BATCH_EVENT_FREQUENCY ) )
+		assert_that( result, has_entries(
+								'RecommendedAnalyticsSyncInterval', DEFAULT_ANALYTICS_FREQUENCY,
+								'RecommendedBatchEventsSendFrequency', DEFAULT_ANALYTICS_FREQUENCY,
+								'RecommendedBatchEventsSize', DEFAULT_ANALYTICS_BATCH_SIZE,
+								'RecommendedBatchSessionsSendFrequency', DEFAULT_ANALYTICS_FREQUENCY,
+								'RecommendedBatchSessionsSize', DEFAULT_ANALYTICS_BATCH_SIZE ) )
 
 class TestAnalyticsSession( _AbstractTestViews ):
 
