@@ -25,6 +25,7 @@ from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtils
 
 from nti.analytics.model import delete_research_status
 from nti.analytics.model import UserResearchStatusEvent
+from nti.analytics.model import AnalyticsClientParams
 
 from nti.analytics.sessions import handle_new_session
 from nti.analytics.sessions import handle_end_session
@@ -62,12 +63,6 @@ from . import BATCH_EVENT_PARAMS
 from . import ANALYTICS_SESSION
 from . import END_ANALYTICS_SESSION
 from . import ANALYTICS_SESSIONS
-
-BATCH_EVENT_SIZE_NAME = 'RecommendedBatchEventsSize'
-BATCH_EVENT_SIZE = 100
-BATCH_EVENT_FREQUENCY_NAME = 'RecommendedBatchEventsSendFrequency'
-# In seconds
-BATCH_EVENT_FREQUENCY = 60
 
 SET_RESEARCH_VIEW = 'SetUserResearch'
 
@@ -118,10 +113,9 @@ class BatchEvents(	AbstractAuthenticatedView,
 class BatchEventParams( AbstractAuthenticatedView ):
 
 	def __call__(self):
-		result = LocatedExternalDict()
-		result[BATCH_EVENT_SIZE_NAME] = BATCH_EVENT_SIZE
-		result[BATCH_EVENT_FREQUENCY_NAME] = BATCH_EVENT_FREQUENCY
-		return result
+		# Return our default analytic client params
+		client_params = AnalyticsClientParams()
+		return client_params
 
 @view_config(route_name='objects.generic.traversal',
 			 name=ANALYTICS_SESSION,
