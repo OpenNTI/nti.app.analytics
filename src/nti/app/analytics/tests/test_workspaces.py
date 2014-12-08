@@ -45,5 +45,8 @@ class TestWorkspaces(ApplicationLayerTest):
 														'Links', has_item(
 																	has_entries( 'rel', BATCH_EVENTS,
 																				'rel', ANALYTICS_SESSION,
-																				'rel', SYNC_PARAMS ) ) )) )
+																				'rel', SYNC_PARAMS ) ),
+														'Items', has_item(
+																	has_entries( 'Title', 'Events',
+																				'Title', 'Sessions' )) )) )
 

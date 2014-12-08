@@ -18,12 +18,11 @@ from zope.location.interfaces import ILocation
 
 from nti.appserver.interfaces import IWorkspace
 from nti.appserver.interfaces import IUserService
-from nti.appserver.interfaces import ICollection
+from nti.appserver.interfaces import IContainerCollection
 
 from nti.dataserver.links import Link
 from nti.dataserver.interfaces import IDataserverFolder
 
-from nti.utils.property import alias
 from nti.utils.property import Lazy
 
 from . import ANALYTICS
@@ -50,8 +49,8 @@ class _AnalyticsWorkspace(Contained):
 	exposes links that may be useful to analytics clients.
 	"""
 
-	__name__ = ANALYTICS_TITLE
-	name = alias('__name__', __name__)
+	__name__ = ANALYTICS
+	name = ANALYTICS_TITLE
 
 	__parent__ = None
 
@@ -62,9 +61,9 @@ class _AnalyticsWorkspace(Contained):
 
 	@property
 	def collections(self):
-		return ( BatchEventsCollection(self), SessionsCollection(self) )
+		return ( EventsCollection(self), SessionsCollection(self) )
 
-
+	@property
 	def links(self):
 		result = []
 		link_names = [BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS, SYNC_PARAMS]
@@ -76,11 +75,11 @@ class _AnalyticsWorkspace(Contained):
 			result.append(link)
 		return result
 
-@interface.implementer(ICollection)
-class BatchEventsCollection(object):
+@interface.implementer(IContainerCollection)
+class EventsCollection(object):
 
 	__name__ = 'batch_events'
-	name = alias('__name__', __name__)
+	name = 'Events'
 
 	accepts = ()
 
@@ -91,11 +90,11 @@ class BatchEventsCollection(object):
 	def container(self):
 		return ()
 
-@interface.implementer(ICollection)
+@interface.implementer(IContainerCollection)
 class SessionsCollection(object):
 
 	__name__ = 'sessions'
-	name = alias('__name__', __name__)
+	name = 'Sessions'
 
 	accepts = ()
 
