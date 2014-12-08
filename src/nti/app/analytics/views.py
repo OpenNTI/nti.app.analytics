@@ -59,7 +59,7 @@ from nti.ntiids import ntiids
 from nti.utils.maps import CaseInsensitiveDict
 
 from . import BATCH_EVENTS
-from . import BATCH_EVENT_PARAMS
+from . import SYNC_PARAMS
 from . import ANALYTICS_SESSION
 from . import END_ANALYTICS_SESSION
 from . import ANALYTICS_SESSIONS
@@ -107,7 +107,7 @@ class BatchEvents(	AbstractAuthenticatedView,
 		return event_count
 
 @view_config(route_name='objects.generic.traversal',
-			 name=BATCH_EVENT_PARAMS,
+			 name=SYNC_PARAMS,
 			 renderer='rest',
 			 request_method='GET')
 class BatchEventParams( AbstractAuthenticatedView ):

@@ -18,7 +18,7 @@ from zope.location.interfaces import ILocation
 
 from nti.appserver.interfaces import IWorkspace
 from nti.appserver.interfaces import IUserService
-from nti.appserver.interfaces import IContainerCollection
+from nti.appserver.interfaces import ICollection
 
 from nti.dataserver.links import Link
 from nti.dataserver.interfaces import IDataserverFolder
@@ -27,11 +27,11 @@ from nti.utils.property import alias
 from nti.utils.property import Lazy
 
 from . import ANALYTICS
-from . import BATCH_EVENTS
-from . import BATCH_EVENT_PARAMS
 from . import ANALYTICS_TITLE
 from . import ANALYTICS_SESSION
 from . import ANALYTICS_SESSIONS
+from . import BATCH_EVENTS
+from . import SYNC_PARAMS
 
 from .interfaces import IAnalyticsWorkspace
 
@@ -62,13 +62,12 @@ class _AnalyticsWorkspace(Contained):
 
 	@property
 	def collections(self):
-		return ( BatchEventsCollection(self), )
+		return ( BatchEventsCollection(self), SessionsCollection(self) )
 
 
-	@property
 	def links(self):
 		result = []
-		link_names = [BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS]
+		link_names = [BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS, SYNC_PARAMS]
 		for name in link_names:
 			link = Link(ANALYTICS, rel=name, elements=(name,))
 			link.__name__ = link.target
@@ -77,11 +76,10 @@ class _AnalyticsWorkspace(Contained):
 			result.append(link)
 		return result
 
-
-@interface.implementer(IContainerCollection)
+@interface.implementer(ICollection)
 class BatchEventsCollection(object):
 
-	__name__ = 'BatchEvents'
+	__name__ = 'batch_events'
 	name = alias('__name__', __name__)
 
 	accepts = ()
@@ -93,15 +91,18 @@ class BatchEventsCollection(object):
 	def container(self):
 		return ()
 
-	@property
-	def links(self):
-		result = []
-		link_names = [BATCH_EVENT_PARAMS]
-		for name in link_names:
-			link = Link( name, rel=name )
-			link.__name__ = link.target
-			link.__parent__ = self.__parent__
-			interface.alsoProvides(link, ILocation)
-			result.append(link)
-		return result
+@interface.implementer(ICollection)
+class SessionsCollection(object):
+
+	__name__ = 'sessions'
+	name = alias('__name__', __name__)
+
+	accepts = ()
+
+	def __init__(self, parent):
+		self.__parent__ = parent
+
+	@Lazy
+	def container(self):
+		return ()
 

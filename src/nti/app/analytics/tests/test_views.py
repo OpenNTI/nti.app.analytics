@@ -77,6 +77,8 @@ from nti.analytics.database.sessions import Sessions
 from nti.analytics.database.sessions import CurrentSessions
 from nti.analytics.database.users import create_user
 
+from nti.app.analytics import SYNC_PARAMS
+
 from nti.analytics.tests import TestIdentifier
 
 from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
@@ -299,7 +301,7 @@ class TestBatchEvents( _AbstractTestViews ):
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	def test_batch_params( self ):
-		batch_url = '/dataserver2/analytics/batch_event_params'
+		batch_url = '/dataserver2/analytics/' + SYNC_PARAMS
 		result = self.testapp.get( batch_url, status=200 )
 		result = result.json_body
 		assert_that( result, has_entries(
