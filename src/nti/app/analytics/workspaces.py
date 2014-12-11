@@ -77,6 +77,9 @@ class _AnalyticsWorkspace(Contained):
 
 @interface.implementer(IContainerCollection)
 class EventsCollection(object):
+	"""
+	Pseudo-collection of analytics events.
+	"""
 
 	__name__ = 'batch_events'
 	name = 'Events'
@@ -92,6 +95,9 @@ class EventsCollection(object):
 
 @interface.implementer(IContainerCollection)
 class SessionsCollection(object):
+	"""
+	Pseudo-collection of analytics sessions.
+	"""
 
 	__name__ = 'sessions'
 	name = 'Sessions'
