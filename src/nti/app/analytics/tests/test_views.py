@@ -549,12 +549,13 @@ class TestProgressView( _AbstractTestViews ):
 			response = self.testapp.get( progress_url, status=status )
 		return response
 
-	def _setup_mocks( self, mock_resolver, mock_find_object, mock_validate, assignment_id ):
+	def _setup_mocks( self, mock_resolver, mock_adapter, mock_find_object, mock_validate, assignment_id ):
 		mock_validate.is_callable().returns( True )
 		mock_resolver = mock_resolver.is_callable().returns_fake()
-		mock_resolver.provides( 'get_course' ).returns( object() )
 		mock_resolver.provides( 'get_assignments_for_course' ).returns( (assignment_id,) )
-		mock_resolver.provides( 'get_self_assessments_for_course' ).returns( [] )
+		mock_resolver.provides( 'get_self_assessments_for_course' ).returns( None )
+
+		mock_adapter.is_callable().returns( object() )
 
 		def _get_assignment( key ):
 			"Get our assignment, or fallback to ntiids lookup."
@@ -570,16 +571,17 @@ class TestProgressView( _AbstractTestViews ):
 
 	@time_monotonically_increases
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
-	@fudge.patch( 	'nti.analytics.resolvers._get_course_from_ntiid_resolver',
+	@fudge.patch( 	'nti.analytics.resolvers._get_course_assessment_resolver',
+					'nti.app.products.courseware.adapters._content_unit_to_course',
 					'nti.ntiids.ntiids.find_object_with_ntiid',
 					'dm.zope.schema.schema.Object._validate' )
-	def test_progress( self, mock_resolver, mock_find_object, mock_validate ):
+	def test_progress( self, mock_resolver, mock_adapter, mock_find_object, mock_validate ):
 		video1 = 'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.03'
 		video2 = 'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.02'
 		resource1 = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:10_LESSON'
 		assignment1 = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_10.01'
 
-		self._setup_mocks(mock_resolver, mock_find_object, mock_validate, assignment1)
+		self._setup_mocks(mock_resolver, mock_adapter, mock_find_object, mock_validate, assignment1)
 
 		response = self._get_progress()
 

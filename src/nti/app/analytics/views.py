@@ -32,7 +32,6 @@ from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import update_session
 
 from nti.analytics.resolvers import recur_children_ntiid_for_unit
-from nti.analytics.resolvers import get_course_by_container_id
 from nti.analytics.resolvers import get_self_assessments_for_course
 from nti.analytics.resolvers import get_assignments_for_course
 
@@ -45,6 +44,7 @@ from nti.analytics.interfaces import IProgress
 from nti.analytics.interfaces import IUserResearchStatus
 
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
+from nti.contenttypes.courses.interfaces import ICourseInstance
 
 from nti.dataserver import authorization as nauth
 from nti.dataserver.interfaces import IUser
@@ -207,8 +207,6 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		# - Locally, this is quick. ~1s (much less when cached) to get
 		# ntiids under node; ~.05s to get empty resource set.  Bumps up to ~.3s
 		# once the user starts accumulating events.
-		# If building the course ntiid cache (in analytics:resolvers.py), this call
-		# is extremely slow (~25s locally with 15 courses).  This is a one-time hit.
 
 		# TODO If these content nodes can be re-used in other courses, we should
 		# probably accept a course param to distinguish progress between courses.
@@ -233,7 +231,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 
 		# Get progress for resource/videos
 		for node_ntiid in node_ntiids:
-			# Can we distinguish between video and other?
+			# Can improve this if we can distinguish between video and other.
 			node_progress = get_progress_for_ntiid( user, node_ntiid )
 
 			if node_progress:
@@ -241,18 +239,18 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 				node_last_modified = _get_last_mod( node_progress, node_last_modified )
 
 		# Get progress for self-assessments and assignments
-		# Expensive and slow if we're building our cache.
 		try:
-			course = get_course_by_container_id( ntiid )
+			course = ICourseInstance( content_unit )
 		except TypeError:
-			logger.warn( 'No course found for ntiid; cannot return progress (%s)', ntiid )
+			logger.warn( 'No course found for content unit; cannot return progress for assessments (%s)',
+						ntiid )
 			course = None
 
 		if course is not None:
 			# Gathering all assignments/self-assessments for course.
 			# May be cheaper than finding just for our unit.
-			self_assessments = get_self_assessments_for_course( course )
-			assignments = get_assignments_for_course( course )
+			self_assessments = get_self_assessments_for_course( course ) or []
+			assignments = get_assignments_for_course( course ) or []
 
 			for assessment_ntiid in chain( assignments, self_assessments ):
 				assessment_object = ntiids.find_object_with_ntiid( assessment_ntiid )
