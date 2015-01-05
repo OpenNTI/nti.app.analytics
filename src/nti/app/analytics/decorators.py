@@ -24,6 +24,8 @@ from nti.dataserver.links import Link
 from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.interfaces import IExternalMappingDecorator
 
+from nti.analytics import has_analytics
+
 LINKS = StandardExternalFields.LINKS
 
 @component.adapter(ICourseOutlineContentNode)
@@ -35,9 +37,10 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
 	"""
 
 	def _do_decorate_external(self, context, result):
-		links = result.setdefault(LINKS, [])
-		link = Link( context, rel="Progress", elements=('Progress',) )
-		interface.alsoProvides(link, ILocation)
-		link.__name__ = ''
-		link.__parent__ = context
-		links.append(link)
+		if has_analytics():
+			links = result.setdefault(LINKS, [])
+			link = Link( context, rel="Progress", elements=('Progress',) )
+			interface.alsoProvides(link, ILocation)
+			link.__name__ = ''
+			link.__parent__ = context
+			links.append(link)

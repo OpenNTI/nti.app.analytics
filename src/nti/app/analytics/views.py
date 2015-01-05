@@ -211,11 +211,9 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		# TODO If these content nodes can be re-used in other courses, we should
 		# probably accept a course param to distinguish progress between courses.
 		user = self.getRemoteUser()
-
 		ntiid = self.context.ContentNTIID
 		content_unit = ntiids.find_object_with_ntiid( ntiid )
 		node_ntiids = recur_children_ntiid_for_unit( content_unit )
-
 		result = LocatedExternalDict()
 		result[StandardExternalFields.ITEMS] = item_dict = {}
 

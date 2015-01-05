@@ -25,6 +25,8 @@ from nti.dataserver.interfaces import IDataserverFolder
 
 from nti.utils.property import Lazy
 
+from nti.analytics import has_analytics
+
 from . import ANALYTICS
 from . import ANALYTICS_TITLE
 from . import ANALYTICS_SESSION
@@ -66,13 +68,15 @@ class _AnalyticsWorkspace(Contained):
 	@property
 	def links(self):
 		result = []
-		link_names = [BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS, SYNC_PARAMS]
-		for name in link_names:
-			link = Link(ANALYTICS, rel=name, elements=(name,))
-			link.__name__ = link.target
-			link.__parent__ = self.__parent__
-			interface.alsoProvides(link, ILocation)
-			result.append(link)
+		if has_analytics():
+			link_names = [BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS, SYNC_PARAMS]
+			for name in link_names:
+				link = Link(ANALYTICS, rel=name, elements=(name,))
+				link.__name__ = link.target
+				link.__parent__ = self.__parent__
+				interface.alsoProvides(link, ILocation)
+				result.append(link)
+
 		return result
 
 @interface.implementer(IContainerCollection)
