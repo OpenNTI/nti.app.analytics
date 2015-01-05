@@ -17,14 +17,10 @@
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
 	<!-- Progress decorators -->
-	<!-- Only in dev mode for now -->
-	<configure zcml:condition="have devmode">
-		<subscriber factory=".decorators._CourseOutlineNodeProgressLinkDecorator"
-					provides="nti.externalization.interfaces.IExternalObjectDecorator"
-					for="nti.contenttypes.courses.interfaces.ICourseOutlineContentNode
-						 pyramid.interfaces.IRequest"  />
-
-	</configure>
+	<subscriber factory=".decorators._CourseOutlineNodeProgressLinkDecorator"
+				provides="nti.externalization.interfaces.IExternalObjectDecorator"
+				for="nti.contenttypes.courses.interfaces.ICourseOutlineContentNode
+					 pyramid.interfaces.IRequest"  />
 
 	<!-- Workspaces -->
 	<!-- Attach to user-service workspaces -->
