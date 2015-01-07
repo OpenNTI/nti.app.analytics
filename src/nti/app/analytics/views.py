@@ -11,9 +11,6 @@ logger = __import__('logging').getLogger(__name__)
 
 from datetime import datetime
 
-from itertools import chain
-
-from zope import component
 from zope.event import notify
 from zope.schema.interfaces import ValidationError
 
@@ -32,16 +29,15 @@ from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import update_session
 
 from nti.analytics.resolvers import recur_children_ntiid_for_unit
-from nti.analytics.resolvers import get_self_assessments_for_course
-from nti.analytics.resolvers import get_assignments_for_course
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
 
 from nti.analytics.interfaces import IBatchResourceEvents
 from nti.analytics.interfaces import IAnalyticsSessions
-from nti.analytics.interfaces import IProgress
 from nti.analytics.interfaces import IUserResearchStatus
+
+from nti.analytics.progress import get_assessment_progresses_for_course
 
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 from nti.contenttypes.courses.interfaces import ICourseInstance
@@ -249,15 +245,10 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		if course is not None:
 			# Gathering all assignments/self-assessments for course.
 			# May be cheaper than finding just for our unit.
-			self_assessments = get_self_assessments_for_course( course ) or []
-			assignments = get_assignments_for_course( course ) or []
-
-			for assessment_ntiid in chain( assignments, self_assessments ):
-				assessment_object = ntiids.find_object_with_ntiid( assessment_ntiid )
-				progress = component.queryMultiAdapter( (user, assessment_object), IProgress )
-				if progress:
-					item_dict[progress.progress_id] = to_external_object( progress )
-					node_last_modified = _get_last_mod( progress, node_last_modified )
+			progresses = get_assessment_progresses_for_course( user, course )
+			for progress in progresses:
+				item_dict[progress.progress_id] = to_external_object( progress )
+				node_last_modified = _get_last_mod( progress, node_last_modified )
 
 		# TODO Summarize progress for node. This might be difficult unless we assume
 		# that every child ntiid contributes towards progress.  If we need to filter
