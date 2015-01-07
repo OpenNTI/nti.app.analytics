@@ -214,7 +214,9 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		ntiid = self.context.ContentNTIID
 		content_unit = ntiids.find_object_with_ntiid( ntiid )
 		node_ntiids = recur_children_ntiid_for_unit( content_unit )
+
 		result = LocatedExternalDict()
+		result['Class'] = 'LessonProgress'
 		result[StandardExternalFields.ITEMS] = item_dict = {}
 
 		node_last_modified = None
@@ -257,7 +259,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 					item_dict[progress.progress_id] = to_external_object( progress )
 					node_last_modified = _get_last_mod( progress, node_last_modified )
 
-		# TODO Summarize progress for node. This might be difficult, unless we assume
+		# TODO Summarize progress for node. This might be difficult unless we assume
 		# that every child ntiid contributes towards progress.  If we need to filter
 		# out certain types of ntiids, that might be tough.
 
