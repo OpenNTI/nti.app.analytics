@@ -29,6 +29,8 @@ from hamcrest import has_key
 from hamcrest import has_entry
 from hamcrest import has_entries
 
+from nti.contenttypes.courses.interfaces import ICourseInstance
+
 from nti.dataserver.tests import mock_dataserver
 
 from nti.dataserver.users import User
@@ -73,6 +75,7 @@ from nti.analytics.database.resource_views import VideoEvents
 from nti.analytics.database.resource_views import CourseResourceViews
 from nti.analytics.database.resource_views import create_course_resource_view
 from nti.analytics.database.resource_views import create_video_event
+from nti.analytics.database.root_context import get_root_context_id
 from nti.analytics.database.sessions import Sessions
 from nti.analytics.database.sessions import CurrentSessions
 from nti.analytics.database.users import create_user
@@ -485,6 +488,11 @@ class TestAnalyticsSession( _AbstractTestViews ):
 
 class TestProgressView( _AbstractTestViews ):
 
+	def _create_course(self):
+		content_unit = find_object_with_ntiid( course )
+		course_obj = ICourseInstance( content_unit )
+		get_root_context_id( self.db, course_obj, create=True )
+
 	def _create_video_event(self, user, resource_val, max_time_length=None):
 		test_session_id = 1
 		time_length = 30
@@ -549,12 +557,8 @@ class TestProgressView( _AbstractTestViews ):
 			response = self.testapp.get( progress_url, status=status )
 		return response
 
-	def _setup_mocks( self, mock_resolver, mock_adapter, mock_find_object, mock_validate, assignment_id ):
+	def _setup_mocks( self, mock_adapter, mock_find_object, mock_validate, assignment_id ):
 		mock_validate.is_callable().returns( True )
-		mock_resolver = mock_resolver.is_callable().returns_fake()
-		mock_resolver.provides( 'get_assignments_for_course' ).returns( (assignment_id,) )
-		mock_resolver.provides( 'get_self_assessments_for_course' ).returns( None )
-
 		mock_adapter.is_callable().returns( object() )
 
 		def _get_assignment( key ):
@@ -571,17 +575,16 @@ class TestProgressView( _AbstractTestViews ):
 
 	@time_monotonically_increases
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
-	@fudge.patch( 	'nti.analytics.resolvers._get_course_assessment_resolver',
-					'nti.app.products.courseware.adapters._content_unit_to_course',
+	@fudge.patch( 	'nti.app.products.courseware.adapters._content_unit_to_course',
 					'nti.ntiids.ntiids.find_object_with_ntiid',
 					'dm.zope.schema.schema.Object._validate' )
-	def test_progress( self, mock_resolver, mock_adapter, mock_find_object, mock_validate ):
+	def test_progress( self, mock_adapter, mock_find_object, mock_validate ):
 		video1 = 'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.03'
 		video2 = 'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.02'
 		resource1 = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:10_LESSON'
 		assignment1 = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_10.01'
 
-		self._setup_mocks(mock_resolver, mock_adapter, mock_find_object, mock_validate, assignment1)
+		self._setup_mocks(mock_adapter, mock_find_object, mock_validate, assignment1)
 
 		response = self._get_progress()
 
@@ -593,6 +596,7 @@ class TestProgressView( _AbstractTestViews ):
 
 		# Now a video event
 		with mock_dataserver.mock_db_trans(self.ds):
+			self._create_course()
 			self._create_video_event( user=user, resource_val=video1 )
 
 		response = self._get_progress( response=response )
