@@ -216,7 +216,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		node_ntiids = recur_children_ntiid_for_unit( content_unit )
 
 		result = LocatedExternalDict()
-		result['Class'] = 'LessonProgress'
+		result['Class'] = 'CourseOutlineNodeProgress'
 		result[StandardExternalFields.ITEMS] = item_dict = {}
 
 		node_last_modified = None
