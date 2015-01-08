@@ -21,10 +21,14 @@ from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
 from nti.dataserver.links import Link
 
+from nti.dataserver.contenttypes.forums.interfaces import ITopic
+
 from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.interfaces import IExternalMappingDecorator
+from nti.externalization.externalization import to_external_object
 
 from nti.analytics import has_analytics
+from nti.analytics.progress import get_topic_progress
 
 LINKS = StandardExternalFields.LINKS
 
@@ -44,3 +48,17 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
 			link.__name__ = ''
 			link.__parent__ = context
 			links.append(link)
+
+@component.adapter(ITopic)
+@interface.implementer(IExternalMappingDecorator)
+class _TopicProgressDecorator(AbstractAuthenticatedRequestAwareDecorator):
+	"""
+	Return progress for the outbound Topic.  Generally useful for noting
+	the last time a user viewed a topic to determine if there is new
+	user content.
+	"""
+
+	def _do_decorate_external(self, context, result):
+		if has_analytics():
+			progress = get_topic_progress( self.remoteUser, context )
+			result['Progress'] = to_external_object( progress )

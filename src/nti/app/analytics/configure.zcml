@@ -22,6 +22,11 @@
 				for="nti.contenttypes.courses.interfaces.ICourseOutlineContentNode
 					 pyramid.interfaces.IRequest"  />
 
+	<subscriber factory=".decorators._TopicProgressDecorator"
+				provides="nti.externalization.interfaces.IExternalObjectDecorator"
+				for="nti.dataserver.contenttypes.forums.interfaces.ITopic
+					 pyramid.interfaces.IRequest"  />
+
 	<!-- Workspaces -->
 	<!-- Attach to user-service workspaces -->
 	<subscriber factory=".workspaces.AnalyticsWorkspace"
