@@ -56,6 +56,7 @@ from nti.analytics.model import BlogViewEvent
 from nti.analytics.model import NoteViewEvent
 from nti.analytics.model import TopicViewEvent
 from nti.analytics.model import SkipVideoEvent
+from nti.analytics.model import WatchVideoEvent
 from nti.analytics.model import BatchResourceEvents
 from nti.analytics.model import AnalyticsSessions
 from nti.analytics.model import AnalyticsSession
@@ -134,6 +135,17 @@ video_event = SkipVideoEvent(user=user,
 				Duration=time_length,
 				video_start_time=video_start_time,
 				video_end_time=video_end_time,
+				with_transcript=with_transcript)
+
+# Essentially a video start event
+watch_video_event = WatchVideoEvent(user=user,
+				timestamp=timestamp,
+				RootContextID=course,
+				context_path=context_path,
+				resource_id=resource_id,
+				Duration=None,
+				video_start_time=video_start_time,
+				video_end_time=None,
 				with_transcript=with_transcript)
 
 resource_event = ResourceEvent(user=user,
@@ -269,6 +281,20 @@ class TestBatchEvents( _AbstractTestViews ):
 		results = self.session.query( TopicsViewed ).all()
 		assert_that( results, has_length( 1 ) )
 		assert_that( results[0].session_id, is_( session_id ))
+
+		# Send a video start event successfully
+		io = BatchResourceEvents( events=[ watch_video_event ] )
+		ext_obj = toExternalObject(io)
+		session_id = 9999
+		headers = { ANALYTICS_SESSION_HEADER : str( session_id ) }
+
+		self.testapp.post_json( batch_url,
+								ext_obj,
+								headers=headers,
+								status=200 )
+
+		results = self.session.query( VideoEvents ).all()
+		assert_that( results, has_length( 2 ) )
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.resource_views._get_object' )
