@@ -22,10 +22,12 @@
 				for="nti.contenttypes.courses.interfaces.ICourseOutlineContentNode
 					 pyramid.interfaces.IRequest"  />
 
+<!-- JZ 1.15.2015 - disable for now, ConnectionStateErrors seen in janux
 	<subscriber factory=".decorators._TopicProgressDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
 				for="nti.dataserver.contenttypes.forums.interfaces.ITopic
 					 pyramid.interfaces.IRequest"  />
+-->
 
 	<!-- Workspaces -->
 	<!-- Attach to user-service workspaces -->
