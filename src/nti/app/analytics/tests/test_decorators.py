@@ -21,6 +21,7 @@ from nti.contenttypes.courses.outlines import CourseOutlineNode
 from nti.contenttypes.courses.outlines import CourseOutlineContentNode
 
 from nti.app.analytics.decorators import _CourseOutlineNodeProgressLinkDecorator
+from nti.app.analytics.decorators import _CourseVideoProgressLinkDecorator
 
 from nti.analytics.tests import NTIAnalyticsApplicationTestLayer
 
@@ -42,5 +43,15 @@ class TestDecorators( ApplicationLayerTest ):
 		assert_that( result, not_none() )
 		assert_that(result, has_entry('Links',
 								contains(has_property('rel', 'Progress' ))))
+
+	def test_course_decorator(self):
+		inst = CourseInstance()
+		result = {}
+		decorator = _CourseVideoProgressLinkDecorator( object(), None )
+		decorator._do_decorate_external( inst, result )
+
+		assert_that( result, not_none() )
+		assert_that(result, has_entry('Links',
+								contains(has_property('rel', 'VideoProgress' ))))
 
 

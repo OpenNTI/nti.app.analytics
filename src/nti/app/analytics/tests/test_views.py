@@ -516,7 +516,7 @@ class TestProgressView( _AbstractTestViews ):
 
 	def _create_course(self):
 		content_unit = find_object_with_ntiid( course )
-		course_obj = ICourseInstance( content_unit )
+		course_obj = self.course = ICourseInstance( content_unit )
 		get_root_context_id( self.db, course_obj, create=True )
 
 	def _create_video_event(self, user, resource_val, max_time_length=None):
@@ -527,11 +527,10 @@ class TestProgressView( _AbstractTestViews ):
 		video_end_time = 60
 		with_transcript = True
 		event_time = time.time()
-		course_id = 1
 		context_path = ['Blah', 'Bleh' ]
 		create_video_event( user,
 							test_session_id, event_time,
-							course_id, context_path,
+							self.course, context_path,
 							resource_val, time_length, max_time_length,
 							video_event_type, video_start_time,
 							video_end_time,  with_transcript )
@@ -541,11 +540,10 @@ class TestProgressView( _AbstractTestViews ):
 		test_session_id = 1
 		time_length = 30
 		event_time = time.time()
-		course_id = 1
 		context_path = ['Blah', 'Bleh' ]
 		create_course_resource_view( user,
 									test_session_id, event_time,
-									course_id, context_path,
+									self.course, context_path,
 									resource_val, time_length )
 
 	def _get_assignment(self):
@@ -572,16 +570,27 @@ class TestProgressView( _AbstractTestViews ):
 		db.session.add( new_object )
 		db.session.flush()
 
-	def _get_progress(self, status=200, response=None):
-		progress_url = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/Outline/2/1/Progress'
+	def _do_get_url(self, url, status=200, response=None):
+		"""
+		Gets the url, using the given response (if available)
+		as last modified.
+		"""
 		if response and response.last_modified:
-			response = self.testapp.get( progress_url,
+			response = self.testapp.get( url,
 										headers={'If-Modified-Since':
 												serialize_date( response.last_modified )},
 										status=status )
 		else:
-			response = self.testapp.get( progress_url, status=status )
+			response = self.testapp.get( url, status=status )
 		return response
+
+	def _get_progress(self, status=200, response=None):
+		progress_url = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/Outline/2/1/Progress'
+		return self._do_get_url( progress_url, status, response )
+
+	def _get_video_progress(self, status=200, response=None):
+		progress_url = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/VideoProgress'
+		return self._do_get_url( progress_url, status, response )
 
 	def _setup_mocks( self, mock_adapter, mock_find_object, mock_validate, assignment_id ):
 		mock_validate.is_callable().returns( True )
@@ -612,9 +621,13 @@ class TestProgressView( _AbstractTestViews ):
 
 		self._setup_mocks(mock_adapter, mock_find_object, mock_validate, assignment1)
 
+		# Empty progress/empty video progress
 		response = self._get_progress()
-
 		result = response.json_body['Items']
+		assert_that( result, has_length( 0 ))
+
+		video_response = self._get_video_progress()
+		result = video_response.json_body['Items']
 		assert_that( result, has_length( 0 ))
 
 		user_id = 'sjohnson@nextthought.com'
@@ -622,11 +635,11 @@ class TestProgressView( _AbstractTestViews ):
 
 		# Now a video event
 		with mock_dataserver.mock_db_trans(self.ds):
+			user = User.get_user( user_id )
 			self._create_course()
 			self._create_video_event( user=user, resource_val=video1 )
 
 		response = self._get_progress( response=response )
-
 		result = response.json_body['Items']
 		assert_that( result, has_length( 1 ))
 		assert_that( result, contains( video1 ))
@@ -636,9 +649,16 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( video_progress, has_entry('AbsoluteProgress', 30 ) )
 		assert_that( video_progress, has_entry('HasProgress', True ) )
 
+		# Video progress for course
+		video_response = self._get_video_progress()
+		result = video_response.json_body['Items']
+		assert_that( result, has_length( 1 ))
+		assert_that( result, contains( video1 ))
+
 		# Same video event
 		max_progress = 120
 		with mock_dataserver.mock_db_trans(self.ds):
+			user = User.get_user( user_id )
 			self._create_video_event( user=user, resource_val=video1, max_time_length=max_progress )
 		response = self._get_progress( response=response )
 
@@ -651,8 +671,14 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( video_progress, has_entry('AbsoluteProgress', 60 ) )
 		assert_that( video_progress, has_entry('HasProgress', True ) )
 
+		video_response = self._get_video_progress()
+		result = video_response.json_body['Items']
+		assert_that( result, has_length( 1 ))
+		assert_that( result, contains( video1 ))
+
 		# New video doesn't affect old video
 		with mock_dataserver.mock_db_trans(self.ds):
+			user = User.get_user( user_id )
 			self._create_video_event( user=user, resource_val=video2 )
 		response = self._get_progress( response=response )
 
@@ -665,8 +691,14 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( video_progress, has_entry('AbsoluteProgress', 60 ) )
 		assert_that( video_progress, has_entry('HasProgress', True ) )
 
+		video_response = self._get_video_progress()
+		result = video_response.json_body['Items']
+		assert_that( result, has_length( 2 ))
+		assert_that( result, contains_inanyorder( video1, video2 ))
+
 		# Now a resource view
 		with mock_dataserver.mock_db_trans(self.ds):
+			user = User.get_user( user_id )
 			self._create_resource_view( user=user, resource_val=resource1 )
 		response = self._get_progress( response=response )
 

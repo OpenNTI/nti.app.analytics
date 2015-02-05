@@ -67,6 +67,16 @@ def _is_true(t):
 	result = bool(t and str(t).lower() in ('1', 'y', 'yes', 't', 'true'))
 	return result
 
+def _get_last_mod( progress, max_last_mod ):
+	"For progress, get the most recent date as our last modified."
+	result = max_last_mod
+
+	if 		not max_last_mod \
+		or 	( 	progress.last_modified and \
+				progress.last_modified > max_last_mod ):
+		result = progress.last_modified
+	return result
+
 @view_config(route_name='objects.generic.traversal',
 			 name=BATCH_EVENTS,
 			 renderer='rest',
@@ -217,14 +227,6 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		result[StandardExternalFields.ITEMS] = item_dict = {}
 
 		node_last_modified = None
-		def _get_last_mod( progress, max_last_mod ):
-			result = max_last_mod
-
-			if 		not max_last_mod \
-				or 	( 	progress.last_modified and \
-						progress.last_modified > max_last_mod ):
-				result = progress.last_modified
-			return result
 
 		# Get progress for resource/videos
 		for node_ntiid in node_ntiids:
@@ -282,20 +284,10 @@ class UserCourseVideoProgress(AbstractAuthenticatedView, ModeledContentUploadReq
 		result = LocatedExternalDict()
 		result['Class'] = 'CourseVideoProgress'
 		result[StandardExternalFields.ITEMS] = item_dict = {}
-
 		node_last_modified = None
-		def _get_last_mod( progress, max_last_mod ):
-			result = max_last_mod
-
-			if 		not max_last_mod \
-				or 	( 	progress.last_modified and \
-						progress.last_modified > max_last_mod ):
-				result = progress.last_modified
-			return result
 
 		video_progress_col = get_video_progress_for_course( user, course )
 
-		# Get our last mod
 		for video_progress in video_progress_col:
 			item_dict[video_progress.ResourceID] = to_external_object( video_progress )
 			node_last_modified = _get_last_mod( video_progress, node_last_modified )
