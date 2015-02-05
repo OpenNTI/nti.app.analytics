@@ -17,6 +17,7 @@ from zope.location.interfaces import ILocation
 
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
 
+from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
 from nti.dataserver.links import Link
@@ -44,6 +45,23 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
 		if has_analytics():
 			links = result.setdefault(LINKS, [])
 			link = Link( context, rel="Progress", elements=('Progress',) )
+			interface.alsoProvides(link, ILocation)
+			link.__name__ = ''
+			link.__parent__ = context
+			links.append(link)
+
+@component.adapter(ICourseInstance)
+@interface.implementer(IExternalMappingDecorator)
+class _CourseVideoProgressLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
+	"""
+	Return a link on the course in which the client can retrieve
+	all video progress for a user.
+	"""
+
+	def _do_decorate_external(self, context, result):
+		if has_analytics():
+			links = result.setdefault(LINKS, [])
+			link = Link( context, rel="VideoProgress", elements=('VideoProgress',) )
 			interface.alsoProvides(link, ILocation)
 			link.__name__ = ''
 			link.__parent__ = context

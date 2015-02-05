@@ -32,6 +32,7 @@ from nti.analytics.resolvers import recur_children_ntiid_for_unit
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
+from nti.analytics.resource_views import get_video_progress_for_course
 
 from nti.analytics.interfaces import IBatchResourceEvents
 from nti.analytics.interfaces import IAnalyticsSessions
@@ -253,6 +254,51 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		# TODO Summarize progress for node. This might be difficult unless we assume
 		# that every child ntiid contributes towards progress.  If we need to filter
 		# out certain types of ntiids, that might be tough.
+
+		# Setting this will enable the renderer to return a 304, if needed.
+		self.request.response.last_modified = node_last_modified
+		return result
+
+@view_config(route_name='objects.generic.traversal',
+			 renderer='rest',
+			 context=ICourseInstance,
+			 request_method='GET',
+			 permission=nauth.ACT_READ,
+			 name="VideoProgress" )
+class UserCourseVideoProgress(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
+	"""
+	For the given course instance, return the progress we have for the user
+	on each video in the course.
+
+	On return, the 'LastModified' header will be set, allowing
+	the client to specify the 'If-Modified-Since' header for future requests.  A 304 will be
+	returned if there is the results have not changed.
+	"""
+
+	def __call__(self):
+		user = self.getRemoteUser()
+		course = self.context
+
+		result = LocatedExternalDict()
+		result['Class'] = 'CourseVideoProgress'
+		result[StandardExternalFields.ITEMS] = item_dict = {}
+
+		node_last_modified = None
+		def _get_last_mod( progress, max_last_mod ):
+			result = max_last_mod
+
+			if 		not max_last_mod \
+				or 	( 	progress.last_modified and \
+						progress.last_modified > max_last_mod ):
+				result = progress.last_modified
+			return result
+
+		video_progress_col = get_video_progress_for_course( user, course )
+
+		# Get our last mod
+		for video_progress in video_progress_col:
+			item_dict[video_progress.ResourceID] = to_external_object( video_progress )
+			node_last_modified = _get_last_mod( video_progress, node_last_modified )
 
 		# Setting this will enable the renderer to return a 304, if needed.
 		self.request.response.last_modified = node_last_modified

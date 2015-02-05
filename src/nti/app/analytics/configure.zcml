@@ -22,6 +22,11 @@
 				for="nti.contenttypes.courses.interfaces.ICourseOutlineContentNode
 					 pyramid.interfaces.IRequest"  />
 
+	<subscriber factory=".decorators._CourseVideoProgressLinkDecorator"
+				provides="nti.externalization.interfaces.IExternalObjectDecorator"
+				for="nti.contenttypes.courses.interfaces.ICourseInstance
+					 pyramid.interfaces.IRequest"  />
+
 <!-- JZ 1.15.2015 - Disable until needed
 	<subscriber factory=".decorators._TopicProgressDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
