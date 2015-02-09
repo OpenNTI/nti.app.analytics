@@ -53,7 +53,7 @@ from nti.externalization.externalization import to_external_object
 
 from nti.ntiids import ntiids
 
-from nti.utils.maps import CaseInsensitiveDict
+from nti.common.maps import CaseInsensitiveDict
 
 from . import BATCH_EVENTS
 from . import SYNC_PARAMS
