@@ -224,7 +224,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 
 		result = LocatedExternalDict()
 		result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
-		result[StandardExternalFields.MIMETYPE] = 'application/vnd.nextthought.courseoutlinenodeprogress'
+		result[StandardExternalFields.MIMETYPE] = 'application/vnd.nextthought.progresscontainer'
 		result[StandardExternalFields.ITEMS] = item_dict = {}
 
 		node_last_modified = None
