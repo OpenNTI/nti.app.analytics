@@ -23,7 +23,7 @@ from nti.appserver.interfaces import IContainerCollection
 from nti.dataserver.links import Link
 from nti.dataserver.interfaces import IDataserverFolder
 
-from nti.utils.property import Lazy
+from nti.common.property import Lazy
 
 from nti.analytics import has_analytics
 

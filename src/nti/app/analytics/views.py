@@ -223,7 +223,8 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 		node_ntiids = recur_children_ntiid_for_unit( content_unit )
 
 		result = LocatedExternalDict()
-		result['Class'] = 'CourseOutlineNodeProgress'
+		result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
+		result[StandardExternalFields.MIMETYPE] = 'application/vnd.nextthought.courseoutlinenodeprogress'
 		result[StandardExternalFields.ITEMS] = item_dict = {}
 
 		node_last_modified = None
@@ -282,7 +283,7 @@ class UserCourseVideoProgress(AbstractAuthenticatedView, ModeledContentUploadReq
 		course = self.context
 
 		result = LocatedExternalDict()
-		result['Class'] = 'CourseVideoProgress'
+		result[StandardExternalFields.CLASS] = 'CourseVideoProgress'
 		result[StandardExternalFields.ITEMS] = item_dict = {}
 		node_last_modified = None
 
