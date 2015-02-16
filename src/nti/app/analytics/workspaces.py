@@ -16,9 +16,9 @@ from zope import component
 from zope.container.contained import Contained
 from zope.location.interfaces import ILocation
 
-from nti.appserver.interfaces import IWorkspace
-from nti.appserver.interfaces import IUserService
-from nti.appserver.interfaces import IContainerCollection
+from nti.appserver.workspaces.interfaces import IWorkspace
+from nti.appserver.workspaces.interfaces import IUserService
+from nti.appserver.workspaces.interfaces import IContainerCollection
 
 from nti.dataserver.links import Link
 from nti.dataserver.interfaces import IDataserverFolder
