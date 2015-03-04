@@ -3,8 +3,8 @@
 """
 .. $Id$
 """
+
 from __future__ import print_function, unicode_literals, absolute_import, division
-from ZODB.interfaces import IBroken
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -13,6 +13,8 @@ from datetime import datetime
 
 from zope.event import notify
 from zope.schema.interfaces import ValidationError
+
+from ZODB.interfaces import IBroken
 
 from pyramid.view import view_config
 from pyramid import httpexceptions as hexc
@@ -40,11 +42,11 @@ from nti.analytics.interfaces import IUserResearchStatus
 
 from nti.analytics.progress import get_assessment_progresses_for_course
 
-from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 from nti.contenttypes.courses.interfaces import ICourseInstance
+from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
-from nti.dataserver import authorization as nauth
 from nti.dataserver.interfaces import IUser
+from nti.dataserver import authorization as nauth
 
 from nti.externalization import internalization
 from nti.externalization.interfaces import LocatedExternalDict
@@ -162,7 +164,8 @@ class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequest
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
-class UpdateAnalyticsSessions(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
+class UpdateAnalyticsSessions(AbstractAuthenticatedView, 
+							  ModeledContentUploadRequestUtilsMixin):
 
 	content_predicate = IAnalyticsSessions.providedBy
 
@@ -201,7 +204,8 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView, ModeledContentUploadReq
 			 request_method='GET',
 			 permission=nauth.ACT_READ,
 			 name="Progress" )
-class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
+class CourseOutlineNodeProgress( AbstractAuthenticatedView,
+								 ModeledContentUploadRequestUtilsMixin):
 	"""
 	For the given content outline node, return the progress we have for the user
 	on each ntiid within the content node.  This will include self-assessments and
@@ -268,7 +272,8 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView, ModeledContentUploadR
 			 request_method='GET',
 			 permission=nauth.ACT_READ,
 			 name="VideoProgress" )
-class UserCourseVideoProgress(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
+class UserCourseVideoProgress(AbstractAuthenticatedView,
+							  ModeledContentUploadRequestUtilsMixin):
 	"""
 	For the given course instance, return the progress we have for the user
 	on each video in the course.
