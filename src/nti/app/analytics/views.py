@@ -42,6 +42,8 @@ from nti.analytics.interfaces import IUserResearchStatus
 
 from nti.analytics.progress import get_assessment_progresses_for_course
 
+from nti.common.maps import CaseInsensitiveDict
+
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
@@ -54,8 +56,6 @@ from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.externalization import to_external_object
 
 from nti.ntiids import ntiids
-
-from nti.common.maps import CaseInsensitiveDict
 
 from . import BATCH_EVENTS
 from . import SYNC_PARAMS

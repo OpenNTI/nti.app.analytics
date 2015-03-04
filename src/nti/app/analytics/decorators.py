@@ -20,13 +20,13 @@ from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecora
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
-from nti.dataserver.links import Link
-
 from nti.dataserver.contenttypes.forums.interfaces import ITopic
 
 from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.interfaces import IExternalMappingDecorator
 from nti.externalization.externalization import to_external_object
+
+from nti.links.links import Link
 
 from nti.analytics import has_analytics
 from nti.analytics.progress import get_topic_progress

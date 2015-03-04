@@ -24,16 +24,16 @@ from pyramid.view import view_config
 
 from nti.analytics import get_factory
 from nti.analytics import QUEUE_NAMES
-
 from nti.analytics.interfaces import IUserResearchStatus
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
-from nti.dataserver.authorization import ACT_MODERATE
-from nti.dataserver.authorization import ACT_READ
+from nti.dataserver.interfaces import IUser
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
-from nti.dataserver.interfaces import IUser
+
+from nti.dataserver.authorization import ACT_READ
+from nti.dataserver.authorization import ACT_MODERATE
 
 from nti.externalization.interfaces import LocatedExternalDict
 
