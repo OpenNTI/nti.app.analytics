@@ -78,7 +78,6 @@ from nti.analytics.database.resource_views import create_course_resource_view
 from nti.analytics.database.resource_views import create_video_event
 from nti.analytics.database.root_context import get_root_context_id
 from nti.analytics.database.sessions import Sessions
-from nti.analytics.database.sessions import CurrentSessions
 from nti.analytics.database.users import create_user
 
 from nti.app.analytics import SYNC_PARAMS
@@ -348,8 +347,6 @@ class TestAnalyticsSession( _AbstractTestViews ):
 	def test_session( self ):
 		results = self.session.query( Sessions ).all()
 		assert_that( results, has_length( 0 ) )
-		results = self.session.query( CurrentSessions ).all()
-		assert_that( results, has_length( 0 ) )
 
 		# New session
 		session_url = '/dataserver2/analytics/analytics_session'
@@ -357,13 +354,13 @@ class TestAnalyticsSession( _AbstractTestViews ):
 								None,
 								status=200 )
 
-		cookie_id = _get_cookie_id( self.testapp )
+		cookie_id = first_session_id = _get_cookie_id( self.testapp )
 		assert_that( cookie_id, is_( 1 ))
 
 		results = self.session.query( Sessions ).all()
 		assert_that( results, has_length( 1 ) )
-		results = self.session.query( CurrentSessions ).all()
-		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, first_session_id )
+		assert_that( results[0].end_time, none() )
 
 		with mock_dataserver.mock_db_trans(self.ds):
 			user = User.get_user( self.extra_environ_default_user )
@@ -381,8 +378,9 @@ class TestAnalyticsSession( _AbstractTestViews ):
 		results = self.session.query( Sessions ).all()
 		assert_that( results, has_length( 2 ) )
 		# This last call implicitly ends the previous session.
-		results = self.session.query( CurrentSessions ).all()
-		assert_that( results, has_length( 1 ) )
+		first_session = self.session.query( Sessions ).filter(
+								Sessions.session_id == first_session_id ).one()
+		assert_that( first_session.end_time, not_none() )
 
 		with mock_dataserver.mock_db_trans(self.ds):
 			user = User.get_user( self.extra_environ_default_user )
@@ -401,8 +399,6 @@ class TestAnalyticsSession( _AbstractTestViews ):
 # 		cookie_id = _get_cookie_id( self.testapp )
 # 		assert_that( cookie_id, none() )
 
-		results = self.session.query( CurrentSessions ).all()
-		assert_that( results, has_length( 0 ) )
 		session_record = self.session.query( Sessions ).filter( Sessions.session_id == 2 ).first()
 		assert_that( session_record, not_none() )
 		assert_that( session_record.end_time, not_none() )
@@ -415,8 +411,6 @@ class TestAnalyticsSession( _AbstractTestViews ):
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	def test_sessions( self ):
 		results = self.session.query( Sessions ).all()
-		assert_that( results, has_length( 0 ) )
-		results = self.session.query( CurrentSessions ).all()
 		assert_that( results, has_length( 0 ) )
 
 		# No end time
@@ -440,8 +434,6 @@ class TestAnalyticsSession( _AbstractTestViews ):
 
 		results = self.session.query( Sessions ).all()
 		assert_that( results, has_length( 3 ) )
-		results = self.session.query( CurrentSessions ).all()
-		assert_that( results, has_length( 3 ) )
 
 		# This is header driven.
 		current_session_id = get_current_session_id( user )
@@ -454,9 +446,6 @@ class TestAnalyticsSession( _AbstractTestViews ):
 		db_session = self.session.query( Sessions ).filter( Sessions.session_id == session_id ).one()
 		assert_that( db_session, not_none() )
 		assert_that( db_session.end_time, none() )
-
-		db_session = self.session.query( CurrentSessions ).filter( CurrentSessions.session_id == session_id ).one()
-		assert_that( db_session, not_none() )
 
 		end_time = timestamp + 1
 		session.SessionEndTime = end_time
@@ -477,9 +466,6 @@ class TestAnalyticsSession( _AbstractTestViews ):
 		db_session = self.session.query( Sessions ).filter( Sessions.session_id == session_id ).one()
 		assert_that( db_session, not_none() )
 		assert_that( db_session.end_time, not_none() )
-
-		db_session = self.session.query( CurrentSessions ).filter( CurrentSessions.session_id == session_id ).first()
-		assert_that( db_session, none() )
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	def test_update_session_with_invalid( self ):
