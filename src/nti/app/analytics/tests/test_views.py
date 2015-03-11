@@ -387,12 +387,18 @@ class TestAnalyticsSession( _AbstractTestViews ):
 			current_session_id = get_current_session_id( user )
 			assert_that( current_session_id, none() )
 
+		# Batch information
+		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event ] )
+		batch_events = toExternalObject(io)
+
 		# End our session
 		end_session_url = '/dataserver2/analytics/end_analytics_session'
 
 		timestamp = timestamp_type( 1 )
 		self.testapp.post_json( end_session_url,
-								{ 'session_id' : 2, 'timestamp' : 1 },
+								{ 'session_id' : 2,
+								'timestamp' : 1,
+								'batch_events': batch_events },
 								status=204 )
 
 		# This cookie is set to expire.

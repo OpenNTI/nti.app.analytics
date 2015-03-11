@@ -79,6 +79,27 @@ def _get_last_mod( progress, max_last_mod ):
 		result = progress.last_modified
 	return result
 
+def _process_batch_events( events ):
+	"Process the events, returning a tuple of events queued and malformed events."
+	batch_events = []
+	malformed_count = 0
+
+	# Lets hand-internalize these objects one-by-one so that we
+	# can exclude any malformed objects and process the proper events.
+	for event in events:
+		factory = internalization.find_factory_for(event)
+		new_event = factory()
+		try:
+			internalization.update_from_external_object(new_event, event)
+			batch_events.append( new_event )
+		except ValidationError as e:
+			# The app may resend events if we err; so we should just log.
+			logger.warn('Malformed events received (event=%s) (%s)', event, e)
+			malformed_count += 1
+
+	event_count = handle_events( batch_events )
+	return event_count, malformed_count
+
 @view_config(route_name='objects.generic.traversal',
 			 name=BATCH_EVENTS,
 			 renderer='rest',
@@ -86,31 +107,19 @@ def _get_last_mod( progress, max_last_mod ):
 			 permission=nauth.ACT_READ)
 class BatchEvents(	AbstractAuthenticatedView,
 					ModeledContentUploadRequestUtilsMixin ):
+	"""
+	A view that accepts a batch of analytics events.  The view
+	will parse the input and process the events (e.g. queueing).
+	"""
 
 	content_predicate = IBatchResourceEvents.providedBy
 
 	def _do_call(self):
 		external_input = self.readInput()
-		# Ok, lets hand-internalize these objects one-by-one so that we
-		# can exclude any malformed objects and process the proper events.
-		batch_events = []
-		malformed_count = 0
 		events = external_input['events']
 		total_count = len(events)
 
-		for event in events:
-			factory = internalization.find_factory_for(event)
-			new_event = factory()
-			try:
-				internalization.update_from_external_object(new_event, event)
-				batch_events.append( new_event )
-			except ValidationError as e:
-				# TODO Should we capture a more generic exception?
-				# The app may resend events on error.
-				logger.warn('Malformed events received (event=%s) (%s)', event, e)
-				malformed_count += 1
-
-		event_count = handle_events( batch_events )
+		event_count, malformed_count = _process_batch_events( events )
 		logger.info('Received batched analytic events (count=%s) (total_count=%s) (malformed=%s)',
 					event_count, total_count, malformed_count )
 		return event_count
@@ -149,6 +158,19 @@ class AnalyticsSession( AbstractAuthenticatedView ):
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
 class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
+	"""
+	Ends an analytic session, defined by information in the
+	header or cookie of this request.  Optionally accepts a
+	`timestamp` param, allowing the client to specify the
+	session end time.
+
+	timestamp
+		The (optional) seconds since the epoch marking when
+		the session ended.
+
+	batch_events
+		The (optional) closed batch_events, occurring at the end of session.
+	"""
 
 	def __call__(self):
 		"""
@@ -159,6 +181,16 @@ class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequest
 
 		values = CaseInsensitiveDict(self.readInput())
 		timestamp = values.get( 'timestamp' )
+		batch_events = values.get( 'batch_events' )
+
+		if batch_events:
+			events = batch_events.get( 'events' )
+
+			if events:
+				total_count = len( events )
+				event_count, malformed_count = _process_batch_events( events )
+				logger.info('Process batched analytic events on session close (count=%s) (total_count=%s) (malformed=%s)',
+						event_count, total_count, malformed_count )
 
 		handle_end_session( user, request, timestamp=timestamp )
 		return hexc.HTTPNoContent()
@@ -262,7 +294,7 @@ class CourseOutlineNodeProgress( AbstractAuthenticatedView,
 				item_dict[progress.progress_id] = to_external_object( progress )
 				node_last_modified = _get_last_mod( progress, node_last_modified )
 
-		# TODO Summarize progress for node. This might be difficult unless we assume
+		# We could ummarize progress for node. This might be difficult unless we assume
 		# that every child ntiid contributes towards progress.  If we need to filter
 		# out certain types of ntiids, that might be tough.
 
