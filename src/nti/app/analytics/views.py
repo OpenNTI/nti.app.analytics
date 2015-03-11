@@ -156,7 +156,11 @@ class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequest
 		"""
 		request = self.request
 		user = request.remote_user
-		handle_end_session( user, request )
+
+		values = CaseInsensitiveDict(self.readInput())
+		timestamp = values.get( 'timestamp' )
+
+		handle_end_session( user, request, timestamp=timestamp )
 		return hexc.HTTPNoContent()
 
 @view_config(route_name='objects.generic.traversal',
@@ -164,7 +168,7 @@ class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequest
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
-class UpdateAnalyticsSessions(AbstractAuthenticatedView, 
+class UpdateAnalyticsSessions(AbstractAuthenticatedView,
 							  ModeledContentUploadRequestUtilsMixin):
 
 	content_predicate = IAnalyticsSessions.providedBy

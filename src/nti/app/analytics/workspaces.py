@@ -32,6 +32,7 @@ from . import ANALYTICS
 from . import ANALYTICS_TITLE
 from . import ANALYTICS_SESSION
 from . import ANALYTICS_SESSIONS
+from . import END_ANALYTICS_SESSION
 from . import BATCH_EVENTS
 from . import SYNC_PARAMS
 
@@ -70,7 +71,7 @@ class _AnalyticsWorkspace(Contained):
 	def links(self):
 		result = []
 		if has_analytics():
-			link_names = [BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS, SYNC_PARAMS]
+			link_names = [BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS, END_ANALYTICS_SESSION, SYNC_PARAMS]
 			for name in link_names:
 				link = Link(ANALYTICS, rel=name, elements=(name,))
 				link.__name__ = link.target

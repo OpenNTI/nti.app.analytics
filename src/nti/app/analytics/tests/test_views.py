@@ -390,8 +390,9 @@ class TestAnalyticsSession( _AbstractTestViews ):
 		# End our session
 		end_session_url = '/dataserver2/analytics/end_analytics_session'
 
+		timestamp = timestamp_type( 1 )
 		self.testapp.post_json( end_session_url,
-								{ 'session_id' : 2 },
+								{ 'session_id' : 2, 'timestamp' : 1 },
 								status=204 )
 
 		# This cookie is set to expire.
@@ -401,7 +402,7 @@ class TestAnalyticsSession( _AbstractTestViews ):
 
 		session_record = self.session.query( Sessions ).filter( Sessions.session_id == 2 ).first()
 		assert_that( session_record, not_none() )
-		assert_that( session_record.end_time, not_none() )
+		assert_that( session_record.end_time, is_( timestamp ) )
 
 		with mock_dataserver.mock_db_trans(self.ds):
 			user = User.get_user( self.extra_environ_default_user )

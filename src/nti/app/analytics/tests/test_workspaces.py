@@ -15,6 +15,7 @@ from nti.appserver.workspaces import UserService
 
 from nti.app.analytics import ANALYTICS_TITLE
 from nti.app.analytics import BATCH_EVENTS
+from nti.app.analytics import END_ANALYTICS_SESSION
 from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import SYNC_PARAMS
 
@@ -45,6 +46,7 @@ class TestWorkspaces(ApplicationLayerTest):
 														'Links', has_item(
 																	has_entries( 'rel', BATCH_EVENTS,
 																				'rel', ANALYTICS_SESSION,
+																				'rel', END_ANALYTICS_SESSION,
 																				'rel', SYNC_PARAMS ) ),
 														'Items', has_item(
 																	has_entries( 'Title', 'Events',
