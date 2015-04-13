@@ -161,8 +161,8 @@ play_speed_event = VideoPlaySpeedChangeEvent(user=user,
 				RootContextID=course,
 				ResourceId=resource_id,
 				VideoTime=video_start_time,
-				OldPlaySpeed='2x',
-				NewPlaySpeed='8x')
+				OldPlaySpeed=2,
+				NewPlaySpeed=8)
 
 def _internalize( ext ):
 	factory = internalization.find_factory_for( ext )

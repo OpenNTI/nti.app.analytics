@@ -122,7 +122,11 @@ class BatchEvents(	AbstractAuthenticatedView,
 		event_count, malformed_count = _process_batch_events( events )
 		logger.info('Received batched analytic events (count=%s) (total_count=%s) (malformed=%s)',
 					event_count, total_count, malformed_count )
-		return event_count
+
+		result = LocatedExternalDict()
+		result['EventCount'] = event_count
+		result['MalformedEventCount'] = malformed_count
+		return result
 
 @view_config(route_name='objects.generic.traversal',
 			 name=SYNC_PARAMS,
