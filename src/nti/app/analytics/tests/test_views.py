@@ -60,6 +60,7 @@ from nti.analytics.model import WatchVideoEvent
 from nti.analytics.model import BatchResourceEvents
 from nti.analytics.model import AnalyticsSessions
 from nti.analytics.model import AnalyticsSession
+from nti.analytics.model import VideoPlaySpeedChangeEvent
 
 from nti.analytics.sessions import _get_cookie_id
 from nti.analytics.sessions import get_current_session_id
@@ -74,6 +75,7 @@ from nti.analytics.database.enrollments import CourseCatalogViews
 from nti.analytics.database.resource_tags import NotesViewed
 from nti.analytics.database.resource_views import VideoEvents
 from nti.analytics.database.resource_views import CourseResourceViews
+from nti.analytics.database.resource_views import VideoPlaySpeedEvents
 from nti.analytics.database.resource_views import create_course_resource_view
 from nti.analytics.database.resource_views import create_video_event
 from nti.analytics.database.root_context import get_root_context_id
@@ -154,6 +156,14 @@ resource_event = ResourceEvent(user=user,
 					resource_id=resource_id,
 					Duration=time_length)
 
+play_speed_event = VideoPlaySpeedChangeEvent(user=user,
+				timestamp=timestamp,
+				RootContextID=course,
+				ResourceId=resource_id,
+				VideoTime=video_start_time,
+				OldPlaySpeed='2x',
+				NewPlaySpeed='8x')
+
 def _internalize( ext ):
 	factory = internalization.find_factory_for( ext )
 	_object = factory()
@@ -211,7 +221,7 @@ class TestBatchEvents( _AbstractTestViews ):
 		course_catalog_event.SessionID = course_catalog_session_id
 
 		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event,
-											blog_event, note_event, topic_event ] )
+											blog_event, note_event, topic_event, play_speed_event ] )
 
 		ext_obj = toExternalObject(io)
 
@@ -247,6 +257,10 @@ class TestBatchEvents( _AbstractTestViews ):
 		assert_that( results[0].session_id, is_( session_id ))
 
 		results = self.session.query( TopicsViewed ).all()
+		assert_that( results, has_length( 1 ) )
+		assert_that( results[0].session_id, is_( session_id ))
+
+		results = self.session.query( VideoPlaySpeedEvents ).all()
 		assert_that( results, has_length( 1 ) )
 		assert_that( results[0].session_id, is_( session_id ))
 
@@ -541,7 +555,7 @@ class TestProgressView( _AbstractTestViews ):
 
 	def _get_assignment(self):
 		new_assignment = QAssignment()
-		new_assignment.ntiid = self.assignment_id = 'tag:ntiid1'
+		new_assignment.ntiid = self.assignment_id = 'tag:nextthought.com,2015:ntiid1'
 		return new_assignment
 
 	def _install_user(self, user_id):
