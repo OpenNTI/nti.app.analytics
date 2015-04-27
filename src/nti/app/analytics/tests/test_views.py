@@ -61,8 +61,6 @@ from nti.analytics.model import BatchResourceEvents
 from nti.analytics.model import AnalyticsSessions
 from nti.analytics.model import AnalyticsSession
 from nti.analytics.model import VideoPlaySpeedChangeEvent
-from nti.analytics.model import SelfAssessmentViewEvent
-from nti.analytics.model import AssignmentViewEvent
 
 from nti.analytics.sessions import _get_cookie_id
 from nti.analytics.sessions import get_current_session_id
@@ -71,8 +69,6 @@ from nti.analytics.sessions import ANALYTICS_SESSION_HEADER
 from nti.analytics.database.database import AnalyticsDB
 from nti.analytics.database import interfaces as analytic_interfaces
 from nti.analytics.database.assessments import AssignmentsTaken
-from nti.analytics.database.assessments import SelfAssessmentViews
-from nti.analytics.database.assessments import AssignmentViews
 from nti.analytics.database.boards import TopicsViewed
 from nti.analytics.database.blogs import BlogsViewed
 from nti.analytics.database.enrollments import CourseCatalogViews
@@ -161,8 +157,6 @@ resource_kwargs = { 'user':user,
 					'Duration':time_length }
 
 resource_event = ResourceEvent( **resource_kwargs )
-self_assessment_event = SelfAssessmentViewEvent( **resource_kwargs )
-assignment_event = AssignmentViewEvent( **resource_kwargs )
 
 play_speed_event = VideoPlaySpeedChangeEvent(user=user,
 				timestamp=timestamp,
@@ -229,8 +223,7 @@ class TestBatchEvents( _AbstractTestViews ):
 		course_catalog_event.SessionID = course_catalog_session_id
 
 		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event,
-											blog_event, note_event, topic_event, play_speed_event,
-											self_assessment_event, assignment_event ] )
+											blog_event, note_event, topic_event, play_speed_event ] )
 
 		ext_obj = toExternalObject(io)
 
@@ -244,12 +237,6 @@ class TestBatchEvents( _AbstractTestViews ):
 								ext_obj,
 								headers=headers,
 								status=200 )
-
-		results = self.session.query( SelfAssessmentViews ).all()
-		assert_that( results, has_length( 1 ) )
-
-		results = self.session.query( AssignmentViews ).all()
-		assert_that( results, has_length( 1 ) )
 
 		results = self.session.query( VideoEvents ).all()
 		assert_that( results, has_length( 1 ) )
@@ -285,12 +272,6 @@ class TestBatchEvents( _AbstractTestViews ):
 								ext_obj,
 								headers=headers,
 								status=200 )
-
-		results = self.session.query( SelfAssessmentViews ).all()
-		assert_that( results, has_length( 1 ) )
-
-		results = self.session.query( AssignmentViews ).all()
-		assert_that( results, has_length( 1 ) )
 
 		results = self.session.query( VideoEvents ).all()
 		assert_that( results, has_length( 1 ) )
