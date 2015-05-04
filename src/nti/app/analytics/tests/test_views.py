@@ -716,7 +716,7 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( result, contains_inanyorder( video1, video2, resource1 ))
 
 		resource_progress = result.get( resource1 )
-		assert_that( resource_progress, has_entry('MaxPossibleProgress', 1 ) )
+		assert_that( resource_progress, has_entry('MaxPossibleProgress', 2 ) )
 		assert_that( resource_progress, has_entry('AbsoluteProgress', 1 ) )
 		assert_that( resource_progress, has_entry('HasProgress', True ) )
 
