@@ -674,10 +674,11 @@ class TestProgressView( _AbstractTestViews ):
 		user = self._install_user( user_id )
 
 		# Now a video event
+		max_progress = 120
 		with mock_dataserver.mock_db_trans(self.ds):
 			user = User.get_user( user_id )
 			self._create_course()
-			self._create_video_event( user=user, resource_val=video1 )
+			self._create_video_event( user=user, resource_val=video1, max_time_length=max_progress  )
 
 		response = self._get_progress( response=response )
 		result = response.json_body['Items']
@@ -685,7 +686,7 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( result, contains( video1 ))
 
 		video_progress = result.get( video1 )
-		assert_that( video_progress, has_entry('MaxPossibleProgress', None ) )
+		assert_that( video_progress, has_entry('MaxPossibleProgress', max_progress ) )
 		assert_that( video_progress, has_entry('AbsoluteProgress', 30 ) )
 		assert_that( video_progress, has_entry('HasProgress', True ) )
 
@@ -696,10 +697,9 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( result, contains( video1 ))
 
 		# Same video event
-		max_progress = 120
 		with mock_dataserver.mock_db_trans(self.ds):
 			user = User.get_user( user_id )
-			self._create_video_event( user=user, resource_val=video1, max_time_length=max_progress )
+			self._create_video_event( user=user, resource_val=video1 )
 		response = self._get_progress( response=response )
 
 		result = response.json_body['Items']
