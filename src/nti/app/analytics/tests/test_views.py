@@ -163,13 +163,13 @@ resource_kwargs = { 'user':user,
 resource_event = ResourceEvent( **resource_kwargs )
 
 self_assess_kwargs = dict( **resource_kwargs )
-self_assess_kwargs['ResourceId'] = self_assess_kwargs.pop( 'resource_id' )
-self_assess_kwargs['QuestionSetId'] = question_set_id = 'tag:nextthought.com,2011-10:OU-NAQ-CLC3403_LawAndJustice.naq.set.qset:QUIZ1_aristotle'
+self_assess_kwargs['ContentId'] = self_assess_kwargs.pop( 'resource_id' )
+self_assess_kwargs['ResourceId'] = question_set_id = 'tag:nextthought.com,2011-10:OU-NAQ-CLC3403_LawAndJustice.naq.set.qset:QUIZ1_aristotle'
 self_assessment_event = SelfAssessmentViewEvent( **self_assess_kwargs )
 
 assignment_kwargs = dict( **resource_kwargs )
 assignment_kwargs.pop( 'resource_id' )
-assignment_kwargs['AssignmentId'] = assignment_id = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_01.01'
+assignment_kwargs['ResourceId'] = assignment_id = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_01.01'
 assignment_event = AssignmentViewEvent( **assignment_kwargs )
 
 play_speed_event = VideoPlaySpeedChangeEvent(user=user,
