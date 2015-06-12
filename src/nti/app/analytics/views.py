@@ -30,8 +30,6 @@ from nti.analytics.sessions import handle_new_session
 from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import update_session
 
-from nti.analytics.resolvers import recur_children_ntiid_for_unit
-
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
 from nti.analytics.resource_views import get_video_progress_for_course
@@ -46,6 +44,8 @@ from nti.common.maps import CaseInsensitiveDict
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
+
+from nti.contentlibrary.indexed_data import get_catalog
 
 from nti.dataserver.interfaces import IUser
 from nti.dataserver import authorization as nauth
@@ -238,6 +238,33 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
 				results.append( val )
 		return results
 
+def _get_children_ntiid_legacy( unit, accum ):
+	for attr in ('ntiid', 'target_ntiid'):
+		ntiid_val = getattr( unit, attr, None )
+		if ntiid_val is not None:
+			accum.add( ntiid_val )
+	for ntiid in unit.embeddedContainerNTIIDs:
+		accum.add( ntiid )
+	for child in unit.children:
+		_get_children_ntiid_legacy( child, accum )
+
+def _get_children_ntiid( unit ):
+	catalog = get_catalog()
+	rs = catalog.search_objects( container_ntiids=unit.ntiid )
+	contained_objects = tuple( rs )
+	results = set()
+	if not contained_objects:
+		# Probably a unit from a global, non-persistent course;
+		# iterating is the best we can do.
+		_get_children_ntiid_legacy( unit, results )
+	else:
+		for contained_object in contained_objects:
+			for attr in ('ntiid', 'target_ntiid'):
+				ntiid_val = getattr( contained_object, attr, None )
+				if ntiid_val is not None:
+					results.add( ntiid_val )
+	return results
+
 @view_config(route_name='objects.generic.traversal',
 			 renderer='rest',
 			 context=ICourseOutlineContentNode,
@@ -258,13 +285,10 @@ class CourseOutlineNodeProgress( AbstractAuthenticatedView,
 		# - Locally, this is quick. ~1s (much less when cached) to get
 		# ntiids under node; ~.05s to get empty resource set.  Bumps up to ~.3s
 		# once the user starts accumulating events.
-
-		# TODO If these content nodes can be re-used in other courses, we should
-		# probably accept a course param to distinguish progress between courses.
 		user = self.getRemoteUser()
 		ntiid = self.context.ContentNTIID
 		content_unit = ntiids.find_object_with_ntiid( ntiid )
-		node_ntiids = recur_children_ntiid_for_unit( content_unit )
+		node_ntiids = _get_children_ntiid( content_unit )
 
 		result = LocatedExternalDict()
 		result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
