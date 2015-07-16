@@ -34,6 +34,16 @@
 					 pyramid.interfaces.IRequest"  />
 -->
 
+	<!-- View count adapters -->
+	<adapter factory=".adapters._note_view_stats" />
+	<adapter factory=".adapters._note_view_stats_for_user" />
+	<adapter factory=".adapters._topic_view_stats" />
+	<adapter factory=".adapters._topic_view_stats_for_user" />
+
+	<!-- Progress adapters -->
+	<adapter factory=".adapters._assignment_progress_for_user" />
+	<adapter factory=".adapters._assessment_progress_for_user" />
+
 	<!-- Workspaces -->
 	<!-- Attach to user-service workspaces -->
 	<subscriber factory=".workspaces.AnalyticsWorkspace"

@@ -354,7 +354,7 @@ class TestBatchEvents( _AbstractTestViews ):
 		mock_course.has_attr( intid=999 )
 
 		# This event is now malformed
-		resource_event.RootContextID = None
+		resource_event.resource_id = 'this is not an ntiid'
 
 		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event ] )
 
