@@ -12,6 +12,8 @@ logger = __import__('logging').getLogger(__name__)
 
 from datetime import datetime
 
+from six import integer_types
+
 from zope import interface
 from zope import component
 
@@ -103,7 +105,7 @@ def _get_stats( records, replies=None, user=None ):
 			new_reply_count_for_user = 0
 			for reply in replies:
 				reply_created_time = reply.createdTime
-				if isinstance( reply_created_time, int ):
+				if isinstance( reply_created_time, (integer_types, float) ):
 					reply_created_time = datetime.utcfromtimestamp( reply_created_time )
 				if reply_created_time and reply_created_time > user_last_viewed:
 					new_reply_count_for_user += 1
