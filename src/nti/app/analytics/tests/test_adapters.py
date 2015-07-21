@@ -311,7 +311,9 @@ class TestViewStatAdapters( NTIAnalyticsTestCase ):
 
 	@WithMockDSTrans
 	@time_monotonically_increases
-	def test_note_views(self):
+	@fudge.patch( 'nti.analytics.database.resource_tags.get_root_context' )
+	def test_note_views(self, mock_root_context):
+		mock_root_context.is_callable().returns( 1 )
 		user = self._get_user()
 		other_user = self._get_other_user()
 		note = self._create_note( user )

@@ -100,6 +100,7 @@ def _get_stats( records, replies=None, user=None ):
 	else:
 		# Ok, find out how many replies since our user viewed the object.
 		user_view_times = [x.timestamp for x in records if x.user == user and x.timestamp]
+
 		if user_view_times:
 			user_last_viewed = max( user_view_times ) if user_view_times else 0
 			new_reply_count_for_user = 0

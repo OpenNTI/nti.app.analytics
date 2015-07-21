@@ -8,10 +8,11 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
+import time
 import fudge
+
 from fudge import patch_object
 
-import time
 from datetime import datetime
 
 from webob.datetime_utils import serialize_date
@@ -29,6 +30,7 @@ from hamcrest import has_key
 from hamcrest import has_entry
 from hamcrest import has_entries
 
+from nti.contenttypes.courses.courses import CourseInstance
 from nti.contenttypes.courses.interfaces import ICourseInstance
 
 from nti.dataserver.tests import mock_dataserver
@@ -214,18 +216,18 @@ class TestBatchEvents( _AbstractTestViews ):
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.resource_views._get_object' )
-	@fudge.patch( 'nti.analytics.resource_views._get_course' )
+	@fudge.patch( 'nti.analytics.resource_views._get_root_context' )
 	@fudge.patch( 'nti.analytics.database.blogs._get_blog_id' )
 	@fudge.patch( 'nti.analytics.database.resource_tags._get_note_id' )
 	@fudge.patch( 'nti.analytics.database.boards._get_forum_id_from_forum' )
 	@fudge.patch( 'nti.analytics.database.boards._get_topic_id_from_topic' )
-	def test_batch_event( self, mock_get_object, mock_get_course, mock_get_blog, mock_get_note, mock_get_forum, mock_get_topic ):
+	def test_batch_event( self, mock_get_object, mock_root_context, mock_get_blog, mock_get_note, mock_get_forum, mock_get_topic ):
 		mock_parent = mock_get_object.is_callable().returns_fake()
 		mock_parent.has_attr( __parent__=201 )
 		mock_parent.has_attr( containerId=333 )
 
-		mock_course = mock_get_course.is_callable().returns_fake()
-		mock_course.has_attr( intid=999 )
+		course = CourseInstance()
+		mock_root_context.is_callable().returns( course )
 
 		mock_get_blog.is_callable().returns( 1 )
 		mock_get_note.is_callable().returns( 2 )
@@ -344,19 +346,19 @@ class TestBatchEvents( _AbstractTestViews ):
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.resource_views._get_object' )
-	@fudge.patch( 'nti.analytics.resource_views._get_course' )
-	def test_malformed_event( self, mock_get_object, mock_get_course ):
+	@fudge.patch( 'nti.analytics.resource_views._get_root_context' )
+	def test_malformed_event( self, mock_get_object, mock_find_object ):
 		mock_parent = mock_get_object.is_callable().returns_fake()
 		mock_parent.has_attr( __parent__=201 )
 		mock_parent.has_attr( containerId=333 )
 
-		mock_course = mock_get_course.is_callable().returns_fake()
-		mock_course.has_attr( intid=999 )
+		course = CourseInstance()
+		mock_find_object.is_callable().returns( course )
 
 		# This event is now malformed
 		resource_event.resource_id = 'this is not an ntiid'
 
-		io = BatchResourceEvents( events=[ 	video_event, resource_event, course_catalog_event ] )
+		io = BatchResourceEvents( events=[ video_event, resource_event, course_catalog_event ] )
 
 		ext_obj = toExternalObject(io)
 
