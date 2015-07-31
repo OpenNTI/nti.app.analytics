@@ -39,6 +39,7 @@
 	<adapter factory=".adapters._note_view_stats_for_user" />
 	<adapter factory=".adapters._topic_view_stats" />
 	<adapter factory=".adapters._topic_view_stats_for_user" />
+	<adapter factory=".adapters._video_usage_stats" />
 
 	<!-- Progress adapters -->
 	<adapter factory=".adapters._assignment_progress_for_user" />

@@ -18,6 +18,7 @@ from zope import interface
 from zope import component
 
 from nti.app.products.courseware.interfaces import IViewStats
+from nti.app.products.courseware.interfaces import IVideoUsageStats
 from nti.dataserver.contenttypes.forums.interfaces import ITopic
 
 from nti.assessment.interfaces import IQAssignment
@@ -25,6 +26,7 @@ from nti.assessment.interfaces import IQuestionSet
 
 from nti.dataserver.interfaces import INote
 from nti.dataserver.interfaces import IUser
+from nti.contenttypes.courses.interfaces import ICourseInstance
 
 from nti.analytics import has_analytics
 from nti.analytics.interfaces import IProgress
@@ -35,8 +37,11 @@ from nti.analytics.assessments import get_self_assessments_for_user_and_id
 from nti.analytics.boards import get_topic_views
 
 from nti.analytics.resource_tags import get_note_views
+from nti.analytics.resource_views import get_video_views
 
 from nti.analytics.progress import DefaultProgress
+
+from .video_usage_stats import VideoUsageReport
 
 @interface.implementer( IProgress )
 @component.adapter( IUser, IQAssignment )
@@ -152,4 +157,15 @@ def _note_view_stats_for_user( note, user ):
 		replies = note.referents
 		result = _get_stats( records, replies, user )
 	return result
+
+@interface.implementer( IVideoUsageStats )
+@component.adapter( ICourseInstance )
+def _video_usage_stats( course ):
+	result = None
+	if has_analytics():
+		video_events = get_video_views( course=course )
+		report = VideoUsageReport()
+		result = report.get_video_usage_stats( video_events, course )
+	return result
+	
 
