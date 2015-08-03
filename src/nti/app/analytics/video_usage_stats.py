@@ -18,10 +18,10 @@ _VideoInfo = namedtuple( '_VideoInfoData',
                             'percentage_watched_completely', 
                             'falloff_rate'))
 _VideoFalloffRate = namedtuple( '_VideoFalloffRate', 
-                            ('drop25',
-                            'drop50',
-                            'drop75',
-                            'drop100'))
+                            ('drop25count', 'drop25percentage',
+                            'drop50count', 'drop50percentage',
+                            'drop75count', 'drop75percentage',
+                            'drop100count', 'drop100percentage'))
 _VideoAverageWatchTimes = namedtuple('_VideoAverageWatchTimes', 
                                     ('average_total_watch_time', 'average_session_watch_time'))
 _GeneralVideoInfo = namedtuple('_GeneralVideoInfo', ('percentage_completed_video_sessions'))
@@ -199,20 +199,15 @@ class VideoUsageReport( object ):
             else:
                 drop100count += 1
                     
-        drop25percentage = drop25count/float(session_count)
-        drop50percentage = drop50count/float(session_count)
-        drop75percentage = drop75count/float(session_count)
-        drop100percentage = drop100count/float(session_count)
-            
-        str_drop25 = '%d (%d%%)' % (drop25count, int(round(drop25percentage * 100)))
-        str_drop50 = '%d (%d%%)' % (drop50count, int(round(drop50percentage * 100)))
-        str_drop75 = '%d (%d%%)' % (drop75count, int(round(drop75percentage * 100)))
-        str_drop100 = '%d (%d%%)' % (drop100count, int(round(drop100percentage * 100)))
+        drop25percentage = round(drop25count/float(session_count)*100)
+        drop50percentage = round(drop50count/float(session_count)*100)
+        drop75percentage = round(drop75count/float(session_count)*100)
+        drop100percentage = round(drop100count/float(session_count)*100)
 
-        falloff_data = _VideoFalloffRate(str_drop25,
-                                         str_drop50,
-                                         str_drop75,
-                                         str_drop100)
+        falloff_data = _VideoFalloffRate(drop25count, drop25percentage,
+                                         drop50count, drop50percentage,
+                                         drop75count, drop75percentage,
+                                         drop100count, drop100percentage)
             
         return falloff_data
     
@@ -229,7 +224,7 @@ class VideoUsageReport( object ):
         for scope_name in course.SharingScopes:
             scope = course.SharingScopes.get( scope_name, None )
     
-            if         scope is not None \
+            if scope is not None \
                 and scope not in (public_scope, purchased_scope):
     
                 # If our scope is not 'public'-ish, store it separately.
