@@ -80,3 +80,22 @@ class _TopicProgressDecorator(AbstractAuthenticatedRequestAwareDecorator):
 		if has_analytics():
 			progress = get_topic_progress( self.remoteUser, context )
 			result['Progress'] = to_external_object( progress )
+			
+@component.adapter(ICourseInstance)
+@interface.implementer(IExternalMappingDecorator)
+class _LocationDataLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
+	"""
+	Return locations for users in a course.
+	"""
+ 	
+	def _do_decorate_external(self, context, result):
+		if has_analytics():
+			from IPython.core.debugger import Tracer; Tracer()()
+			links = result.setdefault(LINKS, [])
+			link = Link( context, rel='GeoLocation', elements=('GetGeoLocations',) )
+			interface.alsoProvides(link, ILocation)
+			link.__name__ = ''
+			link__parent__ = context
+			links.append(link)
+
+

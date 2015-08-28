@@ -27,11 +27,14 @@ from hamcrest import not_none
 from hamcrest import contains_inanyorder
 from hamcrest import contains
 from hamcrest import has_key
+from hamcrest import has_item
 from hamcrest import has_entry
 from hamcrest import has_entries
 
 from nti.contenttypes.courses.courses import CourseInstance
+from nti.contenttypes.courses.courses import ContentCourseSubInstance
 from nti.contenttypes.courses.interfaces import ICourseInstance
+from nti.contenttypes.courses.sharing import CourseInstanceSharingScope
 
 from nti.dataserver.tests import mock_dataserver
 
@@ -86,9 +89,12 @@ from nti.analytics.database.resource_views import create_course_resource_view
 from nti.analytics.database.resource_views import create_video_event
 from nti.analytics.database.root_context import get_root_context_id
 from nti.analytics.database.sessions import Sessions
+from nti.analytics.database.sessions import Location
+from nti.analytics.database.sessions import IpGeoLocation
 from nti.analytics.database.users import create_user
 
 from nti.app.analytics import SYNC_PARAMS
+from nti.app.analytics.views import UserLocationView
 
 from nti.analytics.tests import TestIdentifier
 
@@ -526,6 +532,7 @@ class TestAnalyticsSession( _AbstractTestViews ):
 		db_session = self.session.query( Sessions ).filter( Sessions.session_id == session_id ).one()
 		assert_that( db_session, not_none() )
 		assert_that( db_session.end_time, not_none() )
+		
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	def test_update_session_with_invalid( self ):
@@ -777,3 +784,144 @@ class TestProgressView( _AbstractTestViews ):
 
 		# Now a 304 again
 		self._get_progress( response=response, status=304 )
+		
+class TestUserLocationView( _AbstractTestViews ):
+	
+	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
+	@fudge.patch( 'nti.app.analytics.views._get_enrolled_user_ids' )
+	def test_locations( self, mock_get_enrollment_list ):
+		
+		# No one is enrolled in the course yet
+		mock_get_enrollment_list.is_callable().returns([])
+
+		# Initialize location view and fake course
+		course = ContentCourseSubInstance()
+		course.SharingScopes['Public'] = CourseInstanceSharingScope('Public')
+		location_view = UserLocationView(self)
+		
+		# Starting out, no results should be returned
+		result = location_view.get_json_data( course, 'ALL_USERS' )
+		assert_that(result, has_length(0))
+		
+		# Create test locations
+		location1 = Location(latitude='10.0000',
+							longitude='10.0000',
+							city='Atlantis',
+							state='Solid',
+							country='Knowhere'
+							)
+ 		
+		location2 = Location(latitude='11.0000',
+							longitude='11.0000',
+							city='The Forbidden City',
+							state='Liquid',
+							country='United States'
+							)
+		
+		location3 = Location(latitude='12.0000',
+							longitude='12.0000',
+							city='Running out of city names',
+							state='Unknown',
+							country='Great Wilderness'
+							)
+		
+ 		# Add test locations
+		self.session.add(location1)
+		self.session.add(location2)
+		self.session.add(location3)
+		location_results = self.session.query( Location ).all()
+		assert_that(location_results, has_length(3))
+		
+		# There should still be nothing returned, since no users are currently enrolled
+		result = location_view.get_json_data( course, 'ALL_USERS' )
+		assert_that(result, has_length(0))
+ 		
+ 		# Add an IP address for a user enrolled in the course
+		ip_address_1 = IpGeoLocation(user_id=1,
+									ip_addr='1.1.1.1',
+									country_code='US',
+									latitude=10.0,
+									longitude=10.0,
+									location_id=1)
+		self.session.add(ip_address_1)
+		
+		# Now let user 1 be enrolled in the course
+		mock_get_enrollment_list.is_callable().returns([1])
+		
+ 		# We should get one result now
+ 		result = location_view.get_json_data( course, 'ALL_USERS' )
+		assert_that(result, has_length(1))
+ 		assert_that(result[0], has_entry('number_of_students', 1 ))
+ 		assert_that(result[0], has_entry('latitude', 10.0 ))
+ 		assert_that(result[0], has_entry('longitude', 10.0 ))
+ 		
+		# Add another IP address for the same user
+		ip_address_2 = IpGeoLocation(user_id=1,
+									ip_addr='1.1.1.2',
+									country_code='US',
+									latitude=11.0,
+									longitude=11.0,
+									location_id=2)
+		self.session.add(ip_address_2)
+ 		
+		# We should get back two locations with 1 user in each
+ 		result = location_view.get_json_data( course, 'ALL_USERS' )
+		assert_that(result, has_length(2))
+		assert_that(result, has_item(has_entries('latitude', 10.0,
+												'longitude', 10.0,
+												'number_of_students', 1)))
+		assert_that(result, has_item(has_entries('latitude', 11.0,
+												'longitude', 11.0,
+												'number_of_students', 1)))
+		
+		# Add another user in the first location
+		ip_address_3 = IpGeoLocation(user_id=2,
+									ip_addr='1.1.1.3',
+									country_code='US',
+									latitude=10.0,
+									longitude=10.0,
+									location_id=1)
+		self.session.add(ip_address_3)
+		mock_get_enrollment_list.is_callable().returns([1, 2])
+		
+		# Now we get back 2 locations, 1 of which has two users
+		result = location_view.get_json_data( course, 'ALL_USERS' )
+		assert_that(result, has_length(2))
+		assert_that(result, has_item(has_entries('latitude', 10.0,
+												'longitude', 10.0,
+												'number_of_students', 2)))
+		assert_that(result, has_item(has_entries('latitude', 11.0,
+												'longitude', 11.0,
+												'number_of_students', 1)))
+		
+		# The second user has another ip address in a location not shared by the first
+		ip_address_4 = IpGeoLocation(user_id=2,
+									ip_addr='1.1.1.4',
+									country_code='US',
+									latitude=12.0,
+									longitude=12.0,
+									location_id=3)
+		self.session.add(ip_address_4)
+		
+		# Now we get back 3 locations, one of which has two users.
+		
+		# The other two locations should only have one user each.
+		result = location_view.get_json_data( course, 'ALL_USERS' )
+		assert_that(result, has_length(3))
+		assert_that(result, has_item(has_entries('latitude', 10.0,
+												'longitude', 10.0,
+												'number_of_students', 2)))
+		assert_that(result, has_item(has_entries('latitude', 11.0,
+												'longitude', 11.0,
+												'number_of_students', 1)))
+		assert_that(result, has_item(has_entries('latitude', 12.0,
+												'longitude', 12.0,
+												'number_of_students', 1)))
+		
+		
+		
+		
+		
+		
+		
+	
