@@ -90,7 +90,6 @@ class _LocationDataLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
  	
 	def _do_decorate_external(self, context, result):
 		if has_analytics():
-			from IPython.core.debugger import Tracer; Tracer()()
 			links = result.setdefault(LINKS, [])
 			link = Link( context, rel='GeoLocation', elements=('GetGeoLocations',) )
 			interface.alsoProvides(link, ILocation)
