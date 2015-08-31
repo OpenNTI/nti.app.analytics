@@ -63,11 +63,13 @@ from nti.externalization.externalization import to_external_object
 
 from nti.ntiids import ntiids
 
-from . import BATCH_EVENTS
+from nti.site.site import get_component_hierarchy_names
+
 from . import SYNC_PARAMS
+from . import BATCH_EVENTS
 from . import ANALYTICS_SESSION
-from . import END_ANALYTICS_SESSION
 from . import ANALYTICS_SESSIONS
+from . import END_ANALYTICS_SESSION
 
 ALL_USERS = 'ALL_USERS'
 SET_RESEARCH_VIEW = 'SetUserResearch'
@@ -258,7 +260,8 @@ def _get_children_ntiid_legacy( unit, accum ):
 
 def _get_children_ntiid( unit ):
 	catalog = get_catalog()
-	rs = catalog.search_objects( container_ntiids=unit.ntiid )
+	rs = catalog.search_objects( container_ntiids=unit.ntiid,
+								 sites=get_component_hierarchy_names() )
 	contained_objects = tuple( rs )
 	results = set()
 	if not contained_objects:
