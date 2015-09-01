@@ -788,7 +788,7 @@ class TestProgressView( _AbstractTestViews ):
 class TestUserLocationView( _AbstractTestViews ):
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
-	@fudge.patch( 'nti.app.analytics.views._get_enrolled_user_ids' )
+	@fudge.patch( 'nti.analytics.database.locations._get_enrolled_user_ids' )
 	def test_locations( self, mock_get_enrollment_list ):
 
 		# No one is enrolled in the course yet
