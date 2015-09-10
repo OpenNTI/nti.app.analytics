@@ -13,6 +13,7 @@ logger = __import__('logging').getLogger(__name__)
 
 from zope import component
 from zope import interface
+
 from zope.location.interfaces import ILocation
 
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
@@ -44,7 +45,7 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
 	def _do_decorate_external(self, context, result):
 		if has_analytics():
 			links = result.setdefault(LINKS, [])
-			link = Link( context, rel="Progress", elements=('Progress',) )
+			link = Link(context, rel="Progress", elements=('Progress',))
 			interface.alsoProvides(link, ILocation)
 			link.__name__ = ''
 			link.__parent__ = context
@@ -61,7 +62,7 @@ class _CourseVideoProgressLinkDecorator(AbstractAuthenticatedRequestAwareDecorat
 	def _do_decorate_external(self, context, result):
 		if has_analytics():
 			links = result.setdefault(LINKS, [])
-			link = Link( context, rel="VideoProgress", elements=('VideoProgress',) )
+			link = Link(context, rel="VideoProgress", elements=('VideoProgress',))
 			interface.alsoProvides(link, ILocation)
 			link.__name__ = ''
 			link.__parent__ = context
@@ -78,23 +79,21 @@ class _TopicProgressDecorator(AbstractAuthenticatedRequestAwareDecorator):
 
 	def _do_decorate_external(self, context, result):
 		if has_analytics():
-			progress = get_topic_progress( self.remoteUser, context )
-			result['Progress'] = to_external_object( progress )
-			
+			progress = get_topic_progress(self.remoteUser, context)
+			result['Progress'] = to_external_object(progress)
+
 @component.adapter(ICourseInstance)
 @interface.implementer(IExternalMappingDecorator)
 class _LocationDataLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
 	"""
 	Return locations for users in a course.
 	"""
- 	
+
 	def _do_decorate_external(self, context, result):
 		if has_analytics():
 			links = result.setdefault(LINKS, [])
-			link = Link( context, rel='GeoLocation', elements=('GetGeoLocations',) )
+			link = Link(context, rel='GeoLocation', elements=('GetGeoLocations',))
 			interface.alsoProvides(link, ILocation)
 			link.__name__ = ''
-			link__parent__ = context
+			link.__parent__ = context
 			links.append(link)
-
-

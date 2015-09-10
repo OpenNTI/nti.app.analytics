@@ -23,9 +23,6 @@ from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
 from nti.analytics.database import locations
-from nti.analytics.database import get_analytics_db
-from nti.analytics.database.sessions import Location
-from nti.analytics.database.sessions import IpGeoLocation
 
 from nti.analytics.model import delete_research_status
 from nti.analytics.model import UserResearchStatusEvent
@@ -52,10 +49,8 @@ from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
 from nti.contentlibrary.indexed_data import get_catalog
 
-from nti.dataserver.users import User
 from nti.dataserver.interfaces import IUser
 from nti.dataserver import authorization as nauth
-from nti.dataserver.interfaces import IEnumerableEntityContainer
 
 from nti.externalization import internalization
 from nti.externalization.interfaces import LocatedExternalDict
@@ -80,17 +75,17 @@ def _is_true(t):
 	result = bool(t and str(t).lower() in ('1', 'y', 'yes', 't', 'true'))
 	return result
 
-def _get_last_mod( progress, max_last_mod ):
+def _get_last_mod(progress, max_last_mod):
 	"For progress, get the most recent date as our last modified."
 	result = max_last_mod
 
 	if 		not max_last_mod \
-		or 	( 	progress.last_modified and \
-				progress.last_modified > max_last_mod ):
+		or 	(progress.last_modified and \
+				progress.last_modified > max_last_mod):
 		result = progress.last_modified
 	return result
 
-def _process_batch_events( events ):
+def _process_batch_events(events):
 	"Process the events, returning a tuple of events queued and malformed events."
 	batch_events = []
 	malformed_count = 0
@@ -102,13 +97,13 @@ def _process_batch_events( events ):
 		new_event = factory()
 		try:
 			internalization.update_from_external_object(new_event, event)
-			batch_events.append( new_event )
+			batch_events.append(new_event)
 		except ValidationError as e:
 			# The app may resend events if we err; so we should just log.
 			logger.warn('Malformed events received (event=%s) (%s)', event, e)
 			malformed_count += 1
 
-	event_count = handle_events( batch_events )
+	event_count = handle_events(batch_events)
 	return event_count, malformed_count
 
 @view_config(route_name='objects.generic.traversal',
@@ -116,8 +111,8 @@ def _process_batch_events( events ):
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
-class BatchEvents(	AbstractAuthenticatedView,
-					ModeledContentUploadRequestUtilsMixin ):
+class BatchEvents(AbstractAuthenticatedView,
+					ModeledContentUploadRequestUtilsMixin):
 	"""
 	A view that accepts a batch of analytics events.  The view
 	will parse the input and process the events (e.g. queueing).
@@ -130,9 +125,9 @@ class BatchEvents(	AbstractAuthenticatedView,
 		events = external_input['events']
 		total_count = len(events)
 
-		event_count, malformed_count = _process_batch_events( events )
+		event_count, malformed_count = _process_batch_events(events)
 		logger.info('Received batched analytic events (count=%s) (total_count=%s) (malformed=%s)',
-					event_count, total_count, malformed_count )
+					event_count, total_count, malformed_count)
 
 		result = LocatedExternalDict()
 		result['EventCount'] = event_count
@@ -143,7 +138,7 @@ class BatchEvents(	AbstractAuthenticatedView,
 			 name=SYNC_PARAMS,
 			 renderer='rest',
 			 request_method='GET')
-class BatchEventParams( AbstractAuthenticatedView ):
+class BatchEventParams(AbstractAuthenticatedView):
 
 	def __call__(self):
 		# Return our default analytic client params
@@ -155,7 +150,7 @@ class BatchEventParams( AbstractAuthenticatedView ):
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
-class AnalyticsSession( AbstractAuthenticatedView ):
+class AnalyticsSession(AbstractAuthenticatedView):
 
 	def __call__(self):
 		"""
@@ -195,19 +190,19 @@ class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequest
 		user = request.remote_user
 
 		values = CaseInsensitiveDict(self.readInput())
-		timestamp = values.get( 'timestamp' )
-		batch_events = values.get( 'batch_events' )
+		timestamp = values.get('timestamp')
+		batch_events = values.get('batch_events')
 
 		if batch_events:
-			events = batch_events.get( 'events' )
+			events = batch_events.get('events')
 
 			if events:
-				total_count = len( events )
-				event_count, malformed_count = _process_batch_events( events )
+				total_count = len(events)
+				event_count, malformed_count = _process_batch_events(events)
 				logger.info('Process batched analytic events on session close (count=%s) (total_count=%s) (malformed=%s)',
-						event_count, total_count, malformed_count )
+							event_count, total_count, malformed_count)
 
-		handle_end_session( user, request, timestamp=timestamp )
+		handle_end_session(user, request, timestamp=timestamp)
 		return hexc.HTTPNoContent()
 
 @view_config(route_name='objects.generic.traversal',
@@ -230,51 +225,51 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
 		user = request.remote_user
 
 		external_input = self.readInput()
-		factory = internalization.find_factory_for( external_input )
+		factory = internalization.find_factory_for(external_input)
 		sessions = factory()
-		internalization.update_from_external_object( sessions, external_input )
+		internalization.update_from_external_object(sessions, external_input)
 
-		ip_addr = getattr( request, 'remote_addr' , None )
-		user_agent = getattr( request, 'user_agent', None )
+		ip_addr = getattr(request, 'remote_addr' , None)
+		user_agent = getattr(request, 'user_agent', None)
 
 		results = []
 		for session in sessions.sessions:
 			try:
-				result = update_session( session, user, user_agent=user_agent, ip_addr=ip_addr )
-				results.append( result )
+				result = update_session(session, user, user_agent=user_agent, ip_addr=ip_addr)
+				results.append(result)
 			except ValueError as e:
 				# Append invalid session information.  We still return a 200 though.
 				val = dict()
 				val['Error'] = e.message
-				results.append( val )
+				results.append(val)
 		return results
 
-def _get_children_ntiid_legacy( unit, accum ):
+def _get_children_ntiid_legacy(unit, accum):
 	for attr in ('ntiid', 'target_ntiid'):
-		ntiid_val = getattr( unit, attr, None )
+		ntiid_val = getattr(unit, attr, None)
 		if ntiid_val is not None:
-			accum.add( ntiid_val )
+			accum.add(ntiid_val)
 	for ntiid in unit.embeddedContainerNTIIDs:
-		accum.add( ntiid )
+		accum.add(ntiid)
 	for child in unit.children:
-		_get_children_ntiid_legacy( child, accum )
+		_get_children_ntiid_legacy(child, accum)
 
-def _get_children_ntiid( unit ):
+def _get_children_ntiid(unit):
 	catalog = get_catalog()
-	rs = catalog.search_objects( container_ntiids=unit.ntiid,
-								 sites=get_component_hierarchy_names() )
-	contained_objects = tuple( rs )
+	rs = catalog.search_objects(container_ntiids=unit.ntiid,
+								 sites=get_component_hierarchy_names())
+	contained_objects = tuple(rs)
 	results = set()
 	if not contained_objects:
 		# Probably a unit from a global, non-persistent course;
 		# iterating is the best we can do.
-		_get_children_ntiid_legacy( unit, results )
+		_get_children_ntiid_legacy(unit, results)
 	else:
 		for contained_object in contained_objects:
 			for attr in ('ntiid', 'target_ntiid'):
-				ntiid_val = getattr( contained_object, attr, None )
+				ntiid_val = getattr(contained_object, attr, None)
 				if ntiid_val is not None:
-					results.add( ntiid_val )
+					results.add(ntiid_val)
 	return results
 
 @view_config(route_name='objects.generic.traversal',
@@ -282,8 +277,8 @@ def _get_children_ntiid( unit ):
 			 context=ICourseOutlineContentNode,
 			 request_method='GET',
 			 permission=nauth.ACT_READ,
-			 name="Progress" )
-class CourseOutlineNodeProgress( AbstractAuthenticatedView,
+			 name="Progress")
+class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 								 ModeledContentUploadRequestUtilsMixin):
 	"""
 	For the given content outline node, return the progress we have for the user
@@ -299,8 +294,8 @@ class CourseOutlineNodeProgress( AbstractAuthenticatedView,
 		# once the user starts accumulating events.
 		user = self.getRemoteUser()
 		ntiid = self.context.ContentNTIID
-		content_unit = ntiids.find_object_with_ntiid( ntiid )
-		node_ntiids = _get_children_ntiid( content_unit )
+		content_unit = ntiids.find_object_with_ntiid(ntiid)
+		node_ntiids = _get_children_ntiid(content_unit)
 
 		result = LocatedExternalDict()
 		result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
@@ -312,27 +307,27 @@ class CourseOutlineNodeProgress( AbstractAuthenticatedView,
 		# Get progress for resource/videos
 		for node_ntiid in node_ntiids:
 			# Can improve this if we can distinguish between video and other.
-			node_progress = get_progress_for_ntiid( user, node_ntiid )
+			node_progress = get_progress_for_ntiid(user, node_ntiid)
 
 			if node_progress:
-				item_dict[node_ntiid] = to_external_object( node_progress )
-				node_last_modified = _get_last_mod( node_progress, node_last_modified )
+				item_dict[node_ntiid] = to_external_object(node_progress)
+				node_last_modified = _get_last_mod(node_progress, node_last_modified)
 
 		# Get progress for self-assessments and assignments
 		try:
-			course = ICourseInstance( content_unit )
+			course = ICourseInstance(content_unit)
 		except TypeError:
-			logger.warn( 'No course found for content unit; cannot return progress for assessments (%s)',
-						ntiid )
+			logger.warn('No course found for content unit; cannot return progress for assessments (%s)',
+						ntiid)
 			course = None
 
 		if course is not None:
 			# Gathering all assignments/self-assessments for course.
 			# May be cheaper than finding just for our unit.
-			progresses = get_assessment_progresses_for_course( user, course )
+			progresses = get_assessment_progresses_for_course(user, course)
 			for progress in progresses:
-				item_dict[progress.progress_id] = to_external_object( progress )
-				node_last_modified = _get_last_mod( progress, node_last_modified )
+				item_dict[progress.progress_id] = to_external_object(progress)
+				node_last_modified = _get_last_mod(progress, node_last_modified)
 
 		# We could summarize progress for node. This might be difficult unless we assume
 		# that every child ntiid contributes towards progress.  If we need to filter
@@ -347,7 +342,7 @@ class CourseOutlineNodeProgress( AbstractAuthenticatedView,
 			 context=ICourseInstance,
 			 request_method='GET',
 			 permission=nauth.ACT_READ,
-			 name="VideoProgress" )
+			 name="VideoProgress")
 class UserCourseVideoProgress(AbstractAuthenticatedView,
 							  ModeledContentUploadRequestUtilsMixin):
 	"""
@@ -368,23 +363,23 @@ class UserCourseVideoProgress(AbstractAuthenticatedView,
 		result[StandardExternalFields.ITEMS] = item_dict = {}
 		node_last_modified = None
 
-		video_progress_col = get_video_progress_for_course( user, course )
+		video_progress_col = get_video_progress_for_course(user, course)
 
 		for video_progress in video_progress_col:
-			item_dict[video_progress.ResourceID] = to_external_object( video_progress )
-			node_last_modified = _get_last_mod( video_progress, node_last_modified )
+			item_dict[video_progress.ResourceID] = to_external_object(video_progress)
+			node_last_modified = _get_last_mod(video_progress, node_last_modified)
 
 		# Setting this will enable the renderer to return a 304, if needed.
 		self.request.response.last_modified = node_last_modified
 		return result
 
-@view_config( route_name='objects.generic.traversal',
+@view_config(route_name='objects.generic.traversal',
 			  renderer='rest',
 			  context=IUser,
 			  request_method='POST',
 			  name=SET_RESEARCH_VIEW)
 class UserResearchStudyView(AbstractAuthenticatedView,
-							ModeledContentUploadRequestUtilsMixin ):
+							ModeledContentUploadRequestUtilsMixin):
 	"""
 	Updates a user's research status.
 	"""
@@ -404,29 +399,25 @@ class UserResearchStudyView(AbstractAuthenticatedView,
 		research_status.allow_research = allow_research
 
 		logger.info('Setting research status for user (user=%s) (allow_research=%s)',
-					user.username, allow_research )
+					user.username, allow_research)
 
 		notify(UserResearchStatusEvent(user, allow_research))
 		return hexc.HTTPNoContent()
-	
 
-@view_config( route_name='objects.generic.traversal',
+@view_config(route_name='objects.generic.traversal',
 			  renderer='rest',
 			  context=ICourseInstance,
 			  request_method='GET',
 			  name=GEO_LOCATION_VIEW)
 class UserLocationView(AbstractAuthenticatedView):
 	"""
-	Provides a representation of the geographical 
+	Provides a representation of the geographical
 	locations of users within a course.
 	"""
-	
+
 	def get_json_data(self, course, enrollment_scope):
-		
 		data = locations.get_location_list(course, enrollment_scope)
 		return data
- 		
-	def __call__(self):
-		return to_external_object( self.get_json_data(self.context, ALL_USERS) )
 
-		
+	def __call__(self):
+		return to_external_object(self.get_json_data(self.context, ALL_USERS))
