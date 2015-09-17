@@ -5,6 +5,7 @@
 """
 
 from __future__ import print_function, unicode_literals, absolute_import, division
+from Crypto.Util.number import size
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -69,7 +70,8 @@ from . import END_ANALYTICS_SESSION
 
 ALL_USERS = 'ALL_USERS'
 SET_RESEARCH_VIEW = 'SetUserResearch'
-GEO_LOCATION_VIEW = 'GetGeoLocations'
+GEO_LOCATION_JSON_VIEW = 'GetGeoLocationJson'
+GEO_LOCATION_HTML_VIEW = 'GetGeoLocationHtml'
 
 def _is_true(t):
 	result = bool(t and str(t).lower() in ('1', 'y', 'yes', 't', 'true'))
@@ -403,21 +405,64 @@ class UserResearchStudyView(AbstractAuthenticatedView,
 
 		notify(UserResearchStatusEvent(user, allow_research))
 		return hexc.HTTPNoContent()
+	
+class AbstractUserLocationView(AbstractAuthenticatedView):
+	"""
+	Provides a representation of the geographical 
+	locations of users within a course.
+	"""
+	
+	def get_data(self, course, enrollment_scope):
+		
+		data = locations.get_location_list(course, enrollment_scope)
+		return data
 
 @view_config(route_name='objects.generic.traversal',
 			  renderer='rest',
 			  context=ICourseInstance,
 			  request_method='GET',
-			  name=GEO_LOCATION_VIEW)
-class UserLocationView(AbstractAuthenticatedView):
+			  name=GEO_LOCATION_JSON_VIEW)
+class UserLocationJsonView(AbstractUserLocationView):
 	"""
-	Provides a representation of the geographical
+	Provides a json representation of the geographical 
 	locations of users within a course.
 	"""
 
-	def get_json_data(self, course, enrollment_scope):
-		data = locations.get_location_list(course, enrollment_scope)
-		return data
-
+	def __call__(self):		
+		return self.get_data(self.context, ALL_USERS)
+	
+	
+def _encode( val ):
+	 	try:
+	 		return str( val ) if val else ''
+	 	except:
+	 		return ''
+	 	
+@view_config( route_name='objects.generic.traversal',
+			  renderer='templates/user_location_map.pt',
+			  context=ICourseInstance,
+			  request_method='GET',
+			  name=GEO_LOCATION_HTML_VIEW)
+class UserLocationHtmlView(AbstractUserLocationView):
+	"""
+	Provides HTML code for a page displaying the geographical 
+	locations of users within a course, plotted on a map.
+	"""
+	
 	def __call__(self):
-		return to_external_object(self.get_json_data(self.context, ALL_USERS))
+		options = {}
+		locations = []
+		location_data = self.get_data(self.context, ALL_USERS)
+		if len(location_data) == 0:
+			return hexc.HTTPNotFound("No locations were found");
+		locations.append([_encode("Lat"), _encode("Long"), _encode("Label")])
+		for location in location_data:
+			locations.append([location['latitude'], 
+							location['longitude'], 
+							_encode(location['label'])])
+			
+		options['locations'] = locations
+		
+		return options
+
+

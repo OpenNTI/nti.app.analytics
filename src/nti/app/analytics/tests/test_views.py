@@ -4,6 +4,7 @@
 .. $Id$
 """
 from __future__ import print_function, unicode_literals, absolute_import, division
+from nti.integrationtests.generalpurpose.utils.run_tests import username
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -19,6 +20,9 @@ from webob.datetime_utils import serialize_date
 
 from zope import component
 
+from hamcrest import contains_string
+from hamcrest import instance_of
+from hamcrest import equal_to
 from hamcrest import assert_that
 from hamcrest import has_length
 from hamcrest import is_
@@ -44,6 +48,8 @@ from nti.externalization import internalization
 from nti.externalization.externalization import toExternalObject
 
 from nti.assessment.assignment import QAssignment
+
+from nti.app.products.courseware.tests import InstructedCourseApplicationTestLayer
 
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
@@ -94,7 +100,8 @@ from nti.analytics.database.sessions import IpGeoLocation
 from nti.analytics.database.users import create_user
 
 from nti.app.analytics import SYNC_PARAMS
-from nti.app.analytics.views import UserLocationView
+from nti.app.analytics.views import UserLocationJsonView
+from nti.app.analytics.views import UserLocationHtmlView
 
 from nti.analytics.tests import TestIdentifier
 
@@ -103,6 +110,8 @@ from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
 from nti.ntiids.ntiids import find_object_with_ntiid
 
 from nti.testing.time import time_monotonically_increases
+
+from pyramid import httpexceptions as hexc
 
 timestamp = time.mktime( datetime.utcnow().timetuple() )
 user = 'sjohnson@nextthought.com'
@@ -786,24 +795,10 @@ class TestProgressView( _AbstractTestViews ):
 		self._get_progress( response=response, status=304 )
 
 class TestUserLocationView( _AbstractTestViews ):
-
-	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
-	@fudge.patch( 'nti.analytics.database.locations._get_enrolled_user_ids' )
-	def test_locations( self, mock_get_enrollment_list ):
-
-		# No one is enrolled in the course yet
-		mock_get_enrollment_list.is_callable().returns([])
-
-		# Initialize location view and fake course
-		course = ContentCourseSubInstance()
-		course.SharingScopes['Public'] = CourseInstanceSharingScope('Public')
-		# TODO Self?
-		location_view = UserLocationView( self )
-
-		# Starting out, no results should be returned
-		result = location_view.get_json_data( course, 'ALL_USERS' )
-		assert_that(result, has_length(0))
-
+	
+	default_origin = str('http://janux.ou.edu')
+	
+	def set_up_test_locations(self):
 		# Create test locations
 		location1 = Location(latitude='10.0000',
 							longitude='10.0000',
@@ -830,13 +825,37 @@ class TestUserLocationView( _AbstractTestViews ):
 		self.session.add(location1)
 		self.session.add(location2)
 		self.session.add(location3)
+		
+		# TODO: This doesn't matter to this test except
+		# to verify that our locations got added, so
+		# is this an assertion we can remove? 
 		location_results = self.session.query( Location ).all()
 		assert_that(location_results, has_length(3))
 
-		# There should still be nothing returned, since no users are currently enrolled
-		result = location_view.get_json_data( course, 'ALL_USERS' )
+	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
+	@fudge.patch( 'nti.analytics.database.locations._get_enrolled_user_ids' )
+	def test_location_json( self, mock_get_enrollment_list ):
+ 
+		# No one is enrolled in the course yet
+		mock_get_enrollment_list.is_callable().returns([])
+ 
+		# Initialize location view and fake course
+		course = ContentCourseSubInstance()
+		course.SharingScopes['Public'] = CourseInstanceSharingScope('Public')
+		# TODO Self?
+		location_view = UserLocationJsonView(self)
+		location_view.context = course
+ 
+		# Starting out, no results should be returned
+		result = location_view()
 		assert_that(result, has_length(0))
-
+ 		
+		self.set_up_test_locations()
+ 
+		# There should still be nothing returned, since no users are currently enrolled
+		result = location_view()
+		assert_that(result, has_length(0))
+ 
  		# Add an IP address for a user enrolled in the course
 		ip_address_1 = IpGeoLocation(user_id=1,
 									ip_addr='1.1.1.1',
@@ -845,17 +864,17 @@ class TestUserLocationView( _AbstractTestViews ):
 									longitude=10.0,
 									location_id=1)
 		self.session.add(ip_address_1)
-
+ 
 		# Now let user 1 be enrolled in the course
 		mock_get_enrollment_list.is_callable().returns([1])
-
+ 
  		# We should get one result now
- 		result = location_view.get_json_data( course, 'ALL_USERS' )
+ 		result = location_view()
 		assert_that(result, has_length(1))
  		assert_that(result[0], has_entry('number_of_students', 1 ))
  		assert_that(result[0], has_entry('latitude', 10.0 ))
  		assert_that(result[0], has_entry('longitude', 10.0 ))
-
+ 
 		# Add another IP address for the same user
 		ip_address_2 = IpGeoLocation(user_id=1,
 									ip_addr='1.1.1.2',
@@ -864,9 +883,9 @@ class TestUserLocationView( _AbstractTestViews ):
 									longitude=11.0,
 									location_id=2)
 		self.session.add(ip_address_2)
-
+ 
 		# We should get back two locations with 1 user in each
- 		result = location_view.get_json_data( course, 'ALL_USERS' )
+ 		result = location_view()
 		assert_that(result, has_length(2))
 		assert_that(result, has_item(has_entries('latitude', 10.0,
 												'longitude', 10.0,
@@ -874,7 +893,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		assert_that(result, has_item(has_entries('latitude', 11.0,
 												'longitude', 11.0,
 												'number_of_students', 1)))
-
+ 
 		# Add another user in the first location
 		ip_address_3 = IpGeoLocation(user_id=2,
 									ip_addr='1.1.1.3',
@@ -884,9 +903,9 @@ class TestUserLocationView( _AbstractTestViews ):
 									location_id=1)
 		self.session.add(ip_address_3)
 		mock_get_enrollment_list.is_callable().returns([1, 2])
-
+ 
 		# Now we get back 2 locations, 1 of which has two users
-		result = location_view.get_json_data( course, 'ALL_USERS' )
+		result = location_view()
 		assert_that(result, has_length(2))
 		assert_that(result, has_item(has_entries('latitude', 10.0,
 												'longitude', 10.0,
@@ -894,7 +913,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		assert_that(result, has_item(has_entries('latitude', 11.0,
 												'longitude', 11.0,
 												'number_of_students', 1)))
-
+ 
 		# The second user has another ip address in a location not shared by the first
 		ip_address_4 = IpGeoLocation(user_id=2,
 									ip_addr='1.1.1.4',
@@ -903,11 +922,10 @@ class TestUserLocationView( _AbstractTestViews ):
 									longitude=12.0,
 									location_id=3)
 		self.session.add(ip_address_4)
-
+ 
 		# Now we get back 3 locations, one of which has two users.
-
 		# The other two locations should only have one user each.
-		result = location_view.get_json_data( course, 'ALL_USERS' )
+		result = location_view()
 		assert_that(result, has_length(3))
 		assert_that(result, has_item(has_entries('latitude', 10.0,
 												'longitude', 10.0,
@@ -918,4 +936,86 @@ class TestUserLocationView( _AbstractTestViews ):
 		assert_that(result, has_item(has_entries('latitude', 12.0,
 												'longitude', 12.0,
 												'number_of_students', 1)))
+		
+		
+	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
+	@fudge.patch( 'nti.analytics.database.locations._get_enrolled_user_ids' )
+	def test_location_html( self, mock_get_enrollment_list ):
+		
+		location_link_path = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/GetGeoLocationHtml'
+		
+		# No one is enrolled in the course yet
+		mock_get_enrollment_list.is_callable().returns([])
 
+		# Initialize location view and fake course
+		course = ContentCourseSubInstance()
+		course.SharingScopes['Public'] = CourseInstanceSharingScope('Public')
+		location_view = UserLocationHtmlView(self)
+		location_view.context = course
+		self.set_up_test_locations()
+		instructor_environ = self._make_extra_environ(user='harp4162')
+
+		# With no students in the course, we should get a 404
+		result = location_view()
+		assert_that(result, instance_of(hexc.HTTPNotFound))
+		
+		# Add an IP address for a user enrolled in the course
+		ip_address_1 = IpGeoLocation(user_id=1,
+									ip_addr='1.1.1.1',
+									country_code='US',
+									latitude=10.0,
+									longitude=10.0,
+									location_id=1)
+		self.session.add(ip_address_1)
+
+		# Now let user 1 be enrolled in the course
+		mock_get_enrollment_list.is_callable().returns([1])
+		
+		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		location_json_result = location_view()
+		
+		# The html output should contain the same location data as in the json result.
+		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
+		
+		ip_address_2 = IpGeoLocation(user_id=1,
+									ip_addr='1.1.1.2',
+									country_code='US',
+									latitude=11.0,
+									longitude=11.0,
+									location_id=2)
+		self.session.add(ip_address_2)
+		
+		# We should get back two locations with 1 user in each
+		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		location_json_result = location_view()
+		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
+		
+		# Add another user in the first location
+		ip_address_3 = IpGeoLocation(user_id=2,
+									ip_addr='1.1.1.3',
+									country_code='US',
+									latitude=10.0,
+									longitude=10.0,
+									location_id=1)
+		self.session.add(ip_address_3)
+		mock_get_enrollment_list.is_callable().returns([1, 2])
+ 
+		# Now we get back 2 locations, 1 of which has two users
+		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		location_json_result = location_view()
+		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
+		
+		# The second user has another ip address in a location not shared by the first
+		ip_address_4 = IpGeoLocation(user_id=2,
+									ip_addr='1.1.1.4',
+									country_code='US',
+									latitude=12.0,
+									longitude=12.0,
+									location_id=3)
+		self.session.add(ip_address_4)
+ 
+		# Now we get back 3 locations, one of which has two users.
+		# The other two locations should only have one user each.
+		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		location_json_result = location_view()
+		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
