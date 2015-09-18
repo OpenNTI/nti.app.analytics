@@ -13,7 +13,9 @@ logger = __import__('logging').getLogger(__name__)
 
 from zope import interface
 from zope import component
+
 from zope.container.contained import Contained
+
 from zope.location.interfaces import ILocation
 
 from nti.appserver.workspaces.interfaces import IWorkspace
@@ -29,12 +31,12 @@ from nti.links.links import Link
 from nti.analytics import has_analytics
 
 from . import ANALYTICS
+from . import SYNC_PARAMS
+from . import BATCH_EVENTS
 from . import ANALYTICS_TITLE
 from . import ANALYTICS_SESSION
 from . import ANALYTICS_SESSIONS
 from . import END_ANALYTICS_SESSION
-from . import BATCH_EVENTS
-from . import SYNC_PARAMS
 
 from .interfaces import IAnalyticsWorkspace
 
@@ -59,19 +61,20 @@ class _AnalyticsWorkspace(Contained):
 	__parent__ = None
 
 	def __init__(self, parent=None):
-		super(_AnalyticsWorkspace,self).__init__()
+		super(_AnalyticsWorkspace, self).__init__()
 		if parent:
 			self.__parent__ = parent
 
 	@property
 	def collections(self):
-		return ( EventsCollection(self), SessionsCollection(self) )
+		return (EventsCollection(self), SessionsCollection(self))
 
 	@property
 	def links(self):
 		result = []
 		if has_analytics():
-			link_names = [BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS, END_ANALYTICS_SESSION, SYNC_PARAMS]
+			link_names = (BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS,
+						  END_ANALYTICS_SESSION, SYNC_PARAMS)
 			for name in link_names:
 				link = Link(ANALYTICS, rel=name, elements=(name,))
 				link.__name__ = link.target
@@ -116,4 +119,3 @@ class SessionsCollection(object):
 	@Lazy
 	def container(self):
 		return ()
-
