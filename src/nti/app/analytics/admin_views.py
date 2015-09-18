@@ -3,6 +3,7 @@
 """
 .. $Id$
 """
+
 from __future__ import print_function, unicode_literals, absolute_import, division
 __docformat__ = "restructuredtext en"
 
@@ -13,12 +14,14 @@ import time
 from datetime import datetime
 from datetime import timedelta
 
-from ZODB.POSException import POSError
-
 from zope import component
 from zope import interface
+
 from zope.container.contained import Contained
+
 from zope.traversing.interfaces import IPathAdapter
+
+from ZODB.POSException import POSError
 
 from pyramid.view import view_config
 
@@ -108,8 +111,8 @@ def empty_queue(request):
 		fail_queue.empty()
 
 		if queue_count or failed_count:
-			logger.info( 	'Emptied analytics processing queue (%s) (count=%s) (fail_count=%s)',
-							name, queue_count, failed_count )
+			logger.info('Emptied analytics processing queue (%s) (count=%s) (fail_count=%s)',
+						name, queue_count, failed_count )
 
 		queue_stat = LocatedExternalDict()
 		queue_stat['Total'] = queue_count
@@ -119,7 +122,6 @@ def empty_queue(request):
 	elapsed = time.time() - now
 	logger.info( 'Emptied analytics processing queue (time=%s)', elapsed )
 	return result
-
 
 @view_config(route_name='objects.generic.traversal',
 			 name='user_research_stats',
@@ -167,7 +169,7 @@ class UserResearchStatsView(AbstractAuthenticatedView):
 		result['ToBePromptedCount'] = neither_count
 		return result
 
-### Assessments
+# Assessments
 
 import csv
 from io import BytesIO
