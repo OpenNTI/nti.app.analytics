@@ -5,7 +5,6 @@
 """
 
 from __future__ import print_function, unicode_literals, absolute_import, division
-from Crypto.Util.number import size
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -43,6 +42,7 @@ from nti.analytics.interfaces import IUserResearchStatus
 
 from nti.analytics.progress import get_assessment_progresses_for_course
 
+from nti.common.string import TRUE_VALUES
 from nti.common.maps import CaseInsensitiveDict
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
@@ -74,7 +74,7 @@ GEO_LOCATION_JSON_VIEW = 'GetGeoLocationJson'
 GEO_LOCATION_HTML_VIEW = 'GetGeoLocationHtml'
 
 def _is_true(t):
-	result = bool(t and str(t).lower() in ('1', 'y', 'yes', 't', 'true'))
+	result = bool(t and str(t).lower() in TRUE_VALUES)
 	return result
 
 def _get_last_mod(progress, max_last_mod):
@@ -88,7 +88,9 @@ def _get_last_mod(progress, max_last_mod):
 	return result
 
 def _process_batch_events(events):
-	"Process the events, returning a tuple of events queued and malformed events."
+	"""
+	Process the events, returning a tuple of events queued and malformed events.
+	"""
 	batch_events = []
 	malformed_count = 0
 
@@ -114,7 +116,7 @@ def _process_batch_events(events):
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
 class BatchEvents(AbstractAuthenticatedView,
-					ModeledContentUploadRequestUtilsMixin):
+				  ModeledContentUploadRequestUtilsMixin):
 	"""
 	A view that accepts a batch of analytics events.  The view
 	will parse the input and process the events (e.g. queueing).
@@ -169,7 +171,8 @@ class AnalyticsSession(AbstractAuthenticatedView):
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
-class EndAnalyticsSession(AbstractAuthenticatedView, ModeledContentUploadRequestUtilsMixin):
+class EndAnalyticsSession(AbstractAuthenticatedView, 
+						  ModeledContentUploadRequestUtilsMixin):
 	"""
 	Ends an analytic session, defined by information in the
 	header or cookie of this request.  Optionally accepts a
@@ -405,15 +408,14 @@ class UserResearchStudyView(AbstractAuthenticatedView,
 
 		notify(UserResearchStatusEvent(user, allow_research))
 		return hexc.HTTPNoContent()
-	
+
 class AbstractUserLocationView(AbstractAuthenticatedView):
 	"""
-	Provides a representation of the geographical 
+	Provides a representation of the geographical
 	locations of users within a course.
 	"""
-	
+
 	def get_data(self, course, enrollment_scope):
-		
 		data = locations.get_location_list(course, enrollment_scope)
 		return data
 
@@ -424,45 +426,42 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 			  name=GEO_LOCATION_JSON_VIEW)
 class UserLocationJsonView(AbstractUserLocationView):
 	"""
-	Provides a json representation of the geographical 
+	Provides a json representation of the geographical
 	locations of users within a course.
 	"""
 
-	def __call__(self):		
+	def __call__(self):
 		return self.get_data(self.context, ALL_USERS)
-	
-	
-def _encode( val ):
-	 	try:
-	 		return str( val ) if val else ''
-	 	except:
-	 		return ''
-	 	
-@view_config( route_name='objects.generic.traversal',
+
+def _encode(val):
+	try:
+		return str(val) if val else u''
+	except (Exception, StandardError):
+		return u''
+
+@view_config(route_name='objects.generic.traversal',
 			  renderer='templates/user_location_map.pt',
 			  context=ICourseInstance,
 			  request_method='GET',
 			  name=GEO_LOCATION_HTML_VIEW)
 class UserLocationHtmlView(AbstractUserLocationView):
 	"""
-	Provides HTML code for a page displaying the geographical 
+	Provides HTML code for a page displaying the geographical
 	locations of users within a course, plotted on a map.
 	"""
-	
+
 	def __call__(self):
 		options = {}
 		locations = []
 		location_data = self.get_data(self.context, ALL_USERS)
 		if len(location_data) == 0:
-			return hexc.HTTPNotFound("No locations were found");
+			return hexc.HTTPUnprocessableEntity("No locations were found")
+
 		locations.append([_encode("Lat"), _encode("Long"), _encode("Label")])
 		for location in location_data:
-			locations.append([location['latitude'], 
-							location['longitude'], 
-							_encode(location['label'])])
-			
+			locations.append([location['latitude'],
+							  location['longitude'],
+							  _encode(location['label'])])
+
 		options['locations'] = locations
-		
 		return options
-
-

@@ -42,14 +42,16 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
 	progress information for a user.
 	"""
 
+	def _predicate(self, context, result):
+		return self._is_authenticated and has_analytics()
+
 	def _do_decorate_external(self, context, result):
-		if has_analytics():
-			links = result.setdefault(LINKS, [])
-			link = Link(context, rel="Progress", elements=('Progress',))
-			interface.alsoProvides(link, ILocation)
-			link.__name__ = ''
-			link.__parent__ = context
-			links.append(link)
+		links = result.setdefault(LINKS, [])
+		link = Link(context, rel="Progress", elements=('Progress',))
+		interface.alsoProvides(link, ILocation)
+		link.__name__ = ''
+		link.__parent__ = context
+		links.append(link)
 
 @component.adapter(ICourseInstance)
 @interface.implementer(IExternalMappingDecorator)
@@ -59,14 +61,16 @@ class _CourseVideoProgressLinkDecorator(AbstractAuthenticatedRequestAwareDecorat
 	all video progress for a user.
 	"""
 
+	def _predicate(self, context, result):
+		return self._is_authenticated and has_analytics()
+
 	def _do_decorate_external(self, context, result):
-		if has_analytics():
-			links = result.setdefault(LINKS, [])
-			link = Link(context, rel="VideoProgress", elements=('VideoProgress',))
-			interface.alsoProvides(link, ILocation)
-			link.__name__ = ''
-			link.__parent__ = context
-			links.append(link)
+		links = result.setdefault(LINKS, [])
+		link = Link(context, rel="VideoProgress", elements=('VideoProgress',))
+		interface.alsoProvides(link, ILocation)
+		link.__name__ = ''
+		link.__parent__ = context
+		links.append(link)
 
 @component.adapter(ITopic)
 @interface.implementer(IExternalMappingDecorator)
@@ -77,10 +81,12 @@ class _TopicProgressDecorator(AbstractAuthenticatedRequestAwareDecorator):
 	user content.
 	"""
 
+	def _predicate(self, context, result):
+		return self._is_authenticated and has_analytics()
+
 	def _do_decorate_external(self, context, result):
-		if has_analytics():
-			progress = get_topic_progress(self.remoteUser, context)
-			result['Progress'] = to_external_object(progress)
+		progress = get_topic_progress(self.remoteUser, context)
+		result['Progress'] = to_external_object(progress)
 
 @component.adapter(ICourseInstance)
 @interface.implementer(IExternalMappingDecorator)
@@ -89,15 +95,16 @@ class _LocationDataJsonLinkDecorator(AbstractAuthenticatedRequestAwareDecorator)
 	Return a json representation of locations of course users.
 	"""
 
-	def _do_decorate_external(self, context, result):
-		if has_analytics():
-			links = result.setdefault(LINKS, [])
-			link = Link( context, rel='GeoLocationJson', elements=('GetGeoLocationJson',) )
-			interface.alsoProvides(link, ILocation)
-			link.__name__ = ''
-			link.__parent__ = context
-			links.append(link)
+	def _predicate(self, context, result):
+		return self._is_authenticated and has_analytics()
 
+	def _do_decorate_external(self, context, result):
+		links = result.setdefault(LINKS, [])
+		link = Link(context, rel='GeoLocationJson', elements=('GetGeoLocationJson',))
+		interface.alsoProvides(link, ILocation)
+		link.__name__ = ''
+		link.__parent__ = context
+		links.append(link)
 
 @component.adapter(ICourseInstance)
 @interface.implementer(IExternalMappingDecorator)
@@ -105,12 +112,14 @@ class _LocationDataHtmlLinkDecorator(AbstractAuthenticatedRequestAwareDecorator)
 	"""
 	Return an HTML page showing a map of locations of course users.
 	"""
- 	
+
+	def _predicate(self, context, result):
+		return self._is_authenticated and has_analytics()
+
 	def _do_decorate_external(self, context, result):
-		if has_analytics():
-			links = result.setdefault(LINKS, [])
-			link = Link( context, rel='GeoLocationHtml', elements=('GetGeoLocationHtml',) )
-			interface.alsoProvides(link, ILocation)
-			link.__name__ = ''
-			link__parent__ = context
-			links.append(link)
+		links = result.setdefault(LINKS, [])
+		link = Link(context, rel='GeoLocationHtml', elements=('GetGeoLocationHtml',))
+		interface.alsoProvides(link, ILocation)
+		link.__name__ = ''
+		link.__parent__ = context
+		links.append(link)
