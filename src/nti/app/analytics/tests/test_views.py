@@ -950,8 +950,8 @@ class TestUserLocationView( _AbstractTestViews ):
 		instructor_environ = self._make_extra_environ(user='harp4162')
 
 		# With no students in the course, we should get a 404
-		result = location_view()
-		assert_that(result, instance_of(hexc.HTTPNotFound))
+		result = location_view()		
+		assert_that(result, instance_of(hexc.HTTPUnprocessableEntity))
 		
 		# Add an IP address for a user enrolled in the course
 		ip_address_1 = IpGeoLocation(user_id=1,
