@@ -171,7 +171,7 @@ class AnalyticsSession(AbstractAuthenticatedView):
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
-class EndAnalyticsSession(AbstractAuthenticatedView, 
+class EndAnalyticsSession(AbstractAuthenticatedView,
 						  ModeledContentUploadRequestUtilsMixin):
 	"""
 	Ends an analytic session, defined by information in the
@@ -415,7 +415,7 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 	locations of users within a course.
 	"""
 
-	def get_data(self, course, enrollment_scope):
+	def get_data(self, course, enrollment_scope=None):
 		data = locations.get_location_list(course, enrollment_scope)
 		return data
 
@@ -431,7 +431,7 @@ class UserLocationJsonView(AbstractUserLocationView):
 	"""
 
 	def __call__(self):
-		return self.get_data(self.context, ALL_USERS)
+		return self.get_data(self.context)
 
 def _encode(val):
 	try:
@@ -453,7 +453,7 @@ class UserLocationHtmlView(AbstractUserLocationView):
 	def __call__(self):
 		options = {}
 		locations = []
-		location_data = self.get_data(self.context, ALL_USERS)
+		location_data = self.get_data(self.context)
 		if len(location_data) == 0:
 			return hexc.HTTPUnprocessableEntity("No locations were found")
 

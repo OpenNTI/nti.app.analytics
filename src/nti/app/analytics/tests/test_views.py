@@ -148,7 +148,7 @@ video_event = SkipVideoEvent(user=user,
 				timestamp=timestamp,
 				RootContextID=course,
 				context_path=context_path,
-				resource_id=resource_id,
+				ResourceId=resource_id,
 				Duration=time_length,
 				video_start_time=video_start_time,
 				video_end_time=video_end_time,
@@ -159,7 +159,7 @@ watch_video_event = WatchVideoEvent(user=user,
 				timestamp=timestamp,
 				RootContextID=course,
 				context_path=context_path,
-				resource_id=resource_id,
+				ResourceId=resource_id,
 				Duration=None,
 				video_start_time=video_start_time,
 				video_end_time=None,
@@ -169,18 +169,17 @@ resource_kwargs = { 'user':user,
 					'timestamp':timestamp,
 					'RootContextID':course,
 					'context_path':context_path,
-					'resource_id':resource_id,
+					'ResourceId':resource_id,
 					'Duration':time_length }
 
 resource_event = ResourceEvent( **resource_kwargs )
 
 self_assess_kwargs = dict( **resource_kwargs )
-self_assess_kwargs['ContentId'] = self_assess_kwargs.pop( 'resource_id' )
+self_assess_kwargs['ContentId'] = self_assess_kwargs.pop( 'ResourceId' )
 self_assess_kwargs['ResourceId'] = question_set_id = 'tag:nextthought.com,2011-10:OU-NAQ-CLC3403_LawAndJustice.naq.set.qset:QUIZ1_aristotle'
 self_assessment_event = SelfAssessmentViewEvent( **self_assess_kwargs )
 
 assignment_kwargs = dict( **resource_kwargs )
-assignment_kwargs.pop( 'resource_id' )
 assignment_kwargs['ResourceId'] = assignment_id = 'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_01.01'
 assignment_event = AssignmentViewEvent( **assignment_kwargs )
 
@@ -369,12 +368,20 @@ class TestBatchEvents( _AbstractTestViews ):
 		mock_find_object.is_callable().returns( course )
 		mock_get_course.is_callable().returns( course )
 
-		# This event is now malformed
-		resource_event.resource_id = 'this is not an ntiid'
-
 		io = BatchResourceEvents( events=[ video_event, resource_event, course_catalog_event ] )
 
 		ext_obj = toExternalObject(io)
+
+		# Make a malformed event; validate resource_id field.
+		events = ext_obj.get( 'events' )
+		new_events = []
+		for event in events:
+			if event.get( 'MimeType' ) == ResourceEvent.mime_type:
+				event.pop( 'ResourceId' )
+			elif 'ResourceId' in event:
+				event['resource_id'] = event.pop( 'ResourceId' )
+			new_events.append( event )
+		ext_obj['events'] = new_events
 
 		# Upload our events
 		batch_url = '/dataserver2/analytics/batch_events'
@@ -790,9 +797,9 @@ class TestProgressView( _AbstractTestViews ):
 		self._get_progress( response=response, status=304 )
 
 class TestUserLocationView( _AbstractTestViews ):
-	
+
 	default_origin = str('http://janux.ou.edu')
-	
+
 	def set_up_test_locations(self):
 		# Create test locations
 		location1 = Location(latitude='10.0000',
@@ -820,10 +827,10 @@ class TestUserLocationView( _AbstractTestViews ):
 		self.session.add(location1)
 		self.session.add(location2)
 		self.session.add(location3)
-		
+
 		# TODO: This doesn't matter to this test except
 		# to verify that our locations got added, so
-		# is this an assertion we can remove? 
+		# is this an assertion we can remove?
 		location_results = self.session.query( Location ).all()
 		assert_that(location_results, has_length(3))
 
@@ -844,7 +851,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		# Starting out, no results should be returned
 		result = location_view()
 		assert_that(result, has_length(0))
-		
+
 		self.set_up_test_locations()
 
 		# There should still be nothing returned, since no users are currently enrolled
@@ -935,9 +942,9 @@ class TestUserLocationView( _AbstractTestViews ):
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.database.locations._get_enrolled_user_ids' )
 	def test_location_html( self, mock_get_enrollment_list ):
-		
+
 		location_link_path = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/GetGeoLocationHtml'
-		
+
 		# No one is enrolled in the course yet
 		mock_get_enrollment_list.is_callable().returns([])
 
@@ -950,9 +957,9 @@ class TestUserLocationView( _AbstractTestViews ):
 		instructor_environ = self._make_extra_environ(user='harp4162')
 
 		# With no students in the course, we should get a 404
-		result = location_view()		
+		result = location_view()
 		assert_that(result, instance_of(hexc.HTTPUnprocessableEntity))
-		
+
 		# Add an IP address for a user enrolled in the course
 		ip_address_1 = IpGeoLocation(user_id=1,
 									ip_addr='1.1.1.1',
@@ -964,13 +971,13 @@ class TestUserLocationView( _AbstractTestViews ):
 
 		# Now let user 1 be enrolled in the course
 		mock_get_enrollment_list.is_callable().returns([1])
-		
+
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
 		location_json_result = location_view()
-		
+
 		# The html output should contain the same location data as in the json result.
 		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
-		
+
 		ip_address_2 = IpGeoLocation(user_id=1,
 									ip_addr='1.1.1.2',
 									country_code='US',
@@ -978,12 +985,12 @@ class TestUserLocationView( _AbstractTestViews ):
 									longitude=11.0,
 									location_id=2)
 		self.session.add(ip_address_2)
-		
+
 		# We should get back two locations with 1 user in each
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
 		location_json_result = location_view()
 		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
-		
+
 		# Add another user in the first location
 		ip_address_3 = IpGeoLocation(user_id=2,
 									ip_addr='1.1.1.3',
@@ -998,7 +1005,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
 		location_json_result = location_view()
 		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
-		
+
 		# The second user has another ip address in a location not shared by the first
 		ip_address_4 = IpGeoLocation(user_id=2,
 									ip_addr='1.1.1.4',
