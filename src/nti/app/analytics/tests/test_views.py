@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function, unicode_literals, absolute_import, division
+from sqlalchemy.dialects.oracle.zxjdbc import SQLException
 __docformat__ = "restructuredtext en"
 
 # disable: accessing protected members, too many methods
@@ -951,15 +952,15 @@ class TestUserLocationView( _AbstractTestViews ):
 		# Initialize location view and fake course
 		course = ContentCourseSubInstance()
 		course.SharingScopes['Public'] = CourseInstanceSharingScope('Public')
-		location_view = UserLocationHtmlView(self)
+		location_view = UserLocationJsonView(self)
 		location_view.context = course
 		self.set_up_test_locations()
 		instructor_environ = self._make_extra_environ(user='harp4162')
 
-		# With no students in the course, we should get a 404
-		result = location_view()
-		assert_that(result, instance_of(hexc.HTTPUnprocessableEntity))
-
+		# With no students in the course, we expect a 422 to be returned.
+		# Anything else, and this will throw an exception.
+		self.testapp.get( location_link_path, extra_environ=instructor_environ, status=422)
+	
 		# Add an IP address for a user enrolled in the course
 		ip_address_1 = IpGeoLocation(user_id=1,
 									ip_addr='1.1.1.1',
@@ -973,10 +974,17 @@ class TestUserLocationView( _AbstractTestViews ):
 		mock_get_enrollment_list.is_callable().returns([1])
 
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
-		location_json_result = location_view()
+		
+		# Check the result against json from the other view,
+		# which is tested above. We have to do some encoding
+		# stuff to be able to find the string inside of the HTML response.
+		location_json_result = location_view()[0]
+		json_result = [location_json_result['latitude'], 
+					location_json_result['longitude'], 
+					location_json_result['label'].encode('ascii','ignore')]
 
 		# The html output should contain the same location data as in the json result.
-		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
+		assert_that( str(result.html), contains_string( str( json_result ) ) )
 
 		ip_address_2 = IpGeoLocation(user_id=1,
 									ip_addr='1.1.1.2',
@@ -989,7 +997,12 @@ class TestUserLocationView( _AbstractTestViews ):
 		# We should get back two locations with 1 user in each
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
 		location_json_result = location_view()
-		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
+		json_result = [[str('Lat'), str('Long'), str('Label')]]
+		for view in location_json_result:
+			json_result.append([view['latitude'], 
+								view['longitude'], 
+								view['label'].encode('ascii','ignore')])
+		assert_that( str(result.html), contains_string( str( json_result ) ) )
 
 		# Add another user in the first location
 		ip_address_3 = IpGeoLocation(user_id=2,
@@ -1003,8 +1016,14 @@ class TestUserLocationView( _AbstractTestViews ):
 
 		# Now we get back 2 locations, 1 of which has two users
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		
 		location_json_result = location_view()
-		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
+		json_result = [[str('Lat'), str('Long'), str('Label')]]
+		for view in location_json_result:
+			json_result.append([view['latitude'], 
+								view['longitude'], 
+								view['label'].encode('ascii','ignore')])
+		assert_that( str(result.html), contains_string( str( json_result ) ) )
 
 		# The second user has another ip address in a location not shared by the first
 		ip_address_4 = IpGeoLocation(user_id=2,
@@ -1019,4 +1038,9 @@ class TestUserLocationView( _AbstractTestViews ):
 		# The other two locations should only have one user each.
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
 		location_json_result = location_view()
-		assert_that( str(result.html), contains_string( str( location_json_result['locations'] ) ) )
+		json_result = [[str('Lat'), str('Long'), str('Label')]]
+		for view in location_json_result:
+			json_result.append([view['latitude'], 
+								view['longitude'], 
+								view['label'].encode('ascii','ignore')])
+		assert_that( str(result.html), contains_string( str( json_result ) ) )

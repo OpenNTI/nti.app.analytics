@@ -415,7 +415,7 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 	locations of users within a course.
 	"""
 
-	def get_data(self, course, enrollment_scope=None):
+	def get_data(self, course, enrollment_scope=ALL_USERS):
 		data = locations.get_location_list(course, enrollment_scope)
 		return data
 
@@ -451,9 +451,14 @@ class UserLocationHtmlView(AbstractUserLocationView):
 	"""
 
 	def __call__(self):
+		
+		enrollment_scope = self.request.params.get('enrollment_scope')
+		if enrollment_scope is None:
+			enrollment_scope = ALL_USERS
+
 		options = {}
 		locations = []
-		location_data = self.get_data(self.context)
+		location_data = self.get_data(self.context, enrollment_scope)
 		if len(location_data) == 0:
 			return hexc.HTTPUnprocessableEntity("No locations were found")
 
