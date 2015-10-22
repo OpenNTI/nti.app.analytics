@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function, unicode_literals, absolute_import, division
-from sqlalchemy.dialects.oracle.zxjdbc import SQLException
 __docformat__ = "restructuredtext en"
 
 # disable: accessing protected members, too many methods
@@ -20,7 +19,6 @@ from webob.datetime_utils import serialize_date
 from zope import component
 
 from hamcrest import contains_string
-from hamcrest import instance_of
 from hamcrest import assert_that
 from hamcrest import has_length
 from hamcrest import is_
@@ -97,7 +95,6 @@ from nti.analytics.database.users import create_user
 
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics.views import UserLocationJsonView
-from nti.app.analytics.views import UserLocationHtmlView
 
 from nti.analytics.tests import TestIdentifier
 
@@ -106,8 +103,6 @@ from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
 from nti.ntiids.ntiids import find_object_with_ntiid
 
 from nti.testing.time import time_monotonically_increases
-
-from pyramid import httpexceptions as hexc
 
 timestamp = time.mktime( datetime.utcnow().timetuple() )
 user = 'sjohnson@nextthought.com'

@@ -12,6 +12,7 @@ logger = __import__('logging').getLogger(__name__)
 from datetime import datetime
 
 from zope.event import notify
+
 from zope.schema.interfaces import ValidationError
 
 from ZODB.interfaces import IBroken
@@ -28,27 +29,27 @@ from nti.analytics.model import delete_research_status
 from nti.analytics.model import UserResearchStatusEvent
 from nti.analytics.model import AnalyticsClientParams
 
-from nti.analytics.sessions import handle_new_session
-from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import update_session
+from nti.analytics.sessions import handle_end_session
+from nti.analytics.sessions import handle_new_session
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
 from nti.analytics.resource_views import get_video_progress_for_course
 
-from nti.analytics.interfaces import IBatchResourceEvents
 from nti.analytics.interfaces import IAnalyticsSessions
 from nti.analytics.interfaces import IUserResearchStatus
+from nti.analytics.interfaces import IBatchResourceEvents
 
 from nti.analytics.progress import get_assessment_progresses_for_course
 
 from nti.common.string import TRUE_VALUES
 from nti.common.maps import CaseInsensitiveDict
 
+from nti.contentlibrary.indexed_data import get_catalog
+
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
-
-from nti.contentlibrary.indexed_data import get_catalog
 
 from nti.dataserver.interfaces import IUser
 from nti.dataserver import authorization as nauth
@@ -240,7 +241,9 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
 		results = []
 		for session in sessions.sessions:
 			try:
-				result = update_session(session, user, user_agent=user_agent, ip_addr=ip_addr)
+				result = update_session(session, user, 
+										user_agent=user_agent,
+										ip_addr=ip_addr)
 				results.append(result)
 			except ValueError as e:
 				# Append invalid session information.  We still return a 200 though.
@@ -262,7 +265,7 @@ def _get_children_ntiid_legacy(unit, accum):
 def _get_children_ntiid(unit):
 	catalog = get_catalog()
 	rs = catalog.search_objects(container_ntiids=unit.ntiid,
-								 sites=get_component_hierarchy_names())
+								sites=get_component_hierarchy_names())
 	contained_objects = tuple(rs)
 	results = set()
 	if not contained_objects:
@@ -284,7 +287,7 @@ def _get_children_ntiid(unit):
 			 permission=nauth.ACT_READ,
 			 name="Progress")
 class CourseOutlineNodeProgress(AbstractAuthenticatedView,
-								 ModeledContentUploadRequestUtilsMixin):
+								ModeledContentUploadRequestUtilsMixin):
 	"""
 	For the given content outline node, return the progress we have for the user
 	on each ntiid within the content node.  This will include self-assessments and
@@ -451,7 +454,7 @@ class UserLocationHtmlView(AbstractUserLocationView):
 	"""
 
 	def __call__(self):
-		
+
 		enrollment_scope = self.request.params.get('enrollment_scope')
 		if enrollment_scope is None:
 			enrollment_scope = ALL_USERS
