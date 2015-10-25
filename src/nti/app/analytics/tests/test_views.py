@@ -645,7 +645,10 @@ class TestProgressView( _AbstractTestViews ):
 		return response
 
 	def _get_progress(self, status=200, response=None):
-		progress_url = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/Outline/2/1/Progress'
+		outline_ntiid = "tag:nextthought.com,2011-10:OU-NTICourseOutlineNode-CLC3403_LawAndJustice.course_info.2.1"
+		# Why does this outline navigation path no longer work?
+		#progress_url = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/Outline/2/1/Progress'
+		progress_url = "/dataserver2/Objects/%s/Progress" % outline_ntiid
 		return self._do_get_url( progress_url, status, response )
 
 	def _get_video_progress(self, status=200, response=None):
@@ -955,7 +958,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		# With no students in the course, we expect a 422 to be returned.
 		# Anything else, and this will throw an exception.
 		self.testapp.get( location_link_path, extra_environ=instructor_environ, status=422)
-	
+
 		# Add an IP address for a user enrolled in the course
 		ip_address_1 = IpGeoLocation(user_id=1,
 									ip_addr='1.1.1.1',
@@ -969,13 +972,13 @@ class TestUserLocationView( _AbstractTestViews ):
 		mock_get_enrollment_list.is_callable().returns([1])
 
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
-		
+
 		# Check the result against json from the other view,
 		# which is tested above. We have to do some encoding
 		# stuff to be able to find the string inside of the HTML response.
 		location_json_result = location_view()[0]
-		json_result = [location_json_result['latitude'], 
-					location_json_result['longitude'], 
+		json_result = [location_json_result['latitude'],
+					location_json_result['longitude'],
 					location_json_result['label'].encode('ascii','ignore')]
 
 		# The html output should contain the same location data as in the json result.
@@ -994,8 +997,8 @@ class TestUserLocationView( _AbstractTestViews ):
 		location_json_result = location_view()
 		json_result = [[str('Lat'), str('Long'), str('Label')]]
 		for view in location_json_result:
-			json_result.append([view['latitude'], 
-								view['longitude'], 
+			json_result.append([view['latitude'],
+								view['longitude'],
 								view['label'].encode('ascii','ignore')])
 		assert_that( str(result.html), contains_string( str( json_result ) ) )
 
@@ -1011,12 +1014,12 @@ class TestUserLocationView( _AbstractTestViews ):
 
 		# Now we get back 2 locations, 1 of which has two users
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
-		
+
 		location_json_result = location_view()
 		json_result = [[str('Lat'), str('Long'), str('Label')]]
 		for view in location_json_result:
-			json_result.append([view['latitude'], 
-								view['longitude'], 
+			json_result.append([view['latitude'],
+								view['longitude'],
 								view['label'].encode('ascii','ignore')])
 		assert_that( str(result.html), contains_string( str( json_result ) ) )
 
@@ -1035,7 +1038,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		location_json_result = location_view()
 		json_result = [[str('Lat'), str('Long'), str('Label')]]
 		for view in location_json_result:
-			json_result.append([view['latitude'], 
-								view['longitude'], 
+			json_result.append([view['latitude'],
+								view['longitude'],
 								view['label'].encode('ascii','ignore')])
 		assert_that( str(result.html), contains_string( str( json_result ) ) )
