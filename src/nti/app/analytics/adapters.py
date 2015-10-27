@@ -36,8 +36,11 @@ from nti.analytics.assessments import get_assignment_for_user
 from nti.analytics.assessments import get_self_assessments_for_user_and_id
 
 from nti.analytics.boards import get_topic_views
+from nti.analytics.boards import get_topic_last_view
 
 from nti.analytics.resource_tags import get_note_views
+from nti.analytics.resource_tags import get_note_last_view
+
 from nti.analytics.resource_views import get_video_views
 
 from nti.analytics.progress import DefaultProgress
@@ -94,31 +97,20 @@ class _ViewStats(object):
 		self.view_count = view_count
 		self.new_reply_count_for_user = new_reply_count_for_user
 
-def _get_stats(records, replies=None, user=None):
+def _get_stats(records, replies=None, user_last_viewed=None):
 	count = len(records) if records else 0
 	reply_count = len(replies) if replies else 0
-	if user is None:
-		# We just want the count
-		result = _ViewStats(count, 0)
-	elif not records:
-		# User but no views
+	if user_last_viewed is None:
 		result = _ViewStats(count, reply_count)
 	else:
-		# Ok, find out how many replies since our user viewed the object.
-		user_view_times = [x.timestamp for x in records if x.user == user and x.timestamp]
-
-		if user_view_times:
-			user_last_viewed = max(user_view_times) if user_view_times else 0
-			new_reply_count_for_user = 0
-			for reply in replies:
-				reply_created_time = reply.createdTime
-				if isinstance(reply_created_time, (integer_types, float)):
-					reply_created_time = datetime.utcfromtimestamp(reply_created_time)
-				if reply_created_time and reply_created_time > user_last_viewed:
-					new_reply_count_for_user += 1
-			result = _ViewStats(count, new_reply_count_for_user)
-		else:
-			result = _ViewStats(count, reply_count)
+		new_reply_count_for_user = 0
+		for reply in replies:
+			reply_created_time = reply.createdTime
+			if isinstance(reply_created_time, (integer_types, float)):
+				reply_created_time = datetime.utcfromtimestamp(reply_created_time)
+			if reply_created_time and reply_created_time > user_last_viewed:
+				new_reply_count_for_user += 1
+		result = _ViewStats(count, new_reply_count_for_user)
 	return result
 
 @interface.implementer(IViewStats)
@@ -126,7 +118,7 @@ def _get_stats(records, replies=None, user=None):
 def _topic_view_stats(topic):
 	result = None
 	if has_analytics():
-		records = get_topic_views(topic=topic)
+		records = get_topic_views(topic=topic, raw=True)
 		result = _get_stats(records)
 	return result
 
@@ -135,9 +127,10 @@ def _topic_view_stats(topic):
 def _topic_view_stats_for_user(topic, user):
 	result = None
 	if has_analytics():
-		records = get_topic_views(topic=topic)
+		records = get_topic_views(topic=topic, raw=True)
 		replies = topic.values()
-		result = _get_stats(records, replies, user)
+		user_last_view = get_topic_last_view( topic, user )
+		result = _get_stats(records, replies, user_last_view)
 	return result
 
 @interface.implementer(IViewStats)
@@ -145,7 +138,7 @@ def _topic_view_stats_for_user(topic, user):
 def _note_view_stats(note):
 	result = None
 	if has_analytics():
-		records = get_note_views(note=note)
+		records = get_note_views(note=note, raw=True)
 		result = _get_stats(records)
 	return result
 
@@ -154,9 +147,10 @@ def _note_view_stats(note):
 def _note_view_stats_for_user(note, user):
 	result = None
 	if has_analytics():
-		records = get_note_views(note=note)
+		records = get_note_views(note=note, raw=True)
 		replies = note.referents
-		result = _get_stats(records, replies, user)
+		user_last_view = get_note_last_view( note, user )
+		result = _get_stats(records, replies, user_last_view)
 	return result
 
 @interface.implementer(IVideoUsageStats)
