@@ -3,6 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
 	  xmlns:tal="http://xml.zope.org/namespaces/tal" >
 	<head>
+		<meta charset="UTF-8">
 		<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 		<script>
 	        google.load('visualization', '1', { 'packages': ['map'] });
