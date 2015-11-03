@@ -795,6 +795,11 @@ class TestProgressView( _AbstractTestViews ):
 		# Now a 304 again
 		self._get_progress( response=response, status=304 )
 
+def _tx_string(s):
+		if s and isinstance(s, unicode):
+			s = s.encode('utf-8')
+		return s
+	
 class TestUserLocationView( _AbstractTestViews ):
 
 	default_origin = str('http://janux.ou.edu')
@@ -803,23 +808,23 @@ class TestUserLocationView( _AbstractTestViews ):
 		# Create test locations
 		location1 = Location(latitude='10.0000',
 							longitude='10.0000',
-							city='Zürich', #Note the ü. This is to test that unicode works. 
+							city='Zürich, åß∂∆˚≈ç√ñ≤œ∑ø', # Disregard all semblance of a city name. We need to test unicode characters!
 							state='',
 							country='Switzerland'
 							)
 
 		location2 = Location(latitude='11.0000',
 							longitude='11.0000',
-							city = 'The Forbidden City',
-							state = 'Liquid',
-							country = 'United States'
+							city = u'\u4e0a\u6d77\u5e02', # Native spelling of Shanghai
+							state = '',
+							country = 'China'
 							)
 
 		location3 = Location(latitude='12.0000',
 							longitude='12.0000',
 							city = 'Running out of city names',
-							state = 'Unknown',
-							country = 'Great Wilderness'
+							state = 'Oklahoma',
+							country = 'United States of America'
 							)
 
 		# Add test locations
@@ -979,7 +984,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		location_json_result = location_view()[0]
 		json_result = [location_json_result['latitude'],
 					location_json_result['longitude'],
-					location_json_result['label']]
+					_tx_string(location_json_result['label'])]
 
 		# The html output should contain the same location data as in the json result.
 		assert_that( str(result.html), contains_string( str( json_result ) ) )
@@ -999,7 +1004,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		for view in location_json_result:
 			json_result.append([view['latitude'],
 								view['longitude'],
-								view['label']])
+								_tx_string(view['label'])])
 		assert_that( str(result.html), contains_string( str( json_result ) ) )
 
 		# Add another user in the first location
@@ -1020,7 +1025,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		for view in location_json_result:
 			json_result.append([view['latitude'],
 								view['longitude'],
-								view['label']])
+								_tx_string(view['label'])])
 		assert_that( str(result.html), contains_string( str( json_result ) ) )
 
 		# The second user has another ip address in a location not shared by the first
@@ -1040,5 +1045,5 @@ class TestUserLocationView( _AbstractTestViews ):
 		for view in location_json_result:
 			json_result.append([view['latitude'],
 								view['longitude'],
-								view['label']])
+								_tx_string(view['label'])])
 		assert_that( str(result.html), contains_string( str( json_result ) ) )

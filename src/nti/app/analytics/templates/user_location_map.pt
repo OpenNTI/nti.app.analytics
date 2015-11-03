@@ -1,25 +1,53 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 	 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
-	  xmlns:tal="http://xml.zope.org/namespaces/tal" >
+	  xmlns:tal="http://xml.zope.org/namespaces/tal"
+	  xmlns:metal="http://xml.zope.org/namespaces/metal">
 	<head>
 		<meta charset="UTF-8">
+
+			<!-- I don't think this is quite right...  -->
+			<!-- <image file="[nti.appserver]/templates/coppa_consent_header.png"
+			   width="3.5in"
+			   height="0.55in"
+			   x="0.5in" y="7in"
+			   align="left"
+			   metal:define-macro="header_graphic" />
+
+			<tal:block metal:define-macro="header">
+				<img metal:use-macro="macro:header_graphic" />
+				<blockTable alignment='right' style="header_table"
+							tal:content="structure provider:header_table">
+				</blockTable>
+				<nextFrame />
+			</tal:block> -->
+
 		<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 		<script>
-	        google.load('visualization', '1', { 'packages': ['map'] });
-	        google.setOnLoadCallback(drawMap);
 
-	        function drawMap() {
-	          var data = google.visualization.arrayToDataTable( ${options/locations} );
+			google.load('visualization', '1', { 'packages': ['map'] });
+			google.setOnLoadCallback(drawMap);
+			
+			var inputData = ${options/locations}
+			var arrayLength = inputData.length;
 
-	        var options = { showTip: true, 
-	        				enableScrollWheel: true,
-                            mapType: 'normal' };
+			// Notice that we're starting at 1, to skip the header row
+			for (i=1; i<arrayLength; ++i) {
+				// encode the label for each location
+				inputData[i][2] = decodeURIComponent( escape( inputData[i][2] ));
+			}
 
-	        var map = new google.visualization.Map(document.getElementById('chart_div'));
+			function drawMap() {
+			  var data = google.visualization.arrayToDataTable( inputData );
 
-	        map.draw(data, options);
-	        };
+			var options = { showTip: true, 
+							enableScrollWheel: true,
+							mapType: 'normal' };
+
+			var map = new google.visualization.Map(document.getElementById('chart_div'));
+			map.draw(data, options);
+			};
+
 	    </script>
 	</head>
 	<body>

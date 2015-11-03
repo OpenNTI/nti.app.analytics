@@ -424,6 +424,7 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 
 @view_config(route_name='objects.generic.traversal',
 			  renderer='rest',
+ 			  permission=nauth.ACT_NTI_ADMIN,
 			  context=ICourseInstance,
 			  request_method='GET',
 			  name=GEO_LOCATION_JSON_VIEW)
@@ -436,14 +437,15 @@ class UserLocationJsonView(AbstractUserLocationView):
 	def __call__(self):
 		return self.get_data(self.context)
 
-def _encode(val):
-	try:
-		return str(val) if val else u''
-	except (Exception, StandardError):
-		return u''
+
+def _tx_string(label):
+	if label and isinstance(label, unicode):
+		label = label.encode('utf-8')
+	return label
 
 @view_config(route_name='objects.generic.traversal',
 			  renderer='templates/user_location_map.pt',
+			  permission=nauth.ACT_NTI_ADMIN,
 			  context=ICourseInstance,
 			  request_method='GET',
 			  name=GEO_LOCATION_HTML_VIEW)
@@ -465,11 +467,11 @@ class UserLocationHtmlView(AbstractUserLocationView):
 		if len(location_data) == 0:
 			return hexc.HTTPUnprocessableEntity("No locations were found")
 
-		locations.append([_encode("Lat"), _encode("Long"), _encode("Label")])
+		locations.append([str('Lat'), str('Long'), str('Label')])
 		for location in location_data:
 			locations.append([location['latitude'],
 							  location['longitude'],
-							  _encode(location['label'])])
+							_tx_string(location['label'])])
 
 		options['locations'] = locations
 		return options
