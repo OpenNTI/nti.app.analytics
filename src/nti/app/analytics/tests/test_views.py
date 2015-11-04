@@ -89,8 +89,8 @@ from nti.analytics.database.resource_views import create_course_resource_view
 from nti.analytics.database.resource_views import create_video_event
 from nti.analytics.database.root_context import get_root_context_id
 from nti.analytics.database.sessions import Sessions
-from nti.analytics.database.sessions import Location
-from nti.analytics.database.sessions import IpGeoLocation
+from nti.analytics.database.locations import Location
+from nti.analytics.database.locations import IpGeoLocation
 from nti.analytics.database.users import create_user
 
 from nti.app.analytics import SYNC_PARAMS
@@ -799,10 +799,14 @@ def _tx_string(s):
 		if s and isinstance(s, unicode):
 			s = s.encode('utf-8')
 		return s
-	
+
 class TestUserLocationView( _AbstractTestViews ):
 
 	default_origin = str('http://janux.ou.edu')
+
+	def setUp(self):
+		super( TestUserLocationView, self ).setUp()
+		self.params = {}
 
 	def set_up_test_locations(self):
 		# Create test locations
@@ -848,7 +852,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		# Initialize location view and fake course
 		course = ContentCourseSubInstance()
 		course.SharingScopes['Public'] = CourseInstanceSharingScope('Public')
-		# TODO Self?
+		# TODO Self? Shouldnt we just use web query?
 		location_view = UserLocationJsonView(self)
 		location_view.context = course
 

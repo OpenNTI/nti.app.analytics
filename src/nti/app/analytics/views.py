@@ -23,7 +23,7 @@ from pyramid import httpexceptions as hexc
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
-from nti.analytics.database import locations
+from nti.analytics.locations import get_location_list
 
 from nti.analytics.model import delete_research_status
 from nti.analytics.model import UserResearchStatusEvent
@@ -69,7 +69,6 @@ from . import ANALYTICS_SESSION
 from . import ANALYTICS_SESSIONS
 from . import END_ANALYTICS_SESSION
 
-ALL_USERS = 'ALL_USERS'
 SET_RESEARCH_VIEW = 'SetUserResearch'
 GEO_LOCATION_JSON_VIEW = 'GetGeoLocationJson'
 GEO_LOCATION_HTML_VIEW = 'GetGeoLocationHtml'
@@ -241,7 +240,7 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
 		results = []
 		for session in sessions.sessions:
 			try:
-				result = update_session(session, user, 
+				result = update_session(session, user,
 										user_agent=user_agent,
 										ip_addr=ip_addr)
 				results.append(result)
@@ -418,8 +417,9 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 	locations of users within a course.
 	"""
 
-	def get_data(self, course, enrollment_scope=ALL_USERS):
-		data = locations.get_location_list(course, enrollment_scope)
+	def get_data(self, course):
+		enrollment_scope = self.request.params.get('enrollment_scope')
+		data = get_location_list(course, enrollment_scope)
 		return data
 
 @view_config(route_name='objects.generic.traversal',
@@ -433,7 +433,6 @@ class UserLocationJsonView(AbstractUserLocationView):
 	Provides a json representation of the geographical
 	locations of users within a course.
 	"""
-
 	def __call__(self):
 		return self.get_data(self.context)
 
@@ -456,17 +455,12 @@ class UserLocationHtmlView(AbstractUserLocationView):
 	"""
 
 	def __call__(self):
-
-		enrollment_scope = self.request.params.get('enrollment_scope')
-		if enrollment_scope is None:
-			enrollment_scope = ALL_USERS
-
-		options = {}
-		locations = []
-		location_data = self.get_data(self.context, enrollment_scope)
+		location_data = self.get_data(self.context)
 		if len(location_data) == 0:
 			return hexc.HTTPUnprocessableEntity("No locations were found")
 
+		options = {}
+		locations = []
 		locations.append([str('Lat'), str('Long'), str('Label')])
 		for location in location_data:
 			locations.append([location['latitude'],

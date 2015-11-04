@@ -27,7 +27,10 @@ from pyramid.view import view_config
 
 from nti.analytics import get_factory
 from nti.analytics import QUEUE_NAMES
+
 from nti.analytics.interfaces import IUserResearchStatus
+
+from nti.analytics.locations import update_missing_locations
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
@@ -275,3 +278,19 @@ class UserCourseAssessmentsTakenCountsView(AbstractAuthenticatedView):
 		stream.seek(0)
 		response.body_file = stream
 		return response
+
+@view_config(context=AnalyticsPathAdapter)
+@view_defaults(	route_name='objects.generic.traversal',
+				renderer='rest',
+				permission=nauth.ACT_NTI_ADMIN,
+				request_method='POST',
+				name='UpdateGeoLocations')
+class UpdateGeoLocationsView(AbstractAuthenticatedView):
+	"""
+	Update locations missing a city/state in the db.
+	"""
+
+	def __call__(self):
+		updated_count = update_missing_locations()
+		logger.info( 'Updated %s missing geo locations', updated_count )
+		return hexc.HTTPNoContent()
