@@ -100,11 +100,16 @@ class _LocationDataJsonLinkDecorator(AbstractAuthenticatedRequestAwareDecorator)
 
 	def _do_decorate_external(self, context, result):
 		links = result.setdefault(LINKS, [])
-		link = Link(context, rel='GeoLocationJson', elements=('GetGeoLocationJson',))
-		interface.alsoProvides(link, ILocation)
-		link.__name__ = ''
-		link.__parent__ = context
-		links.append(link)
+		json_link = Link(context, rel='GeoLocationJson', elements=('GetGeoLocationJson',))
+		csv_link = Link(context, rel='GeoLocationCsv', elements=('GetGeoLocationCsv',))
+		interface.alsoProvides(json_link, ILocation)
+		interface.alsoProvides(csv_link, ILocation)
+		json_link.__name__ = ''
+		csv_link.__name__ = ''
+		json_link.__parent__ = context
+		csv_link.__parent__ = context
+		links.append(json_link)
+		links.append(csv_link)
 
 @component.adapter(ICourseInstance)
 @interface.implementer(IExternalMappingDecorator)
