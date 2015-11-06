@@ -9,6 +9,8 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
+from io import BytesIO
+import csv
 from datetime import datetime
 
 from zope.event import notify
@@ -72,6 +74,7 @@ from . import END_ANALYTICS_SESSION
 SET_RESEARCH_VIEW = 'SetUserResearch'
 GEO_LOCATION_JSON_VIEW = 'GetGeoLocationJson'
 GEO_LOCATION_HTML_VIEW = 'GetGeoLocationHtml'
+GEO_LOCATION_CSV_VIEW = 'GetGeoLocationCsv'
 
 def _is_true(t):
 	result = bool(t and str(t).lower() in TRUE_VALUES)
@@ -424,7 +427,7 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 
 @view_config(route_name='objects.generic.traversal',
 			  renderer='rest',
- 			  permission=nauth.ACT_NTI_ADMIN,
+  			  permission=nauth.ACT_NTI_ADMIN, 
 			  context=ICourseInstance,
 			  request_method='GET',
 			  name=GEO_LOCATION_JSON_VIEW)
@@ -441,6 +444,43 @@ def _tx_string(label):
 	if label and isinstance(label, unicode):
 		label = label.encode('utf-8')
 	return label
+
+@view_config(route_name='objects.generic.traversal',
+			  renderer='rest',
+			  permission=nauth.ACT_NTI_ADMIN,
+			  context=ICourseInstance,
+			  request_method='GET',
+			  name=GEO_LOCATION_CSV_VIEW)
+class UserLocationCsvView(AbstractUserLocationView):
+	"""
+	Provides a CSV representation of the geographical
+	locations of users within a course.
+	"""
+	def __call__(self):
+
+		def convert_to_utf8(dict):
+			for key in dict:
+				dict[key] = _tx_string(dict[key])
+			return dict
+		
+		location_data = self.get_data(self.context)
+		if len(location_data) == 0:
+			return hexc.HTTPUnprocessableEntity("No locations were found")
+		
+		stream = BytesIO()
+		fieldnames = [u'label', u'number_of_students', u'city',  u'country', u'state', u'longitude', u'latitude']
+		csv_writer = csv.DictWriter(stream, fieldnames=fieldnames)
+		csv_writer.writeheader()
+		
+		for line in location_data:
+			csv_writer.writerow(convert_to_utf8(line))
+			
+		response = self.request.response
+		response.body = stream.getvalue()
+		response.content_type = str('text/csv; charset=UTF-8')
+		response.content_disposition = b'attachment; filename="locations.csv"'
+		return response
+		
 
 @view_config(route_name='objects.generic.traversal',
 			  renderer='templates/user_location_map.pt',
