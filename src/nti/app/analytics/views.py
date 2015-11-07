@@ -9,8 +9,8 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
-from io import BytesIO
 import csv
+from io import BytesIO
 from datetime import datetime
 
 from zope.event import notify
@@ -72,16 +72,18 @@ from . import ANALYTICS_SESSIONS
 from . import END_ANALYTICS_SESSION
 
 SET_RESEARCH_VIEW = 'SetUserResearch'
+GEO_LOCATION_CSV_VIEW = 'GetGeoLocationCsv'
 GEO_LOCATION_JSON_VIEW = 'GetGeoLocationJson'
 GEO_LOCATION_HTML_VIEW = 'GetGeoLocationHtml'
-GEO_LOCATION_CSV_VIEW = 'GetGeoLocationCsv'
 
 def _is_true(t):
 	result = bool(t and str(t).lower() in TRUE_VALUES)
 	return result
 
 def _get_last_mod(progress, max_last_mod):
-	"For progress, get the most recent date as our last modified."
+	"""
+	For progress, get the most recent date as our last modified.
+	"""
 	result = max_last_mod
 
 	if 		not max_last_mod \
@@ -384,10 +386,10 @@ class UserCourseVideoProgress(AbstractAuthenticatedView,
 		return result
 
 @view_config(route_name='objects.generic.traversal',
-			  renderer='rest',
-			  context=IUser,
-			  request_method='POST',
-			  name=SET_RESEARCH_VIEW)
+			 renderer='rest',
+			 context=IUser,
+			 request_method='POST',
+			 name=SET_RESEARCH_VIEW)
 class UserResearchStudyView(AbstractAuthenticatedView,
 							ModeledContentUploadRequestUtilsMixin):
 	"""
@@ -427,7 +429,7 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 
 @view_config(route_name='objects.generic.traversal',
 			  renderer='rest',
-  			  permission=nauth.ACT_NTI_ADMIN, 
+  			  permission=nauth.ACT_NTI_ADMIN,
 			  context=ICourseInstance,
 			  request_method='GET',
 			  name=GEO_LOCATION_JSON_VIEW)
@@ -436,9 +438,9 @@ class UserLocationJsonView(AbstractUserLocationView):
 	Provides a json representation of the geographical
 	locations of users within a course.
 	"""
+
 	def __call__(self):
 		return self.get_data(self.context)
-
 
 def _tx_string(label):
 	if label and isinstance(label, unicode):
@@ -446,48 +448,49 @@ def _tx_string(label):
 	return label
 
 @view_config(route_name='objects.generic.traversal',
-			  renderer='rest',
-			  permission=nauth.ACT_NTI_ADMIN,
-			  context=ICourseInstance,
-			  request_method='GET',
-			  name=GEO_LOCATION_CSV_VIEW)
+			 renderer='rest',
+			 permission=nauth.ACT_NTI_ADMIN,
+			 context=ICourseInstance,
+			 request_method='GET',
+			 name=GEO_LOCATION_CSV_VIEW)
 class UserLocationCsvView(AbstractUserLocationView):
 	"""
 	Provides a CSV representation of the geographical
 	locations of users within a course.
 	"""
+
 	def __call__(self):
 
-		def convert_to_utf8(dict):
-			for key in dict:
-				dict[key] = _tx_string(dict[key])
-			return dict
-		
+		def convert_to_utf8(data):
+			for key, value in list(data.items()): # mutating
+				data[key] = _tx_string(value)
+			return data
+
 		location_data = self.get_data(self.context)
 		if len(location_data) == 0:
 			return hexc.HTTPUnprocessableEntity("No locations were found")
-		
+
 		stream = BytesIO()
-		fieldnames = [u'label', u'number_of_students', u'city',  u'country', u'state', u'longitude', u'latitude']
+		fieldnames = [u'label', u'number_of_students', u'city', u'country',
+					  u'state', u'longitude', u'latitude']
 		csv_writer = csv.DictWriter(stream, fieldnames=fieldnames)
 		csv_writer.writeheader()
-		
+
 		for line in location_data:
 			csv_writer.writerow(convert_to_utf8(line))
-			
+
 		response = self.request.response
 		response.body = stream.getvalue()
 		response.content_type = str('text/csv; charset=UTF-8')
 		response.content_disposition = b'attachment; filename="locations.csv"'
 		return response
-		
 
 @view_config(route_name='objects.generic.traversal',
-			  renderer='templates/user_location_map.pt',
-			  permission=nauth.ACT_NTI_ADMIN,
-			  context=ICourseInstance,
-			  request_method='GET',
-			  name=GEO_LOCATION_HTML_VIEW)
+			 renderer='templates/user_location_map.pt',
+			 permission=nauth.ACT_NTI_ADMIN,
+			 context=ICourseInstance,
+			 request_method='GET',
+			 name=GEO_LOCATION_HTML_VIEW)
 class UserLocationHtmlView(AbstractUserLocationView):
 	"""
 	Provides HTML code for a page displaying the geographical
@@ -496,16 +499,16 @@ class UserLocationHtmlView(AbstractUserLocationView):
 
 	def __call__(self):
 		location_data = self.get_data(self.context)
-		if len(location_data) == 0:
+		if not location_data:
 			return hexc.HTTPUnprocessableEntity("No locations were found")
 
-		options = {}
 		locations = []
+		options = LocatedExternalDict()
 		locations.append([str('Lat'), str('Long'), str('Label')])
 		for location in location_data:
 			locations.append([location['latitude'],
 							  location['longitude'],
-							_tx_string(location['label'])])
+							  _tx_string(location['label'])])
 
 		options['locations'] = locations
 		return options

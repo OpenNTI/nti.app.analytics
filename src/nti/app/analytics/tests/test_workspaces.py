@@ -13,19 +13,19 @@ from hamcrest import assert_that
 
 from nti.appserver.workspaces import UserService
 
-from nti.app.analytics import ANALYTICS_TITLE
-from nti.app.analytics import BATCH_EVENTS
-from nti.app.analytics import END_ANALYTICS_SESSION
-from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import SYNC_PARAMS
+from nti.app.analytics import BATCH_EVENTS
+from nti.app.analytics import ANALYTICS_TITLE
+from nti.app.analytics import ANALYTICS_SESSION
+from nti.app.analytics import END_ANALYTICS_SESSION
 
 from nti.dataserver import users
+
+from nti.externalization.externalization import toExternalObject
 
 from nti.analytics.tests import NTIAnalyticsApplicationTestLayer
 
 from nti.app.testing.application_webtest import ApplicationLayerTest
-
-from nti.externalization.externalization import toExternalObject
 
 from nti.dataserver.tests.mock_dataserver import WithMockDSTrans
 
@@ -35,20 +35,19 @@ class TestWorkspaces(ApplicationLayerTest):
 
 	@WithMockDSTrans
 	def test_workspace_links(self):
-		user = users.User.create_user( dataserver=self.ds, username='sjohnson@nextthought.com' )
-		service = UserService( user )
+		user = users.User.create_user(dataserver=self.ds, username='sjohnson@nextthought.com')
+		service = UserService(user)
 
-		ext_object = toExternalObject( service )
+		ext_object = toExternalObject(service)
 		__traceback_info__ = ext_object
-		toExternalObject( service.workspaces[0] )
-		assert_that( ext_object['Items'], has_item(
-											has_entries( 'Title', ANALYTICS_TITLE,
+		toExternalObject(service.workspaces[0])
+		assert_that(ext_object['Items'], has_item(
+											has_entries('Title', ANALYTICS_TITLE,
 														'Links', has_item(
-																	has_entries( 'rel', BATCH_EVENTS,
-																				'rel', ANALYTICS_SESSION,
-																				'rel', END_ANALYTICS_SESSION,
-																				'rel', SYNC_PARAMS ) ),
+																 has_entries('rel', BATCH_EVENTS,
+																			 'rel', ANALYTICS_SESSION,
+																			 'rel', END_ANALYTICS_SESSION,
+																			 'rel', SYNC_PARAMS)),
 														'Items', has_item(
-																	has_entries( 'Title', 'Events',
-																				'Title', 'Sessions' )) )) )
-
+																	has_entries('Title', 'Events',
+																				'Title', 'Sessions')))))
