@@ -471,9 +471,9 @@ class UserLocationCsvView(AbstractUserLocationView):
 			return hexc.HTTPUnprocessableEntity("No locations were found")
 
 		stream = BytesIO()
-		fieldnames = [u'label', u'number_of_students', u'city', u'country',
-					  u'state', u'longitude', u'latitude']
-		csv_writer = csv.DictWriter(stream, fieldnames=fieldnames)
+		fieldnames = [u'number_of_students', u'city', u'state',
+					u'country', u'latitude', u'longitude']
+		csv_writer = csv.DictWriter(stream, fieldnames=fieldnames, extrasaction='ignore')
 		csv_writer.writeheader()
 
 		for line in location_data:
