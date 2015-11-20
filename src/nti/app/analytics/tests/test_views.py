@@ -675,7 +675,7 @@ class TestProgressView( _AbstractTestViews ):
 	@time_monotonically_increases
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 	'nti.app.products.courseware.adapters._content_unit_to_course',
-					'nti.ntiids.ntiids.find_object_with_ntiid',
+					'nti.app.analytics.views.find_object_with_ntiid',
 					'dm.zope.schema.schema.Object._validate' )
 	def test_progress( self, mock_adapter, mock_find_object, mock_validate ):
 		video1 = 'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.03'
@@ -1052,11 +1052,11 @@ class TestUserLocationView( _AbstractTestViews ):
 								view['longitude'],
 								_tx_string(view['label'])])
 		assert_that( str(result.html), contains_string( str( json_result ) ) )
-		
+
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	@fudge.patch( 'nti.analytics.database.locations._get_enrolled_user_ids' )
 	def test_location_csv( self, mock_get_enrollment_list ):
-		
+
 		location_link_path = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/GetGeoLocationCsv'
 
 		# No one is enrolled in the course yet
@@ -1085,15 +1085,15 @@ class TestUserLocationView( _AbstractTestViews ):
 
 		# Now let user 1 be enrolled in the course
 		mock_get_enrollment_list.is_callable().returns([1])
-		
+
 		def convert_to_utf8(data):
 			for key, value in list(data.items()): # mutating
 				data[key] = _tx_string(value)
 			return data
-		
+
 		fieldnames = [u'number_of_students', u'city', u'state',
 					u'country', u'latitude', u'longitude']
-		
+
 		def get_csv_string (data):
 			predicted_result = str('')
 			for field in fieldnames[:-1]:
@@ -1103,11 +1103,11 @@ class TestUserLocationView( _AbstractTestViews ):
 				predicted_result += value + str(',')
 			predicted_result += str(data[fieldnames[-1]])
 			return predicted_result
-		
+
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
-		predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))		
+		predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))
 		assert_that( result.body, contains_string( predicted_result ) )
-		
+
 		# add a second user in the same location
 		ip_address_2 = IpGeoLocation(user_id=1,
 									ip_addr='1.1.1.2',
@@ -1116,12 +1116,12 @@ class TestUserLocationView( _AbstractTestViews ):
 									longitude=11.0,
 									location_id=2)
 		self.session.add(ip_address_2)
-		
+
 		# Same thing, except we have two users in the same location.
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
-		predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))		
+		predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))
 		assert_that( result.body, contains_string( predicted_result ) )
-		
+
 		# Add another user in the first location
 		ip_address_3 = IpGeoLocation(user_id=2,
 									ip_addr='1.1.1.3',
@@ -1135,8 +1135,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		# Now we get back 2 locations, 1 of which has two users
 		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
 		json_data = json_view.get_data(self)
-		first_location = get_csv_string(convert_to_utf8(json_data[0]))		
+		first_location = get_csv_string(convert_to_utf8(json_data[0]))
 		assert_that( result.body, contains_string( first_location ) )
-		second_location = get_csv_string(convert_to_utf8(json_data[1]))		
+		second_location = get_csv_string(convert_to_utf8(json_data[1]))
 		assert_that( result.body, contains_string( second_location ) )
-		

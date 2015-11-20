@@ -20,6 +20,7 @@ from zope.schema.interfaces import ValidationError
 from ZODB.interfaces import IBroken
 
 from pyramid.view import view_config
+
 from pyramid import httpexceptions as hexc
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
@@ -61,9 +62,11 @@ from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.externalization import to_external_object
 
-from nti.ntiids import ntiids
+from nti.ntiids.ntiids import find_object_with_ntiid
 
 from nti.site.site import get_component_hierarchy_names
+
+from nti.traversal.traversal import find_interface
 
 from . import SYNC_PARAMS
 from . import BATCH_EVENTS
@@ -256,7 +259,7 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
 				results.append(val)
 		return results
 
-def _get_children_ntiid_legacy(unit, accum):
+def _get_legacy_children_ntiids(unit, accum):
 	for attr in ('ntiid', 'target_ntiid'):
 		ntiid_val = getattr(unit, attr, None)
 		if ntiid_val is not None:
@@ -264,24 +267,32 @@ def _get_children_ntiid_legacy(unit, accum):
 	for ntiid in unit.embeddedContainerNTIIDs:
 		accum.add(ntiid)
 	for child in unit.children:
-		_get_children_ntiid_legacy(child, accum)
+		_get_legacy_children_ntiids(child, accum)
 
-def _get_children_ntiid(unit):
+def _get_lesson_items( lesson ):
+	"""
+	For lessons, iterate and retrieve ntiids.
+	"""
+	result = set()
+	for group in lesson.items:
+		result.update( group.items )
+	return result
+
+def _get_children_ntiid(lesson):
 	catalog = get_catalog()
-	rs = catalog.search_objects(container_ntiids=unit.ntiid,
+	rs = catalog.search_objects(container_ntiids=lesson.ntiid,
 								sites=get_component_hierarchy_names())
 	contained_objects = tuple(rs)
 	results = set()
 	if not contained_objects:
-		# Probably a unit from a global, non-persistent course;
-		# iterating is the best we can do.
-		_get_children_ntiid_legacy(unit, results)
-	else:
-		for contained_object in contained_objects:
-			for attr in ('ntiid', 'target_ntiid'):
-				ntiid_val = getattr(contained_object, attr, None)
-				if ntiid_val is not None:
-					results.add(ntiid_val)
+		# If we have a lesson, iterate through
+		contained_objects = _get_lesson_items( lesson )
+
+	for contained_object in contained_objects or ():
+		for attr in ('ntiid', 'target_ntiid'):
+			ntiid_val = getattr(contained_object, attr, None)
+			if ntiid_val is not None:
+				results.add(ntiid_val)
 	return results
 
 @view_config(route_name='objects.generic.traversal',
@@ -305,9 +316,18 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 		# ntiids under node; ~.05s to get empty resource set.  Bumps up to ~.3s
 		# once the user starts accumulating events.
 		user = self.getRemoteUser()
-		ntiid = self.context.ContentNTIID
-		content_unit = ntiids.find_object_with_ntiid(ntiid)
-		node_ntiids = _get_children_ntiid(content_unit)
+		lesson = None
+		try:
+			ntiid = self.context.LessonOverviewNTIID
+		except AttributeError:
+			# Legacy
+			node_ntiids = set()
+			ntiid = self.context.ContentNTIID
+			content_unit = find_object_with_ntiid( ntiid )
+			_get_legacy_children_ntiids( content_unit, node_ntiids )
+		else:
+			lesson = find_object_with_ntiid(ntiid)
+			node_ntiids = _get_children_ntiid(lesson)
 
 		result = LocatedExternalDict()
 		result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
@@ -327,7 +347,10 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 
 		# Get progress for self-assessments and assignments
 		try:
-			course = ICourseInstance(content_unit)
+			course = find_interface( lesson, ICourseInstance, strict=False )
+			if course is None:
+				content_unit = find_object_with_ntiid( self.context.ContentNTIID )
+				course = ICourseInstance( content_unit )
 		except TypeError:
 			logger.warn('No course found for content unit; cannot return progress for assessments (%s)',
 						ntiid)
