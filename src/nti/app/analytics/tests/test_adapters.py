@@ -12,8 +12,6 @@ import time
 import fudge
 import zope.intid
 
-from fudge import patch_object
-
 from hamcrest import is_
 from hamcrest import not_none
 from hamcrest import assert_that
@@ -34,8 +32,6 @@ from nti.dataserver.contenttypes.forums.forum import GeneralForum
 from nti.dataserver.contenttypes.forums.topic import GeneralTopic as Topic
 from nti.dataserver.contenttypes.forums.post import GeneralForumComment
 
-from nti.analytics import identifier
-
 from nti.analytics.database import get_analytics_db
 from nti.analytics.database import boards as db_boards_view
 from nti.analytics.database import resource_tags as db_tags_view
@@ -43,6 +39,10 @@ from nti.analytics.database.root_context import _create_course
 from nti.analytics.database.users import create_user
 from nti.analytics.database.assessments import AssignmentsTaken
 from nti.analytics.database.assessments import SelfAssessmentsTaken
+
+from nti.analytics_database.interfaces import IAnalyticsIntidIdentifier
+from nti.analytics_database.interfaces import IAnalyticsNTIIDIdentifier
+from nti.analytics_database.interfaces import IAnalyticsRootContextIdentifier
 
 from nti.analytics.interfaces import IProgress
 
@@ -69,22 +69,34 @@ def _create_note_view( user_id, note ):
 	db_tags_view.create_note_view( user_id, None, event_time,
 									None, 1, note )
 
-class TestAnalyticAdapters( NTIAnalyticsTestCase ):
+class _AbstractMockAnalyticTestClass( NTIAnalyticsTestCase ):
 
 	def setUp(self):
 		self.analytics_db = get_analytics_db()
 
-		self.patches = [
-			patch_object( identifier.RootContextId, 'get_id', TestIdentifier.get_id ),
-			patch_object( identifier._DSIdentifier, 'get_id', TestIdentifier.get_id ),
-			patch_object( identifier._NtiidIdentifier, 'get_id', TestIdentifier.get_id ),
-			patch_object( identifier.RootContextId, 'get_object', TestIdentifier.get_object ),
-			patch_object( identifier._DSIdentifier, 'get_object', TestIdentifier.get_object ),
-			patch_object( identifier._NtiidIdentifier, 'get_object', TestIdentifier.get_object ) ]
+		self.old_intid_util = component.getGlobalSiteManager().getUtility( IAnalyticsIntidIdentifier )
+		self.old_ntiid_util = component.getGlobalSiteManager().getUtility( IAnalyticsNTIIDIdentifier )
+		self.old_root_context_util = component.getGlobalSiteManager().getUtility( IAnalyticsRootContextIdentifier )
+
+		self.test_identifier = TestIdentifier()
+		component.getGlobalSiteManager().registerUtility( self.test_identifier,
+														IAnalyticsIntidIdentifier )
+		component.getGlobalSiteManager().registerUtility( self.test_identifier,
+														IAnalyticsNTIIDIdentifier )
+		component.getGlobalSiteManager().registerUtility( self.test_identifier,
+														IAnalyticsRootContextIdentifier )
+
 
 	def tearDown(self):
-		for patch in self.patches:
-			patch.restore()
+		component.getGlobalSiteManager().unregisterUtility( self.test_identifier )
+		component.getGlobalSiteManager().registerUtility( self.old_intid_util,
+														IAnalyticsIntidIdentifier )
+		component.getGlobalSiteManager().registerUtility( self.old_ntiid_util,
+														IAnalyticsNTIIDIdentifier )
+		component.getGlobalSiteManager().registerUtility( self.old_root_context_util,
+														IAnalyticsRootContextIdentifier )
+
+class TestAnalyticAdapters( _AbstractMockAnalyticTestClass ):
 
 	def _get_assignment(self):
 		new_assignment = QAssignment()
@@ -192,20 +204,7 @@ class TestAnalyticAdapters( NTIAnalyticsTestCase ):
 		assert_that( progressess,
 					contains_inanyorder( assessment_progress, assignment_progress ) )
 
-class TestViewStatAdapters( NTIAnalyticsTestCase ):
-
-	def setUp(self):
-		self.patches = [
-			patch_object( identifier.RootContextId, 'get_id', TestIdentifier.get_id ),
-			patch_object( identifier._DSIdentifier, 'get_id', TestIdentifier.get_id ),
-			patch_object( identifier._NtiidIdentifier, 'get_id', TestIdentifier.get_id ),
-			patch_object( identifier.RootContextId, 'get_object', TestIdentifier.get_object ),
-			patch_object( identifier._DSIdentifier, 'get_object', TestIdentifier.get_object ),
-			patch_object( identifier._NtiidIdentifier, 'get_object', TestIdentifier.get_object ) ]
-
-	def tearDown(self):
-		for patch in self.patches:
-			patch.restore()
+class TestViewStatAdapters( _AbstractMockAnalyticTestClass ):
 
 	def _get_user(self):
 		user = User.create_user( username='david_copperfield', dataserver=self.ds )

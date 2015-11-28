@@ -48,7 +48,6 @@ def publish_ou_course_entries():
 
 	lib.syncContentPackages()
 
-
 def _do_then_enumerate_library(do, sync_libs=False):
 
 	database = ZODB.DB( ApplicationTestLayer._storage_base,
@@ -110,8 +109,6 @@ class LegacyInstructedCourseApplicationTestLayer(ApplicationTestLayer):
 
 		_do_then_enumerate_library(cleanup)
 		del cls.__old_library
-
-
 
 class RestrictedInstructedCourseApplicationTestLayer(ApplicationTestLayer):
 

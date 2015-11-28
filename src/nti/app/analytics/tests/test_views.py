@@ -48,8 +48,6 @@ from nti.assessment.assignment import QAssignment
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
-from nti.analytics import identifier
-
 from nti.analytics.common import timestamp_type
 
 from nti.analytics.interfaces import DEFAULT_ANALYTICS_BATCH_SIZE
@@ -92,6 +90,10 @@ from nti.analytics.database.sessions import Sessions
 from nti.analytics.database.locations import Location
 from nti.analytics.database.locations import IpGeoLocation
 from nti.analytics.database.users import create_user
+
+from nti.analytics_database.interfaces import IAnalyticsIntidIdentifier
+from nti.analytics_database.interfaces import IAnalyticsNTIIDIdentifier
+from nti.analytics_database.interfaces import IAnalyticsRootContextIdentifier
 
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics.views import UserLocationJsonView
@@ -203,20 +205,29 @@ class _AbstractTestViews( ApplicationLayerTest ):
 		component.getGlobalSiteManager().registerUtility( self.db, analytic_interfaces.IAnalyticsDB )
 		self.session = self.db.session
 
-		self.patches = [
-			patch_object( identifier.RootContextId, 'get_id', TestIdentifier.get_id ),
-			patch_object( identifier._DSIdentifier, 'get_id', TestIdentifier.get_id ),
-			patch_object( identifier._NtiidIdentifier, 'get_id', TestIdentifier.get_id ),
-			patch_object( identifier.RootContextId, 'get_object', TestIdentifier.get_object ),
-			patch_object( identifier._DSIdentifier, 'get_object', TestIdentifier.get_object ),
-			patch_object( identifier._NtiidIdentifier, 'get_object', TestIdentifier.get_object ) ]
+		self.old_intid_util = component.getGlobalSiteManager().getUtility( IAnalyticsIntidIdentifier )
+		self.old_ntiid_util = component.getGlobalSiteManager().getUtility( IAnalyticsNTIIDIdentifier )
+		self.old_root_context_util = component.getGlobalSiteManager().getUtility( IAnalyticsRootContextIdentifier )
+
+		self.test_identifier = TestIdentifier()
+		component.getGlobalSiteManager().registerUtility( self.test_identifier,
+														IAnalyticsIntidIdentifier )
+		component.getGlobalSiteManager().registerUtility( self.test_identifier,
+														IAnalyticsNTIIDIdentifier )
+		component.getGlobalSiteManager().registerUtility( self.test_identifier,
+														IAnalyticsRootContextIdentifier )
+
 
 	def tearDown(self):
 		component.getGlobalSiteManager().unregisterUtility( self.db, provided=analytic_interfaces.IAnalyticsDB )
 		self.session.close()
-
-		for patch in self.patches:
-			patch.restore()
+		component.getGlobalSiteManager().unregisterUtility( self.test_identifier )
+		component.getGlobalSiteManager().registerUtility( self.old_intid_util,
+														IAnalyticsIntidIdentifier )
+		component.getGlobalSiteManager().registerUtility( self.old_ntiid_util,
+														IAnalyticsNTIIDIdentifier )
+		component.getGlobalSiteManager().registerUtility( self.old_root_context_util,
+														IAnalyticsRootContextIdentifier )
 
 class TestBatchEvents( _AbstractTestViews ):
 
