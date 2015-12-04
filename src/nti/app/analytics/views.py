@@ -13,6 +13,8 @@ import csv
 from io import BytesIO
 from datetime import datetime
 
+from nti.app.products.courseware_reports import MessageFactory as _
+
 from zope.event import notify
 
 from zope.schema.interfaces import ValidationError
@@ -48,11 +50,14 @@ from nti.analytics.progress import get_assessment_progresses_for_course
 
 from nti.common.string import TRUE_VALUES
 from nti.common.maps import CaseInsensitiveDict
+from nti.common.property import Lazy
 
 from nti.contentlibrary.indexed_data import get_catalog
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
+from nti.contenttypes.courses.interfaces import ICourseInstance
+from nti.contenttypes.courses.interfaces import ICourseCatalogEntry
 
 from nti.dataserver.interfaces import IUser
 from nti.dataserver import authorization as nauth
@@ -445,6 +450,32 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 	Provides a representation of the geographical
 	locations of users within a course.
 	"""
+	
+	@Lazy
+	def course_start_date(self):
+		try:
+			# legacy code path, but faster
+			entry = self.course.legacy_catalog_entry
+		except AttributeError:
+			entry = ICourseCatalogEntry(self.course)
+		return entry.StartDate
+	
+	@Lazy
+	def course(self):
+		return ICourseInstance(self.context)
+	
+	def generate_semester( self ):
+		start_date = self.course_start_date
+		start_month = start_date.month if start_date else None
+		if start_month < 5:
+			semester = _( 'Spring' )
+		elif start_month < 8:
+			semester = _( 'Summer' )
+		else:
+			semester = _( 'Fall' )
+
+		start_year = start_date.year if start_date else None
+		return '%s %s' % ( semester, start_year ) if start_date else ''
 
 	def get_data(self, course):
 		enrollment_scope = self.request.params.get('enrollment_scope')
@@ -534,5 +565,8 @@ class UserLocationHtmlView(AbstractUserLocationView):
 							  location['longitude'],
 							  _tx_string(location['label'])])
 
-		options['locations'] = locations
+		options['locations'] = locations	
+		options['course_info'] = {'course_friendly_name': self.context.__name__ + ' ' + self.generate_semester(), 'course_section': self.context.__name__}
+
+		
 		return options
