@@ -275,7 +275,8 @@ def _get_lesson_items( lesson ):
 	"""
 	result = set()
 	for group in lesson or ():
-		result.update( group.items )
+		items = group.items or ()
+		result.update( items )
 	return result
 
 def _get_children_ntiid(lesson):
