@@ -274,7 +274,7 @@ def _get_lesson_items( lesson ):
 	For lessons, iterate and retrieve ntiids.
 	"""
 	result = set()
-	for group in lesson.items:
+	for group in lesson or ():
 		result.update( group.items )
 	return result
 
