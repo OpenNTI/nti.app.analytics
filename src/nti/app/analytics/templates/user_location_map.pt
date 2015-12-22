@@ -4,34 +4,37 @@
 	  xmlns:tal="http://xml.zope.org/namespaces/tal"
 	  xmlns:metal="http://xml.zope.org/namespaces/metal"
 	  style="height:100%">
+
 	<head style="height:100%">
 		<meta charset="UTF-8">
 		<body style="height:100%">
 
-			<div style="display:inline-block; float:left; height=20%" border="1">
-				<div style="float:left; display:inline-block;">
-					<!-- FIXME: This image should be loaded appropriately for each site, not just for Janux.
-								Probably need to use a macro. -->
-					<img src="http://d2ixlfeu83tci.cloudfront.net/images/ou_janux_email_tag_2.png" width="470" height="94"
-	                    alt="Janux Interactive Learning Community" />
+			<div style="float:left; height:100%, width:470px;" border="1">
+				<!-- FIXME: This image should be loaded appropriately for each site, not just for Janux.
+							Probably need to use a macro. -->
+				<img src="http://d2ixlfeu83tci.cloudfront.net/images/ou_janux_email_tag_2.png" width="470" height="94"
+					alt="Janux Interactive Learning Community" />
+
+				<div>
+					<!-- OpenSansBold still isn't loading locally -->
+					<font face="OpenSansBold" color="b8b8b8" size="10" tal:content="options/course_info/course_friendly_name" >Course: </font> 
 				</div>
 
-				<div style="float:center">
+				<div style="width:470px;">
+					<font face="OpenSansBold" color="757474" size="3">This map shows locations where students have logged into ${options/course_info/course_section}. Each map marker represents the number of unique students who have logged in at a particular location. A student who logs in from multiple locations will be counted for each of those locations.</font>
+				</div>
+				<hr>
 
-					<div>
-						<font face="OpenSansBold" color="b8b8b8" size="10" tal:content="options/course_info/course_friendly_name" >Course: </font> 
-					</div>
-
-					<div>
-						<font face="OpenSansBold" color="757474" size="3">This map shows locations where students have logged into ${options/course_info/course_section}. Each map marker represents the number of unique students who have logged in at a particular location. A student who logs in from multiple locations will be counted for each of those locations.</font>
-					</div>
-
+				<div tal:define="list options/locations"> 
+					<ul tal:repeat="item python: list[1:]">
+					  <li tal:content="python: item[2]"></li>
+					</ul>
 				</div>
 
-			</div> <br>
+			</div> <!-- End of sidebar div -->
 
 			<!-- Note: using calc() as a CSS attribute is only supported in IE9 and higher. -->
-			<div id="map_body" style="width:100%; height:calc(100% - 140px)"></div>
+			<div id="map_body" style="height:100%"></div>
 
 		<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 		<script>
@@ -59,7 +62,7 @@
 			map.draw(data, options);
 			};
 
-	    </script>
-	    </body>
+		</script>
+		</body>
 	</head>
 </html>
