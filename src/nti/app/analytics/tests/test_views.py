@@ -10,8 +10,6 @@ __docformat__ = "restructuredtext en"
 import time
 import fudge
 
-from fudge import patch_object
-
 from datetime import datetime
 
 from webob.datetime_utils import serialize_date
@@ -808,9 +806,9 @@ class TestProgressView( _AbstractTestViews ):
 		self._get_progress( response=response, status=304 )
 
 def _tx_string(s):
-		if s and isinstance(s, unicode):
-			s = s.encode('utf-8')
-		return s
+	if s and isinstance(s, unicode):
+		s = s.encode('utf-8')
+	return s
 
 class TestUserLocationView( _AbstractTestViews ):
 

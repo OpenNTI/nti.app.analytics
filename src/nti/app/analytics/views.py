@@ -450,7 +450,7 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 	Provides a representation of the geographical
 	locations of users within a course.
 	"""
-	
+
 	@Lazy
 	def course_start_date(self):
 		try:
@@ -459,11 +459,11 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 		except AttributeError:
 			entry = ICourseCatalogEntry(self.course)
 		return entry.StartDate
-	
+
 	@Lazy
 	def course(self):
 		return ICourseInstance(self.context)
-	
+
 	def generate_semester( self ):
 		start_date = self.course_start_date
 		start_month = start_date.month if start_date else None
@@ -563,10 +563,13 @@ class UserLocationHtmlView(AbstractUserLocationView):
 		for location in location_data:
 			locations.append([location['latitude'],
 							  location['longitude'],
-							  _tx_string(location['label'])])
+							  _tx_string( location['label'] )])
 
-		options['locations'] = locations	
-		options['course_info'] = {'course_friendly_name': self.context.__name__ + ' ' + self.generate_semester(), 'course_section': self.context.__name__}
+		options['locations'] = locations
+		# Pass the data separate (and as-is) since our template engine handles encoded items.
+		options['location_data'] = location_data
+		friendly_name = '%s %s' % ( self.context.__name__, self.generate_semester() )
+		options['course_info'] = {'course_friendly_name': friendly_name,
+								'course_section': self.context.__name__}
 
-		
 		return options

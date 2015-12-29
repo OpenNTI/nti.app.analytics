@@ -9,6 +9,34 @@
 		<meta charset="UTF-8">
 		<body style="height:100%">
 
+			<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+			<script>
+
+				google.load('visualization', '1', { 'packages': ['map'] });
+				google.setOnLoadCallback(drawMap);
+
+				var inputData = ${options/locations}
+				var arrayLength = inputData.length;
+
+				// Notice that we're starting at 1, to skip the header row
+				for (i=1; i<arrayLength; ++i) {
+					// encode the label for each location
+					inputData[i][2] = decodeURIComponent( escape( inputData[i][2] ));
+				}
+
+				function drawMap() {
+				  var data = google.visualization.arrayToDataTable( inputData );
+
+				var options = { showTip: true,
+								enableScrollWheel: true,
+								mapType: 'normal' };
+
+				var map = new google.visualization.Map(document.getElementById('map_body'));
+				map.draw(data, options);
+				};
+
+			</script>
+
 			<div style="float:left; height:100%, width:470px;" border="1">
 				<!-- FIXME: This image should be loaded appropriately for each site, not just for Janux.
 							Probably need to use a macro. -->
@@ -17,17 +45,22 @@
 
 				<div>
 					<!-- OpenSansBold still isn't loading locally -->
-					<font face="OpenSansBold" color="b8b8b8" size="10" tal:content="options/course_info/course_friendly_name" >Course: </font> 
+					<font face="OpenSansBold" color="b8b8b8" size="10"
+						tal:content="options/course_info/course_friendly_name" >Course: </font>
 				</div>
 
 				<div style="width:470px;">
-					<font face="OpenSansBold" color="757474" size="3">This map shows locations where students have logged into ${options/course_info/course_section}. Each map marker represents the number of unique students who have logged in at a particular location. A student who logs in from multiple locations will be counted for each of those locations.</font>
+					<font face="OpenSansBold" color="757474" size="3">
+						This map shows locations where students have logged into ${options/course_info/course_section}.
+						Each map marker represents the number of unique students who have logged in at a particular
+						location. A student who logs in from multiple locations will be counted for each of those locations.
+					</font>
 				</div>
 				<hr>
 
-				<div tal:define="list options/locations"> 
-					<ul tal:repeat="item python: list[1:]">
-					  <li tal:content="python: item[2]"></li>
+				<div tal:define="location_data options/location_data">
+					<ul tal:repeat="location location_data">
+					  <li tal:content="python: location['city']"></li>
 					</ul>
 				</div>
 
@@ -36,33 +69,6 @@
 			<!-- Note: using calc() as a CSS attribute is only supported in IE9 and higher. -->
 			<div id="map_body" style="height:100%"></div>
 
-		<script type="text/javascript" src="https://www.google.com/jsapi"></script>
-		<script>
-
-			google.load('visualization', '1', { 'packages': ['map'] });
-			google.setOnLoadCallback(drawMap);
-			
-			var inputData = ${options/locations}
-			var arrayLength = inputData.length;
-
-			// Notice that we're starting at 1, to skip the header row
-			for (i=1; i<arrayLength; ++i) {
-				// encode the label for each location
-				inputData[i][2] = decodeURIComponent( escape( inputData[i][2] ));
-			}
-
-			function drawMap() {
-			  var data = google.visualization.arrayToDataTable( inputData );
-
-			var options = { showTip: true, 
-							enableScrollWheel: true,
-							mapType: 'normal' };
-
-			var map = new google.visualization.Map(document.getElementById('map_body'));
-			map.draw(data, options);
-			};
-
-		</script>
 		</body>
 	</head>
 </html>
