@@ -56,7 +56,6 @@ from nti.contentlibrary.indexed_data import get_catalog
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
-from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseCatalogEntry
 
 from nti.dataserver.interfaces import IUser
@@ -284,13 +283,13 @@ def _get_lesson_items( lesson ):
 		result.update( items )
 	return result
 
-def _get_children_ntiid(lesson):
+def _get_children_ntiid(lesson, lesson_ntiid):
 	catalog = get_catalog()
-	rs = catalog.search_objects(container_ntiids=lesson.ntiid,
+	rs = catalog.search_objects(container_ntiids=lesson_ntiid,
 								sites=get_component_hierarchy_names())
 	contained_objects = tuple(rs)
 	results = set()
-	if not contained_objects:
+	if not contained_objects and lesson is not None:
 		# If we have a lesson, iterate through
 		contained_objects = _get_lesson_items( lesson )
 
@@ -322,7 +321,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 		# ntiids under node; ~.05s to get empty resource set.  Bumps up to ~.3s
 		# once the user starts accumulating events.
 		user = self.getRemoteUser()
-		lesson = None
+		lesson = node_ntiids = None
 		try:
 			ntiid = self.context.LessonOverviewNTIID
 		except AttributeError:
@@ -333,7 +332,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 			_get_legacy_children_ntiids( content_unit, node_ntiids )
 		else:
 			lesson = find_object_with_ntiid(ntiid)
-			node_ntiids = _get_children_ntiid(lesson)
+			node_ntiids = _get_children_ntiid(lesson, ntiid)
 
 		result = LocatedExternalDict()
 		result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
@@ -343,7 +342,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 		node_last_modified = None
 
 		# Get progress for resource/videos
-		for node_ntiid in node_ntiids:
+		for node_ntiid in node_ntiids or ():
 			# Can improve this if we can distinguish between video and other.
 			node_progress = get_progress_for_ntiid(user, node_ntiid)
 
