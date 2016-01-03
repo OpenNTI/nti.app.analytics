@@ -263,11 +263,19 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
 				results.append(val)
 		return results
 
-def _get_legacy_children_ntiids(unit, accum):
-	for attr in ('ntiid', 'target_ntiid'):
-		ntiid_val = getattr(unit, attr, None)
+def _get_ntiids( obj, accum ):
+	for attr in ('ntiid', 'target_ntiid', 'target'):
+		ntiid_val = getattr(obj, attr, None)
 		if ntiid_val is not None:
-			accum.add(ntiid_val)
+			accum.add( ntiid_val )
+	try:
+		for item in obj.items:
+			_get_ntiids( item, accum )
+	except AttributeError:
+		pass
+
+def _get_legacy_children_ntiids(unit, accum):
+	_get_ntiids( unit, accum )
 	for ntiid in unit.embeddedContainerNTIIDs:
 		accum.add(ntiid)
 	for child in unit.children:
@@ -279,8 +287,7 @@ def _get_lesson_items( lesson ):
 	"""
 	result = set()
 	for group in lesson or ():
-		items = group.items or ()
-		result.update( items )
+		result.update( group.items or () )
 	return result
 
 def _get_children_ntiid(lesson, lesson_ntiid):
@@ -294,10 +301,7 @@ def _get_children_ntiid(lesson, lesson_ntiid):
 		contained_objects = _get_lesson_items( lesson )
 
 	for contained_object in contained_objects or ():
-		for attr in ('ntiid', 'target_ntiid'):
-			ntiid_val = getattr(contained_object, attr, None)
-			if ntiid_val is not None:
-				results.add(ntiid_val)
+		_get_ntiids( contained_object, results )
 	return results
 
 @view_config(route_name='objects.generic.traversal',
