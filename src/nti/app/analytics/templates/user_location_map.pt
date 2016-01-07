@@ -9,63 +9,119 @@
 		<meta charset="UTF-8">
 		<body style="height:100%">
 
-			<script type="text/javascript" src="https://www.google.com/jsapi"></script>
-			<script>
-
-				google.load('visualization', '1', { 'packages': ['map'] });
-				google.setOnLoadCallback(drawMap);
-
-				var inputData = ${options/locations}
-				var arrayLength = inputData.length;
-
-				// Notice that we're starting at 1, to skip the header row
-				for (i=1; i<arrayLength; ++i) {
-					// encode the label for each location
-					inputData[i][2] = decodeURIComponent( escape( inputData[i][2] ));
-				}
-
-				function drawMap() {
-				  var data = google.visualization.arrayToDataTable( inputData );
-
-				var options = { showTip: true,
-								enableScrollWheel: true,
-								mapType: 'normal' };
-
-				var map = new google.visualization.Map(document.getElementById('map_body'));
-				map.draw(data, options);
-				};
-
-			</script>
-
 			<div style="float:left; height:100%, width:470px;" border="1">
 				<div metal:use-macro="macro:header" />
 
 				<div>
 					<!-- OpenSansBold still isn't loading locally -->
 					<font face="OpenSansBold" color="b8b8b8" size="10"
-						tal:content="options/course_info/course_friendly_name" >Course: </font>
-				</div>
+						tal:content="options/course_info/course_friendly_name">
+						Course:</font>
+				</div> <br>
 
 				<div style="width:470px;">
 					<font face="OpenSansBold" color="757474" size="3">
-						This map shows locations where students have logged into ${options/course_info/course_section}.
-						Each map marker represents the number of unique students who have logged in at a particular
-						location. A student who logs in from multiple locations will be counted for each of those locations.
+						This map shows locations where students have logged 
+						into ${options/course_info/course_section}.
+						Each map marker represents the number of unique 
+						students who have logged in at a particular
+						location. A student who logs in from multiple 
+						locations will be counted for each of those locations.
 					</font>
-				</div>
+				</div> <br>
 				<hr>
 
-				<div tal:define="location_data options/location_data">
-					<ul tal:repeat="location location_data">
-					  <li tal:content="python: location['city']"></li>
+				<div tal:define="list options/locations"> 
+					<ul id="marker_list">
+					<!-- Add list items with Javascript, below -->
 					</ul>
 				</div>
 
 			</div> <!-- End of sidebar div -->
 
-			<!-- Note: using calc() as a CSS attribute is only supported in IE9 and higher. -->
 			<div id="map_body" style="height:100%"></div>
 
+		<script type="text/javascript" 
+				src="https://maps.googleapis.com/maps/api/js"></script>
+		<script>
+
+			var inputData = ${options/locations}
+			var arrayLength = inputData.length;
+			var markers = []
+			var infowindows = []
+
+			// Notice that we're starting at 1, to skip the header row
+			for (var i=0; i<arrayLength; ++i) {
+				// encode the label for each location
+				inputData[i][2] = decodeURIComponent( escape( inputData[i][2] ));
+			}
+
+			function initialize() {
+
+				// Use these to calculate average latitude
+				// and longitude, so we can make sure that
+				// the map is initially centered on the middle
+				// of the markers. How do we zoom properly though?
+				var total_lat = 0.0
+				var total_lng = 0.0
+				var map = new google.maps.Map(document.getElementById('map_body'), {
+					zoom: 11
+					});
+
+				// Create markers and add them to the map
+				for (var key in inputData) {
+
+					// Create an InfoWindow
+					infowindows[key] = new google.maps.InfoWindow({
+						content: inputData[key][2] + ", " 
+							+ getUserLabel(inputData[key][3])
+					});
+
+					// Create a marker
+					markers[key] = new google.maps.Marker({
+						position: {lat:inputData[key][0], lng:inputData[key][1]},
+						title: inputData[key][2] + ", " 
+							+ getUserLabel(inputData[key][3]),
+						map: map
+					});
+
+					total_lat += inputData[key][0]
+					total_lng += inputData[key][1]
+
+					// Add a listener to open the InfoWindow 
+					// when the marker is clicked.
+					markers[key].addListener('click', function(innerKey){
+						return function() {
+								infowindows[innerKey].open(map, markers[innerKey]);
+							}
+						} (key));
+
+					addMarkerToList(inputData[key][2] + ", " 
+						+ getUserLabel(inputData[key][3]))
+				}
+
+				// Set the center of the map to the average of the points' locations
+				map.setCenter({lat:total_lat/arrayLength, lng:total_lng/arrayLength})
+			}
+
+			function getUserLabel(numberOfUsers) {
+				if (numberOfUsers > 1) {
+					return numberOfUsers + " users"
+				} else {
+					return numberOfUsers + " user"
+				}
+			}
+
+			function addMarkerToList(title) {
+				var ul = document.getElementById("marker_list");
+				var li = document.createElement("li");
+				li.appendChild(document.createTextNode(title));
+				ul.appendChild(li);
+			}
+
+			google.maps.event.addDomListener(window, 'load', initialize);
+
+		</script>
 		</body>
 	</head>
 </html>
