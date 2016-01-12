@@ -36,8 +36,8 @@
 				</div> <br>
 				<hr>
 
-				<div style="padding:5px"> 
-					<table border='1' id="location_table" class="display">
+				<div style="padding-right:5px"> 
+					<table id="location_table" class="display">
 					<thead> 
 						<tr>
 							<th>Location</th> <th>User count</th>
