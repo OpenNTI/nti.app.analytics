@@ -19,6 +19,7 @@ from zope import interface
 
 from nti.app.products.courseware.interfaces import IViewStats
 from nti.app.products.courseware.interfaces import IVideoUsageStats
+from nti.app.products.courseware.interfaces import IResourceUsageStats
 
 from nti.assessment.interfaces import IQAssignment
 from nti.assessment.interfaces import IQuestionSet
@@ -41,11 +42,10 @@ from nti.analytics.boards import get_topic_last_view
 from nti.analytics.resource_tags import get_note_views
 from nti.analytics.resource_tags import get_note_last_view
 
-from nti.analytics.resource_views import get_video_views
-
 from nti.analytics.progress import DefaultProgress
 
-from .video_usage_stats import VideoUsageReport
+from nti.app.analytics.usage_stats import CourseVideoUsageStats
+from nti.app.analytics.usage_stats import CourseResourceUsageStats
 
 @interface.implementer(IProgress)
 @component.adapter(IUser, IQAssignment)
@@ -155,10 +155,16 @@ def _note_view_stats_for_user(note, user):
 
 @interface.implementer(IVideoUsageStats)
 @component.adapter(ICourseInstance)
-def _video_usage_stats(course):
+def _video_usage_stats(context):
 	result = None
 	if has_analytics():
-		video_events = get_video_views(course=course)
-		report = VideoUsageReport()
-		result = report.get_video_usage_stats(video_events, course)
+		result = CourseVideoUsageStats( context )
+	return result
+
+@interface.implementer(IResourceUsageStats)
+@component.adapter(ICourseInstance)
+def _resource_usage_stats(context):
+	result = None
+	if has_analytics():
+		result = CourseResourceUsageStats( context )
 	return result

@@ -43,7 +43,7 @@ from nti.dataserver.authorization import ACT_MODERATE
 
 from nti.externalization.interfaces import LocatedExternalDict
 
-from . import ANALYTICS
+from nti.app.analytics import ANALYTICS
 
 @interface.implementer(IPathAdapter)
 class AnalyticsPathAdapter(Contained):

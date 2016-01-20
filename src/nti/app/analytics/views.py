@@ -72,11 +72,11 @@ from nti.site.site import get_component_hierarchy_names
 
 from nti.traversal.traversal import find_interface
 
-from . import SYNC_PARAMS
-from . import BATCH_EVENTS
-from . import ANALYTICS_SESSION
-from . import ANALYTICS_SESSIONS
-from . import END_ANALYTICS_SESSION
+from nti.app.analytics import SYNC_PARAMS
+from nti.app.analytics import BATCH_EVENTS
+from nti.app.analytics import ANALYTICS_SESSION
+from nti.app.analytics import ANALYTICS_SESSIONS
+from nti.app.analytics import END_ANALYTICS_SESSION
 
 SET_RESEARCH_VIEW = 'SetUserResearch'
 GEO_LOCATION_CSV_VIEW = 'GetGeoLocationCsv'
@@ -94,8 +94,8 @@ def _get_last_mod(progress, max_last_mod):
 	result = max_last_mod
 
 	if 		not max_last_mod \
-		or 	(progress.last_modified and \
-				progress.last_modified > max_last_mod):
+		or 	(	progress.last_modified
+			and	progress.last_modified > max_last_mod):
 		result = progress.last_modified
 	return result
 
