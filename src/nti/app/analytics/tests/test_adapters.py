@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function, unicode_literals, absolute_import, division
-from hamcrest.library.collection.issequence_containinginanyorder import contains_inanyorder
 __docformat__ = "restructuredtext en"
 
 # disable: accessing protected members, too many methods
@@ -13,10 +12,11 @@ import fudge
 import zope.intid
 
 from hamcrest import is_
+from hamcrest import none
 from hamcrest import not_none
 from hamcrest import assert_that
-from hamcrest import none
 from hamcrest import has_length
+from hamcrest import contains_inanyorder
 
 from datetime import datetime
 

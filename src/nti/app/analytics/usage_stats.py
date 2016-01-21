@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Externalization decorators.
+Provide analytics stats on usage for a given context.
 
 .. $Id$
 """
@@ -147,6 +147,13 @@ class _AbstractUsageStats( object ):
 		result = nlargest( top_count, stats, key=lambda vid: vid.session_count )
 		return result
 
+	def _get_title(self, ntiid):
+		result = None
+		obj = find_object_with_ntiid( ntiid )
+		if obj is not None:
+			result = obj.title or getattr( obj, 'label', '' )
+		return result
+
 	def _get_watch_data(self, stats, student_count):
 		"""
 		For the given stats and student count, return watch stats ready
@@ -224,7 +231,8 @@ class ResourceStats( object ):
 		self.event_count += 1
 		if event.Duration:
 			self.total_view_time += event.Duration
-		user_stats = self.user_stats.setdefault( event.user, BaseStats() )
+		# Key on username
+		user_stats = self.user_stats.setdefault( event.user.username, BaseStats() )
 		user_stats.incr( event )
 		session_stats = self.session_stats.setdefault( event.SessionID, BaseStats() )
 		session_stats.incr( event )
@@ -252,15 +260,14 @@ class CourseResourceUsageStats(_AbstractUsageStats):
 
 	@property
 	def events(self):
-		return get_resource_views( course=self.course )
+		return get_resource_views( course=self.course ) or ()
 
 	def _build_resource_stats(self, ntiid, stats, student_count):
-		obj = find_object_with_ntiid( ntiid )
-		if obj is None:
+		title = self._get_title( ntiid )
+		if title is None:
 			return
 
 		watch_data = self._get_watch_data( stats, student_count )
-		title = obj.title or getattr( obj, 'label', '' )
 		data = _ResourceInfo(	title,
 								ntiid,
 								stats.session_count,
@@ -280,9 +287,9 @@ class CourseVideoUsageStats(_AbstractUsageStats):
 
 	@property
 	def events(self):
-		return get_video_views( course=self.course )
+		return get_video_views( course=self.course ) or ()
 
-	def build_drop_off_data( self, stats ):
+	def _build_drop_off_data( self, stats ):
 		"""
 		Using session stats, calculate where each user 'dropped' off while
 		watching a video, bucketing into quartiles.
@@ -321,8 +328,8 @@ class CourseVideoUsageStats(_AbstractUsageStats):
 		return falloff_data
 
 	def _build_resource_stats(self, ntiid, stats, student_count):
-		obj = find_object_with_ntiid( ntiid )
-		if obj is None:
+		title = self._get_title( ntiid )
+		if title is None:
 			return
 
 		video_duration = stats.max_duration
@@ -343,8 +350,7 @@ class CourseVideoUsageStats(_AbstractUsageStats):
 		str_perc_watched_completely = '%d%%' % int(perc_users_watched_completely * 100)
 
 		watch_data = self._get_watch_data( stats, student_count )
-		drop_off_data = self.build_drop_off_data( stats )
-		title = obj.title or getattr( obj, 'label', '' )
+		drop_off_data = self._build_drop_off_data( stats )
 		data = _VideoInfo(	title,
 							ntiid,
 							stats.session_count,
