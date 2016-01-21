@@ -12,6 +12,7 @@ __docformat__ = "restructuredtext en"
 logger = __import__('logging').getLogger(__name__)
 
 from collections import namedtuple
+from collections import defaultdict
 
 from heapq import nlargest
 
@@ -218,8 +219,8 @@ class ResourceStats( object ):
 
 	def __init__(self):
 		self.total_view_time = 0
-		self.user_stats = {}
-		self.session_stats = {}
+		self.user_stats = defaultdict( BaseStats )
+		self.session_stats = defaultdict( BaseStats )
 		self.event_count = 0
 		self.max_duration = None
 
@@ -232,9 +233,9 @@ class ResourceStats( object ):
 		if event.Duration:
 			self.total_view_time += event.Duration
 		# Key on username
-		user_stats = self.user_stats.setdefault( event.user.username, BaseStats() )
+		user_stats = self.user_stats[ event.user.username ]
 		user_stats.incr( event )
-		session_stats = self.session_stats.setdefault( event.SessionID, BaseStats() )
+		session_stats = self.session_stats[ event.SessionID ]
 		session_stats.incr( event )
 		if self.max_duration is None:
 			self.max_duration = getattr( event, 'MaxDuration', None )
@@ -245,10 +246,10 @@ class ResourceEventAccumulator( object ):
 	"""
 
 	def __init__(self):
-		self.ntiid_stats_map = {}
+		self.ntiid_stats_map = defaultdict( ResourceStats )
 
 	def accum(self, event):
-		resource_stats = self.ntiid_stats_map.setdefault( event.ResourceId, ResourceStats() )
+		resource_stats = self.ntiid_stats_map[ event.ResourceId ]
 		resource_stats.incr( event )
 
 @interface.implementer(IResourceUsageStats)
