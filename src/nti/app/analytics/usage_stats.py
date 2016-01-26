@@ -148,11 +148,22 @@ class _AbstractUsageStats( object ):
 		result = nlargest( top_count, stats, key=lambda vid: vid.session_count )
 		return result
 
+	def __get_title(self, obj):
+		return getattr(obj, 'title', None) or getattr( obj, 'label', '' )
+
 	def _get_title(self, ntiid):
 		result = None
 		obj = find_object_with_ntiid( ntiid )
 		if obj is not None:
-			result = obj.title or getattr( obj, 'label', '' )
+			result = self.__get_title( obj )
+			if not result:
+				try:
+					# Content cards
+					target_ntiid = obj.path[-1].ntiid
+					obj = find_object_with_ntiid( target_ntiid )
+					result = self.__get_title( obj )
+				except (AttributeError,IndexError):
+					pass
 		return result
 
 	def _get_watch_data(self, stats, student_count):
