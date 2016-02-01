@@ -110,6 +110,12 @@ def _process_batch_events(events):
 	# can exclude any malformed objects and process the proper events.
 	for event in events:
 		factory = internalization.find_factory_for(event)
+		if factory is None:
+			logger.warn( 'Malformed events received (mime_type=%s)',
+						event.get( 'MimeType' ))
+			malformed_count += 1
+			continue
+
 		new_event = factory()
 		try:
 			internalization.update_from_external_object(new_event, event)
