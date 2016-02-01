@@ -111,8 +111,8 @@ def _process_batch_events(events):
 	for event in events:
 		factory = internalization.find_factory_for(event)
 		if factory is None:
-			logger.warn( 'Malformed events received (mime_type=%s)',
-						event.get( 'MimeType' ))
+			logger.warn( 'Malformed events received (mime_type=%s) (event=%s)',
+						event.get( 'MimeType' ), event)
 			malformed_count += 1
 			continue
 
@@ -120,8 +120,10 @@ def _process_batch_events(events):
 		try:
 			internalization.update_from_external_object(new_event, event)
 			batch_events.append(new_event)
-		except ValidationError as e:
+		except (ValidationError,ValueError) as e:
 			# The app may resend events if we err; so we should just log.
+			# String values in int fields throw ValueErrors instead of validation
+			# errors.
 			logger.warn('Malformed events received (event=%s) (%s)', event, e)
 			malformed_count += 1
 
