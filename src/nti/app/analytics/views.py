@@ -277,7 +277,7 @@ def _get_ntiids( obj, accum ):
 		if ntiid_val is not None:
 			accum.add( ntiid_val )
 	try:
-		for item in obj.items:
+		for item in obj.items or ():
 			_get_ntiids( item, accum )
 	except AttributeError:
 		pass
