@@ -70,6 +70,10 @@ def _get_enrollment_scope_dict(course, instructors=set()):
 	# it makes more sense to keep things in the Credit/NonCredit camps.
 	# Seems like it would make sense to have an Everyone scope...
 	# { Everyone: { Public : ( Open, Purchased ), ForCredit : ( FCD, FCND ) }}
+
+	# XXX: Similar to other report data, we capture everyone in scope, which
+	# includes all subinstances. This seems confusing to the end-user since
+	# this isnt messaged.
 	results = {}
 	# Lumping purchased in with public.
 	public_scope = course.SharingScopes.get('Public', None)
