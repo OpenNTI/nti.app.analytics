@@ -299,13 +299,10 @@ def _get_lesson_items( lesson ):
 	return result
 
 def _get_children_ntiid(lesson, lesson_ntiid):
-	contained_objects = None
-	# TODO: Index is returning different items for some
-	# alpha nodes. Disable for now.
-# 	catalog = get_catalog()
-# 	rs = catalog.search_objects(container_ntiids=lesson_ntiid,
-# 								sites=get_component_hierarchy_names())
-# 	contained_objects = tuple(rs)
+	catalog = get_catalog()
+	rs = catalog.search_objects(container_ntiids=lesson_ntiid,
+								sites=get_component_hierarchy_names())
+	contained_objects = tuple(rs)
 	results = set()
 	if not contained_objects and lesson is not None:
 		# If we have a lesson, iterate through
