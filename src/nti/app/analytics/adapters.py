@@ -118,7 +118,7 @@ def _get_stats(records, replies=None, user_last_viewed=None):
 def _topic_view_stats(topic):
 	result = None
 	if has_analytics():
-		records = get_topic_views(topic=topic, raw=True)
+		records = get_topic_views( topic=topic )
 		result = _get_stats(records)
 	return result
 
@@ -127,7 +127,7 @@ def _topic_view_stats(topic):
 def _topic_view_stats_for_user(topic, user):
 	result = None
 	if has_analytics():
-		records = get_topic_views(topic=topic, raw=True)
+		records = get_topic_views( topic=topic )
 		replies = topic.values()
 		user_last_view = get_topic_last_view( topic, user )
 		result = _get_stats(records, replies, user_last_view)
@@ -138,7 +138,7 @@ def _topic_view_stats_for_user(topic, user):
 def _note_view_stats(note):
 	result = None
 	if has_analytics():
-		records = get_note_views(note=note, raw=True)
+		records = get_note_views( note=note )
 		result = _get_stats(records)
 	return result
 
@@ -147,7 +147,7 @@ def _note_view_stats(note):
 def _note_view_stats_for_user(note, user):
 	result = None
 	if has_analytics():
-		records = get_note_views(note=note, raw=True)
+		records = get_note_views( note=note )
 		replies = note.referents
 		user_last_view = get_note_last_view( note, user )
 		result = _get_stats(records, replies, user_last_view)
