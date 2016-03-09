@@ -16,3 +16,6 @@ BATCH_EVENTS = 'batch_events'
 ANALYTICS_SESSIONS = 'sessions'
 ANALYTICS_SESSION = 'analytics_session'
 END_ANALYTICS_SESSION = 'end_analytics_session'
+
+VIEW_STATS = 'view_stats'
+

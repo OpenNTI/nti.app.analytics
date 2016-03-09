@@ -9,10 +9,18 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
+import csv
 import time
 
 from datetime import datetime
 from datetime import timedelta
+
+from io import BytesIO
+
+from pyramid.view import view_config
+from pyramid.view import view_defaults
+
+from pyramid import httpexceptions as hexc
 
 from zope import component
 from zope import interface
@@ -23,27 +31,65 @@ from zope.traversing.interfaces import IPathAdapter
 
 from ZODB.POSException import POSError
 
-from pyramid.view import view_config
-
 from nti.analytics import get_factory
 from nti.analytics import QUEUE_NAMES
+
+from nti.analytics.assessments import get_self_assessments_for_course
+
+from nti.analytics.boards import get_topic_views
 
 from nti.analytics.interfaces import IUserResearchStatus
 
 from nti.analytics.locations import update_missing_locations
 
+from nti.analytics.resource_tags import get_note_views
+
+from nti.analytics.resource_views import get_video_views_for_ntiid
+from nti.analytics.resource_views import get_resource_views_for_ntiid
+
+from nti.analytics.stats.utils import get_time_stats
+
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
+from nti.app.products.courseware.views import CourseAdminPathAdapter
+
+from nti.common.maps import CaseInsensitiveDict
+
+from nti.contentlibrary.interfaces import IContentUnit
+
+from nti.contenttypes.courses.interfaces import ICourseCatalog
+from nti.contenttypes.courses.interfaces import ICourseInstance
+from nti.contenttypes.courses.interfaces import	ICourseCatalogEntry
+
+from nti.contenttypes.presentation.interfaces import IAssetRef
+from nti.contenttypes.presentation.interfaces import INTIVideo
+from nti.contenttypes.presentation.interfaces import INTIVideoRef
+from nti.contenttypes.presentation.interfaces import IPresentationAsset
+
+from nti.dataserver.authorization import ACT_MODERATE
+from nti.dataserver.authorization import ACT_NTI_ADMIN
+
+from nti.dataserver.contenttypes.forums.interfaces import IForum
+from nti.dataserver.contenttypes.forums.interfaces import ITopic
+
 from nti.dataserver.interfaces import IUser
+from nti.dataserver.interfaces import INote
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
+from nti.dataserver.interfaces import IDataserverFolder
+from nti.dataserver.interfaces import IUsernameSubstitutionPolicy
 
-from nti.dataserver.authorization import ACT_READ
-from nti.dataserver.authorization import ACT_MODERATE
+from nti.dataserver.users import User
 
 from nti.externalization.interfaces import LocatedExternalDict
+from nti.externalization.interfaces import StandardExternalFields
+
+from nti.ntiids.ntiids import find_object_with_ntiid
 
 from nti.app.analytics import ANALYTICS
+from nti.app.analytics import VIEW_STATS
+
+CLASS = StandardExternalFields.CLASS
 
 @interface.implementer(IPathAdapter)
 class AnalyticsPathAdapter(Contained):
@@ -54,14 +100,6 @@ class AnalyticsPathAdapter(Contained):
 		self.context = context
 		self.request = request
 		self.__parent__ = context
-
-_view_defaults = dict(route_name='objects.generic.traversal',
-					  renderer='rest',
-					  permission=ACT_READ,
-					  context=AnalyticsPathAdapter,
-					  request_method='GET')
-_post_view_defaults = _view_defaults.copy()
-_post_view_defaults['request_method'] = 'POST'
 
 def _make_min_max_btree_range(search_term):
 	min_inclusive = search_term # start here
@@ -173,29 +211,6 @@ class UserResearchStatsView(AbstractAuthenticatedView):
 		return result
 
 # Assessments
-
-import csv
-from io import BytesIO
-
-from pyramid.view import view_defaults
-from pyramid import httpexceptions as hexc
-
-from nti.analytics.assessments import get_self_assessments_for_course
-
-from nti.app.products.courseware.views import CourseAdminPathAdapter
-
-from nti.common.maps import CaseInsensitiveDict
-
-from nti.contenttypes.courses.interfaces import ICourseCatalog
-from nti.contenttypes.courses.interfaces import ICourseInstance
-from nti.contenttypes.courses.interfaces import	ICourseCatalogEntry
-
-from nti.dataserver import authorization as nauth
-from nti.dataserver.interfaces import IDataserverFolder
-from nti.dataserver.interfaces import IUsernameSubstitutionPolicy
-
-from nti.ntiids.ntiids import find_object_with_ntiid
-
 def replace_username(username):
 	policy = component.queryUtility(IUsernameSubstitutionPolicy)
 	if policy is not None:
@@ -226,7 +241,7 @@ def _parse_catalog_entry(params, names=('ntiid', 'entry', 'course')):
 @view_config(context=CourseAdminPathAdapter)
 @view_defaults(	route_name='objects.generic.traversal',
 				renderer='rest',
-				permission=nauth.ACT_NTI_ADMIN,
+				permission=ACT_NTI_ADMIN,
 				request_method='GET',
 				name='CourseAssessmentsTakenCounts')
 class UserCourseAssessmentsTakenCountsView(AbstractAuthenticatedView):
@@ -282,7 +297,7 @@ class UserCourseAssessmentsTakenCountsView(AbstractAuthenticatedView):
 @view_config(context=AnalyticsPathAdapter)
 @view_defaults(	route_name='objects.generic.traversal',
 				renderer='rest',
-				permission=nauth.ACT_NTI_ADMIN,
+				permission=ACT_NTI_ADMIN,
 				request_method='POST',
 				name='UpdateGeoLocations')
 class UpdateGeoLocationsView(AbstractAuthenticatedView):
@@ -294,3 +309,153 @@ class UpdateGeoLocationsView(AbstractAuthenticatedView):
 		updated_count = update_missing_locations()
 		logger.info( 'Updated %s missing geo locations', updated_count )
 		return hexc.HTTPNoContent()
+
+# XXX: Tests
+class AbstractViewStatsView(AbstractAuthenticatedView):
+	"""
+	An abstract view_stats view that looks for `user` and
+	`course` params, validating each.
+
+	These views are currently only available as admin views,
+	but may be opened up to instructors or others eventually.
+	"""
+
+	def _get_time_lengths(self, records):
+		result = None
+		if records:
+			result = [x.Duration for x in records if x.Duration is not None]
+		return result
+
+	def _build_time_stats(self, records):
+		time_lengths = self._get_time_lengths( records )
+		stats = get_time_stats( time_lengths )
+		return stats
+
+	def _get_kwargs(self):
+		params = CaseInsensitiveDict( self.request.params )
+		username = params.get( 'user' ) or params.get( 'username' )
+		result = {}
+		if username is not None:
+			user = User.get_user( username )
+			if user is None:
+				raise hexc.HTTPUnprocessableEntity(
+									'Cannot find user %s' % username )
+			result['user'] = user
+		course_ntiid = params.get( 'course' )
+		if course_ntiid is not None:
+			course = find_object_with_ntiid( course_ntiid )
+			course = ICourseInstance( course, None )
+			if course is None:
+				raise hexc.HTTPUnprocessableEntity(
+								'Cannot find course %s' % course_ntiid )
+			result['course'] = course
+		return result
+
+	def __call__( self ):
+		result = LocatedExternalDict()
+		kwargs = self._get_kwargs()
+		records = self._get_records( **kwargs )
+		result['Stats'] = self._build_time_stats( records )
+		result[CLASS] = self.__class__.__name__
+		return result
+
+@view_config(context=IAssetRef)
+@view_config(context=IContentUnit)
+@view_config(context=IPresentationAsset)
+@view_defaults(	route_name='objects.generic.traversal',
+			 	name=VIEW_STATS,
+				renderer='rest',
+				request_method='GET',
+				permission=ACT_NTI_ADMIN)
+class AssetViewStats(AbstractViewStatsView):
+
+	def _get_context_ntiid(self):
+		# XXX: Not sure if we need to try to aggregate everything here
+		# (e.g. INTIRelatedWorkRefs pointing to content on disk).
+		result = self.context.ntiid
+		if IAssetRef.providedBy( self.context ):
+			result = self.context.target
+		return result
+
+	def _get_records( self, **kwargs ):
+		ntiid = self._get_context_ntiid()
+		return get_resource_views_for_ntiid( ntiid, **kwargs )
+
+@view_config(context=INTIVideo)
+@view_config(context=INTIVideoRef)
+@view_defaults(	route_name='objects.generic.traversal',
+			 	name=VIEW_STATS,
+				renderer='rest',
+				request_method='GET',
+				permission=ACT_NTI_ADMIN)
+class VideoViewStats(AbstractViewStatsView):
+
+	def _get_context_ntiid(self):
+		result = self.context.ntiid
+		if INTIVideoRef.providedBy( self.context ):
+			result = self.context.target
+		return result
+
+	def _get_records( self, **kwargs ):
+		ntiid = self._get_context_ntiid()
+		return get_video_views_for_ntiid( ntiid, **kwargs )
+
+# TODO: This does not work. ADMINs do not have admin access to notes.
+# @view_config(route_name='objects.generic.traversal',
+# 			 name=VIEW_STATS,
+# 			 renderer='rest',
+# 			 request_method='GET',
+# 			 permission=ACT_NTI_ADMIN,
+# 			 context=INote)
+# class NoteViewStats(AbstractViewStatsView):
+#
+# 	def _get_records( self, **kwargs ):
+# 		kwargs = dict( kwargs )
+# 		kwargs['note'] = self.context
+# 		return get_note_views( **kwargs )
+
+@view_config(route_name='objects.generic.traversal',
+			 name=VIEW_STATS,
+			 renderer='rest',
+			 request_method='GET',
+			 permission=ACT_NTI_ADMIN,
+			 context=ITopic)
+class TopicViewStats(AbstractViewStatsView):
+
+	def _get_topic_records(self, topic, **kwargs):
+		kwargs = dict( kwargs )
+		kwargs['topic'] = topic
+		return get_topic_views( **kwargs )
+
+	def _get_records( self, **kwargs ):
+		return self._get_topic_records( self.context, **kwargs )
+
+@view_config(	route_name='objects.generic.traversal',
+			 	name=VIEW_STATS,
+			 	renderer='rest',
+				request_method='GET',
+				permission=ACT_NTI_ADMIN,
+				context=IForum)
+class ForumViewStats(TopicViewStats):
+	"""
+	For the contextual IForum, expose the view stats for
+	each contained ITopic.
+	"""
+
+	def _get_stats( self, **kwargs ):
+		result = {}
+		records = []
+		for topic in self.context.values():
+			topic_records = self._get_topic_records( topic, **kwargs )
+			records.extend( topic_records )
+			result[topic.title] = self._build_time_stats( topic_records )
+		return result, records
+
+	def __call__( self ):
+		result = LocatedExternalDict()
+		kwargs = self._get_kwargs()
+		stat_dict, all_records = self._get_stats( **kwargs )
+		result['Stats'] = stat_dict
+		result['AggregateForumStats'] = self._build_time_stats( all_records )
+		result[CLASS] = self.__class__.__name__
+		return result
