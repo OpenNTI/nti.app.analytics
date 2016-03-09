@@ -42,8 +42,6 @@ from nti.analytics.interfaces import IUserResearchStatus
 
 from nti.analytics.locations import update_missing_locations
 
-from nti.analytics.resource_tags import get_note_views
-
 from nti.analytics.resource_views import get_video_views_for_ntiid
 from nti.analytics.resource_views import get_resource_views_for_ntiid
 
@@ -73,7 +71,6 @@ from nti.dataserver.contenttypes.forums.interfaces import IForum
 from nti.dataserver.contenttypes.forums.interfaces import ITopic
 
 from nti.dataserver.interfaces import IUser
-from nti.dataserver.interfaces import INote
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
 from nti.dataserver.interfaces import IDataserverFolder
@@ -90,6 +87,7 @@ from nti.app.analytics import ANALYTICS
 from nti.app.analytics import VIEW_STATS
 
 CLASS = StandardExternalFields.CLASS
+LAST_MODIFIED = StandardExternalFields.LAST_MODIFIED
 
 @interface.implementer(IPathAdapter)
 class AnalyticsPathAdapter(Contained):
@@ -101,24 +99,16 @@ class AnalyticsPathAdapter(Contained):
 		self.request = request
 		self.__parent__ = context
 
-def _make_min_max_btree_range(search_term):
-	min_inclusive = search_term # start here
-	max_exclusive = search_term[0:-1] + unichr(ord(search_term[-1]) + 1)
-	return min_inclusive, max_exclusive
-
-def username_search(search_term):
-	min_inclusive, max_exclusive = _make_min_max_btree_range(search_term)
-	dataserver = component.getUtility(IDataserver)
-	_users = IShardLayout(dataserver).users_folder
-	usernames = list(_users.iterkeys(min_inclusive, max_exclusive, excludemax=True))
-	return usernames
-
 @view_config(route_name='objects.generic.traversal',
 			 name='queue_info',
 			 renderer='rest',
 			 request_method='GET',
 			 permission=ACT_MODERATE)
 def queue_info(request):
+	"""
+	Report on the analytics queue sizes.
+	"""
+
 	result = LocatedExternalDict()
 	factory = get_factory()
 
@@ -137,6 +127,10 @@ def queue_info(request):
 			 request_method='POST',
 			 permission=ACT_MODERATE)
 def empty_queue(request):
+	"""
+	Empty the analytics job queues, including the fail queues.
+	"""
+
 	result = LocatedExternalDict()
 	factory = get_factory()
 	queue_names = QUEUE_NAMES
@@ -319,11 +313,16 @@ class AbstractViewStatsView(AbstractAuthenticatedView):
 	These views are currently only available as admin views,
 	but may be opened up to instructors or others eventually.
 	"""
+	last_modified = None
 
 	def _get_time_lengths(self, records):
-		result = None
-		if records:
-			result = [x.Duration for x in records if x.Duration is not None]
+		result = []
+		last_mod = None
+		for record in records or ():
+			if record.Duration is not None:
+				result.append( record.Duration )
+			last_mod = record.timestamp if not last_mod else max( last_mod, record.timestamp )
+		self.last_modified = last_mod
 		return result
 
 	def _build_time_stats(self, records):
@@ -357,6 +356,7 @@ class AbstractViewStatsView(AbstractAuthenticatedView):
 		records = self._get_records( **kwargs )
 		result['Stats'] = self._build_time_stats( records )
 		result[CLASS] = self.__class__.__name__
+		result[LAST_MODIFIED] = self.last_modified
 		return result
 
 @view_config(context=IAssetRef)
@@ -399,20 +399,6 @@ class VideoViewStats(AbstractViewStatsView):
 	def _get_records( self, **kwargs ):
 		ntiid = self._get_context_ntiid()
 		return get_video_views_for_ntiid( ntiid, **kwargs )
-
-# TODO: This does not work. ADMINs do not have admin access to notes.
-# @view_config(route_name='objects.generic.traversal',
-# 			 name=VIEW_STATS,
-# 			 renderer='rest',
-# 			 request_method='GET',
-# 			 permission=ACT_NTI_ADMIN,
-# 			 context=INote)
-# class NoteViewStats(AbstractViewStatsView):
-#
-# 	def _get_records( self, **kwargs ):
-# 		kwargs = dict( kwargs )
-# 		kwargs['note'] = self.context
-# 		return get_note_views( **kwargs )
 
 @view_config(route_name='objects.generic.traversal',
 			 name=VIEW_STATS,
@@ -458,4 +444,5 @@ class ForumViewStats(TopicViewStats):
 		result['Stats'] = stat_dict
 		result['AggregateForumStats'] = self._build_time_stats( all_records )
 		result[CLASS] = self.__class__.__name__
+		result[LAST_MODIFIED] = self.last_modified
 		return result
