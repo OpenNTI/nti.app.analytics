@@ -79,9 +79,7 @@ from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import END_ANALYTICS_SESSION
 
 SET_RESEARCH_VIEW = 'SetUserResearch'
-GEO_LOCATION_CSV_VIEW = 'GetGeoLocationCsv'
-GEO_LOCATION_JSON_VIEW = 'GetGeoLocationJson'
-GEO_LOCATION_HTML_VIEW = 'GetGeoLocationHtml'
+GEO_LOCATION_VIEW = 'GeoLocations'
 
 def _is_true(t):
 	result = bool(t and str(t).lower() in TRUE_VALUES)
@@ -493,12 +491,13 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 		data = get_location_list(course, enrollment_scope)
 		return data
 
-@view_config(route_name='objects.generic.traversal',
+@view_config( route_name='objects.generic.traversal',
 			  renderer='rest',
   			  permission=nauth.ACT_NTI_ADMIN,
 			  context=ICourseInstance,
 			  request_method='GET',
-			  name=GEO_LOCATION_JSON_VIEW)
+			  accept='application/json',
+			  name=GEO_LOCATION_VIEW)
 class UserLocationJsonView(AbstractUserLocationView):
 	"""
 	Provides a json representation of the geographical
@@ -518,7 +517,8 @@ def _tx_string(label):
 			 permission=nauth.ACT_NTI_ADMIN,
 			 context=ICourseInstance,
 			 request_method='GET',
-			 name=GEO_LOCATION_CSV_VIEW)
+			 accept='text/csv',
+			 name=GEO_LOCATION_VIEW)
 class UserLocationCsvView(AbstractUserLocationView):
 	"""
 	Provides a CSV representation of the geographical
@@ -528,7 +528,7 @@ class UserLocationCsvView(AbstractUserLocationView):
 	def __call__(self):
 
 		def convert_to_utf8(data):
-			for key, value in list(data.items()): # mutating
+			for key, value in list(data.items()):
 				data[key] = _tx_string(value)
 			return data
 
@@ -556,7 +556,8 @@ class UserLocationCsvView(AbstractUserLocationView):
 			 permission=nauth.ACT_NTI_ADMIN,
 			 context=ICourseInstance,
 			 request_method='GET',
-			 name=GEO_LOCATION_HTML_VIEW)
+			 accept='text/html',
+			 name=GEO_LOCATION_VIEW)
 class UserLocationHtmlView(AbstractUserLocationView):
 	"""
 	Provides HTML code for a page displaying the geographical

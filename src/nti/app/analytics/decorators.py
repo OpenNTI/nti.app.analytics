@@ -90,29 +90,9 @@ class _TopicProgressDecorator(AbstractAuthenticatedRequestAwareDecorator):
 
 @component.adapter(ICourseInstance)
 @interface.implementer(IExternalMappingDecorator)
-class _LocationDataJsonLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
+class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
 	"""
-	Return a json representation of locations of course users.
-	"""
-
-	def _predicate(self, context, result):
-		return self._is_authenticated and has_analytics()
-
-	def _do_decorate_external(self, context, result):
-		_links = result.setdefault(LINKS, [])
-		for rel in ('GeoLocationJson', 'GeoLocationCsv'):
-			name = "Get%s" % rel
-			link = Link(context, rel=rel , elements=(name,))
-			interface.alsoProvides(link, ILocation)
-			link.__name__ = ''
-			link.__parent__ = context
-			_links.append(link)
-
-@component.adapter(ICourseInstance)
-@interface.implementer(IExternalMappingDecorator)
-class _LocationDataHtmlLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
-	"""
-	Return an HTML page showing a map of locations of course users.
+	Add a geo location link on the given course.
 	"""
 
 	def _predicate(self, context, result):
@@ -120,7 +100,7 @@ class _LocationDataHtmlLinkDecorator(AbstractAuthenticatedRequestAwareDecorator)
 
 	def _do_decorate_external(self, context, result):
 		links = result.setdefault(LINKS, [])
-		link = Link(context, rel='GeoLocationHtml', elements=('GetGeoLocationHtml',))
+		link = Link(context, rel='GeoLocations', elements=('GeoLocations',))
 		interface.alsoProvides(link, ILocation)
 		link.__name__ = ''
 		link.__parent__ = context

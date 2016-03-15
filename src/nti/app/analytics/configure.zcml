@@ -27,12 +27,7 @@
 				for="nti.contenttypes.courses.interfaces.ICourseInstance
 					 pyramid.interfaces.IRequest"  />
 
-	<subscriber factory=".decorators._LocationDataJsonLinkDecorator"
-				provides="nti.externalization.interfaces.IExternalObjectDecorator"
-				for="nti.contenttypes.courses.interfaces.ICourseInstance
-					 pyramid.interfaces.IRequest"  />
-
-	<subscriber factory=".decorators._LocationDataHtmlLinkDecorator"
+	<subscriber factory=".decorators._GeoLocationsLinkDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
 				for="nti.contenttypes.courses.interfaces.ICourseInstance
 					 pyramid.interfaces.IRequest"  />

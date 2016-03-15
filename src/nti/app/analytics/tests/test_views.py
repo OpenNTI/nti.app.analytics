@@ -94,8 +94,9 @@ from nti.analytics_database.interfaces import IAnalyticsNTIIDIdentifier
 from nti.analytics_database.interfaces import IAnalyticsRootContextIdentifier
 
 from nti.app.analytics import SYNC_PARAMS
+
 from nti.app.analytics.views import UserLocationJsonView
-from nti.app.analytics.views import UserLocationCsvView
+from nti.app.analytics.views import GEO_LOCATION_VIEW
 
 from nti.analytics.tests import TestIdentifier
 
@@ -961,7 +962,7 @@ class TestUserLocationView( _AbstractTestViews ):
 	@fudge.patch( 'nti.analytics.database.locations._get_enrolled_user_ids' )
 	def test_location_html( self, mock_get_enrollment_list ):
 
-		location_link_path = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/GetGeoLocationHtml'
+		location_link_path = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/%s' % GEO_LOCATION_VIEW
 
 		# No one is enrolled in the course yet
 		mock_get_enrollment_list.is_callable().returns([])
@@ -974,9 +975,13 @@ class TestUserLocationView( _AbstractTestViews ):
 		self.set_up_test_locations()
 		instructor_environ = self._make_extra_environ(user='harp4162')
 
+		def fetch_html( status=200 ):
+			return self.testapp.get( location_link_path, extra_environ=instructor_environ,
+									status=status, headers={'accept':str('text/html')})
+
 		# With no students in the course, we expect a 422 to be returned.
 		# Anything else, and this will throw an exception.
-		self.testapp.get( location_link_path, extra_environ=instructor_environ, status=422)
+		fetch_html( status=422 )
 
 		# Add an IP address for a user enrolled in the course
 		ip_address_1 = IpGeoLocation(user_id=1,
@@ -990,8 +995,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		# Now let user 1 be enrolled in the course
 		mock_get_enrollment_list.is_callable().returns([1])
 
-		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
-
+		result = fetch_html()
 		# Check the result against json from the other view,
 		# which is tested above. We have to do some encoding
 		# stuff to be able to find the string inside of the HTML response.
@@ -1012,7 +1016,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		self.session.add(ip_address_2)
 
 		# We should get back two locations with 1 user in each
-		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		result = fetch_html()
 		location_json_result = location_view()
 		json_result = [[str('Lat'), str('Long'), str('Label')]]
 		for view in location_json_result:
@@ -1032,7 +1036,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		mock_get_enrollment_list.is_callable().returns([1, 2])
 
 		# Now we get back 2 locations, 1 of which has two users
-		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		result = fetch_html()
 
 		location_json_result = location_view()
 		json_result = [[str('Lat'), str('Long'), str('Label')]]
@@ -1053,7 +1057,7 @@ class TestUserLocationView( _AbstractTestViews ):
 
 		# Now we get back 3 locations, one of which has two users.
 		# The other two locations should only have one user each.
-		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		result = fetch_html()
 		location_json_result = location_view()
 		json_result = [[str('Lat'), str('Long'), str('Label')]]
 		for view in location_json_result:
@@ -1066,7 +1070,7 @@ class TestUserLocationView( _AbstractTestViews ):
 	@fudge.patch( 'nti.analytics.database.locations._get_enrolled_user_ids' )
 	def test_location_csv( self, mock_get_enrollment_list ):
 
-		location_link_path = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/GetGeoLocationCsv'
+		location_link_path = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/%s' % GEO_LOCATION_VIEW
 
 		# No one is enrolled in the course yet
 		mock_get_enrollment_list.is_callable().returns([])
@@ -1079,9 +1083,13 @@ class TestUserLocationView( _AbstractTestViews ):
 		self.set_up_test_locations()
 		instructor_environ = self._make_extra_environ(user='harp4162')
 
+		def fetch_csv( status=200 ):
+			return self.testapp.get( location_link_path, extra_environ=instructor_environ,
+									status=status, headers={'accept':str('text/csv')})
+
 		# With no students in the course, we expect a 422 to be returned.
 		# Anything else, and this will throw an exception.
-		self.testapp.get( location_link_path, extra_environ=instructor_environ, status=422)
+		fetch_csv( status=422 )
 
 		# Add an IP address for a user enrolled in the course
 		ip_address_1 = IpGeoLocation(user_id=1,
@@ -1113,7 +1121,7 @@ class TestUserLocationView( _AbstractTestViews ):
 			predicted_result += str(data[fieldnames[-1]])
 			return predicted_result
 
-		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		result = fetch_csv()
 		predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))
 		assert_that( result.body, contains_string( predicted_result ) )
 
@@ -1127,7 +1135,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		self.session.add(ip_address_2)
 
 		# Same thing, except we have two users in the same location.
-		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		result = fetch_csv()
 		predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))
 		assert_that( result.body, contains_string( predicted_result ) )
 
@@ -1142,7 +1150,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		mock_get_enrollment_list.is_callable().returns([1, 2])
 
 		# Now we get back 2 locations, 1 of which has two users
-		result = self.testapp.get( location_link_path, extra_environ=instructor_environ)
+		result = fetch_csv()
 		json_data = json_view.get_data(self)
 		first_location = get_csv_string(convert_to_utf8(json_data[0]))
 		assert_that( result.body, contains_string( first_location ) )
