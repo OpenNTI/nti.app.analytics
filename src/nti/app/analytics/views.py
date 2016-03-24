@@ -12,7 +12,7 @@ logger = __import__('logging').getLogger(__name__)
 import csv
 from io import BytesIO
 
-from nti.app.products.courseware_reports import MessageFactory as _
+from nti.app.analytics import MessageFactory as _
 
 from zope.schema.interfaces import ValidationError
 
