@@ -11,15 +11,10 @@ logger = __import__('logging').getLogger(__name__)
 
 import csv
 from io import BytesIO
-from datetime import datetime
 
 from nti.app.products.courseware_reports import MessageFactory as _
 
-from zope.event import notify
-
 from zope.schema.interfaces import ValidationError
-
-from ZODB.interfaces import IBroken
 
 from pyramid.view import view_config
 
@@ -30,8 +25,6 @@ from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtils
 
 from nti.analytics.locations import get_location_list
 
-from nti.analytics.model import delete_research_status
-from nti.analytics.model import UserResearchStatusEvent
 from nti.analytics.model import AnalyticsClientParams
 
 from nti.analytics.sessions import update_session
@@ -43,7 +36,6 @@ from nti.analytics.resource_views import get_progress_for_ntiid
 from nti.analytics.resource_views import get_video_progress_for_course
 
 from nti.analytics.interfaces import IAnalyticsSessions
-from nti.analytics.interfaces import IUserResearchStatus
 from nti.analytics.interfaces import IBatchResourceEvents
 
 from nti.analytics.progress import get_assessment_progresses_for_course
@@ -77,6 +69,8 @@ from nti.app.analytics import BATCH_EVENTS
 from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import END_ANALYTICS_SESSION
+
+from nti.app.analytics.utils import set_research_status
 
 SET_RESEARCH_VIEW = 'SetUserResearch'
 GEO_LOCATION_VIEW = 'GeoLocations'
@@ -440,18 +434,10 @@ class UserResearchStudyView(AbstractAuthenticatedView,
 		allow_research = _is_true(allow_research)
 		user = self.request.context
 
-		research_status = IUserResearchStatus(user)
-		if IBroken.providedBy(research_status):
-			delete_research_status(user)
-			research_status = IUserResearchStatus(user)
-		research_status.updateLastMod()
-		research_status.modified = datetime.utcnow()
-		research_status.allow_research = allow_research
+		set_research_status( user, allow_research )
 
 		logger.info('Setting research status for user (user=%s) (allow_research=%s)',
 					user.username, allow_research)
-
-		notify(UserResearchStatusEvent(user, allow_research))
 		return hexc.HTTPNoContent()
 
 class AbstractUserLocationView(AbstractAuthenticatedView):
