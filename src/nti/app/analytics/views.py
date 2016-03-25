@@ -325,18 +325,17 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 		# ntiids under node; ~.05s to get empty resource set.  Bumps up to ~.3s
 		# once the user starts accumulating events.
 		user = self.getRemoteUser()
-		lesson = node_ntiids = None
-		try:
-			ntiid = self.context.LessonOverviewNTIID
-		except AttributeError:
+		ntiid = self.context.LessonOverviewNTIID
+
+		if ntiid:
+			lesson = find_object_with_ntiid(ntiid)
+			node_ntiids = _get_children_ntiid(lesson, ntiid)
+		else:
 			# Legacy
 			node_ntiids = set()
 			ntiid = self.context.ContentNTIID
-			content_unit = find_object_with_ntiid( ntiid )
-			_get_legacy_children_ntiids( content_unit, node_ntiids )
-		else:
-			lesson = find_object_with_ntiid(ntiid)
-			node_ntiids = _get_children_ntiid(lesson, ntiid)
+			lesson = find_object_with_ntiid( ntiid )
+			_get_legacy_children_ntiids( lesson, node_ntiids )
 
 		result = LocatedExternalDict()
 		result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
