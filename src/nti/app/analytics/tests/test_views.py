@@ -478,8 +478,7 @@ class TestAnalyticsSession( _AbstractTestViews ):
 								'batch_events': batch_events },
 								status=204 )
 
-		# This cookie is set to expire.
-		# How to test that?
+		# This cookie is set to expire; how to test that?
 # 		cookie_id = _get_cookie_id( self.testapp )
 # 		assert_that( cookie_id, none() )
 
@@ -819,38 +818,35 @@ class TestUserLocationView( _AbstractTestViews ):
 		super( TestUserLocationView, self ).setUp()
 		self.params = {}
 
+	def _store_locations(self, *locations):
+		with mock_dataserver.mock_db_trans(self.ds):
+			for location in locations:
+				self.db.session.add( location )
+
 	def set_up_test_locations(self):
 		# Create test locations
+		# Disregard all semblance of a city name. We need to test unicode characters!
 		location1 = Location(latitude='10.0000',
 							longitude='10.0000',
-							city='Zürich åß∂∆˚≈ç√ñ≤œ∑ø', # Disregard all semblance of a city name. We need to test unicode characters!
+							city='Zürich åß∂∆˚≈ç√ñ≤œ∑ø',
 							state='',
-							country='Switzerland'
-							)
+							country='Switzerland')
 
+		# Native spelling of Shanghai
 		location2 = Location(latitude='11.0000',
 							longitude='11.0000',
-							city = u'\u4e0a\u6d77\u5e02', # Native spelling of Shanghai
+							city = u'\u4e0a\u6d77\u5e02',
 							state = '',
-							country = 'China'
-							)
+							country = 'China')
 
 		location3 = Location(latitude='12.0000',
 							longitude='12.0000',
 							city = 'Running out of city names',
 							state = 'Oklahoma',
-							country = 'United States of America'
-							)
+							country = 'United States of America')
 
-		# Add test locations
-		self.session.add(location1)
-		self.session.add(location2)
-		self.session.add(location3)
-
-		# TODO: This doesn't matter to this test except
-		# to verify that our locations got added, so
-		# is this an assertion we can remove?
-		location_results = self.session.query( Location ).all()
+		self._store_locations( location1, location2, location3 )
+		location_results = self.db.session.query( Location ).all()
 		assert_that(location_results, has_length(3))
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
@@ -863,7 +859,7 @@ class TestUserLocationView( _AbstractTestViews ):
 		# Initialize location view and fake course
 		course = ContentCourseSubInstance()
 		course.SharingScopes['Public'] = CourseInstanceSharingScope('Public')
-		# TODO Self? Shouldnt we just use web query?
+		# TODO: Self? Shouldn't we just use web query?
 		location_view = UserLocationJsonView(self)
 		location_view.context = course
 
@@ -884,7 +880,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=10.0,
 									longitude=10.0,
 									location_id=1)
-		self.session.add(ip_address_1)
+		self._store_locations(ip_address_1)
 
 		# Now let user 1 be enrolled in the course
 		mock_get_enrollment_list.is_callable().returns([1])
@@ -903,7 +899,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=11.0,
 									longitude=11.0,
 									location_id=2)
-		self.session.add(ip_address_2)
+		self._store_locations(ip_address_2)
 
 		# We should get back two locations with 1 user in each
 		result = location_view()
@@ -922,7 +918,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=10.0,
 									longitude=10.0,
 									location_id=1)
-		self.session.add(ip_address_3)
+		self._store_locations(ip_address_3)
 		mock_get_enrollment_list.is_callable().returns([1, 2])
 
 		# Now we get back 2 locations, 1 of which has two users
@@ -942,7 +938,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=12.0,
 									longitude=12.0,
 									location_id=3)
-		self.session.add(ip_address_4)
+		self._store_locations(ip_address_4)
 
 		# Now we get back 3 locations, one of which has two users.
 		# The other two locations should only have one user each.
@@ -990,7 +986,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=10.0,
 									longitude=10.0,
 									location_id=1)
-		self.session.add(ip_address_1)
+		self._store_locations(ip_address_1)
 
 		# Now let user 1 be enrolled in the course
 		mock_get_enrollment_list.is_callable().returns([1])
@@ -1013,7 +1009,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=11.0,
 									longitude=11.0,
 									location_id=2)
-		self.session.add(ip_address_2)
+		self._store_locations(ip_address_2)
 
 		# We should get back two locations with 1 user in each
 		result = fetch_html()
@@ -1032,7 +1028,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=10.0,
 									longitude=10.0,
 									location_id=1)
-		self.session.add(ip_address_3)
+		self._store_locations(ip_address_3)
 		mock_get_enrollment_list.is_callable().returns([1, 2])
 
 		# Now we get back 2 locations, 1 of which has two users
@@ -1053,7 +1049,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=12.0,
 									longitude=12.0,
 									location_id=3)
-		self.session.add(ip_address_4)
+		self._store_locations(ip_address_4)
 
 		# Now we get back 3 locations, one of which has two users.
 		# The other two locations should only have one user each.
@@ -1098,7 +1094,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=10.0,
 									longitude=10.0,
 									location_id=1)
-		self.session.add(ip_address_1)
+		self._store_locations(ip_address_1)
 
 		# Now let user 1 be enrolled in the course
 		mock_get_enrollment_list.is_callable().returns([1])
@@ -1132,7 +1128,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=11.0,
 									longitude=11.0,
 									location_id=2)
-		self.session.add(ip_address_2)
+		self._store_locations(ip_address_2)
 
 		# Same thing, except we have two users in the same location.
 		result = fetch_csv()
@@ -1146,7 +1142,7 @@ class TestUserLocationView( _AbstractTestViews ):
 									latitude=10.0,
 									longitude=10.0,
 									location_id=1)
-		self.session.add(ip_address_3)
+		self._store_locations(ip_address_3)
 		mock_get_enrollment_list.is_callable().returns([1, 2])
 
 		# Now we get back 2 locations, 1 of which has two users
