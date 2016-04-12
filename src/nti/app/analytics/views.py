@@ -278,6 +278,10 @@ def _get_legacy_children_ntiids(unit, accum):
 	_get_ntiids( unit, accum )
 	for ntiid in unit.embeddedContainerNTIIDs:
 		accum.add(ntiid)
+		obj = find_object_with_ntiid( ntiid )
+		# If a related work ref, get the target.
+		if hasattr( obj, 'target' ):
+			accum.add( obj.target )
 	for child in unit.children:
 		_get_legacy_children_ntiids(child, accum)
 
