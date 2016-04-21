@@ -589,12 +589,12 @@ class TestProgressView( _AbstractTestViews ):
 		course_obj = self.course = ICourseInstance( content_unit )
 		get_root_context_id( self.db, course_obj, create=True )
 
-	def _create_video_event(self, user, resource_val, max_time_length=None):
+	def _create_video_event(self, user, resource_val, max_time_length=None, video_end_time=None):
 		test_session_id = 1
 		time_length = 30
 		video_event_type = 'WATCH'
 		video_start_time = 30
-		video_end_time = 60
+		video_end_time = video_end_time
 		with_transcript = True
 		event_time = time.time()
 		context_path = ['Blah', 'Bleh' ]
@@ -711,7 +711,8 @@ class TestProgressView( _AbstractTestViews ):
 		with mock_dataserver.mock_db_trans(self.ds):
 			user = User.get_user( user_id )
 			self._create_course()
-			self._create_video_event( user=user, resource_val=video1, max_time_length=max_progress  )
+			self._create_video_event( user=user, resource_val=video1,
+									  max_time_length=max_progress, video_end_time=30  )
 
 		response = self._get_progress( response=response )
 		result = response.json_body['Items']
@@ -722,6 +723,7 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( video_progress, has_entry('MaxPossibleProgress', max_progress ) )
 		assert_that( video_progress, has_entry('AbsoluteProgress', 30 ) )
 		assert_that( video_progress, has_entry('HasProgress', True ) )
+		assert_that( video_progress, has_entry('MostRecentEndTime', 30 ) )
 
 		# Video progress for course
 		video_response = self._get_video_progress()
@@ -743,6 +745,7 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( video_progress, has_entry('MaxPossibleProgress', max_progress ) )
 		assert_that( video_progress, has_entry('AbsoluteProgress', 60 ) )
 		assert_that( video_progress, has_entry('HasProgress', True ) )
+		assert_that( video_progress, has_entry('MostRecentEndTime', None ) )
 
 		video_response = self._get_video_progress()
 		result = video_response.json_body['Items']
@@ -763,6 +766,7 @@ class TestProgressView( _AbstractTestViews ):
 		assert_that( video_progress, has_entry('MaxPossibleProgress', max_progress ) )
 		assert_that( video_progress, has_entry('AbsoluteProgress', 60 ) )
 		assert_that( video_progress, has_entry('HasProgress', True ) )
+		assert_that( video_progress, has_entry('MostRecentEndTime', None ) )
 
 		video_response = self._get_video_progress()
 		result = video_response.json_body['Items']
