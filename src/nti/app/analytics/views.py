@@ -20,7 +20,16 @@ from pyramid.view import view_config
 
 from pyramid import httpexceptions as hexc
 
+from nti.app.analytics import SYNC_PARAMS
+from nti.app.analytics import BATCH_EVENTS
+from nti.app.analytics import ANALYTICS_SESSION
+from nti.app.analytics import ANALYTICS_SESSIONS
+from nti.app.analytics import END_ANALYTICS_SESSION
+
+from nti.app.analytics.utils import set_research_status
+
 from nti.app.base.abstract_views import AbstractAuthenticatedView
+
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
 from nti.analytics.locations import get_location_list
@@ -40,9 +49,11 @@ from nti.analytics.interfaces import IBatchResourceEvents
 
 from nti.analytics.progress import get_assessment_progresses_for_course
 
-from nti.common.string import TRUE_VALUES
 from nti.common.maps import CaseInsensitiveDict
+
 from nti.common.property import Lazy
+
+from nti.common.string import is_true
 
 from nti.contentlibrary.indexed_data import get_catalog
 
@@ -64,20 +75,8 @@ from nti.site.site import get_component_hierarchy_names
 
 from nti.traversal.traversal import find_interface
 
-from nti.app.analytics import SYNC_PARAMS
-from nti.app.analytics import BATCH_EVENTS
-from nti.app.analytics import ANALYTICS_SESSION
-from nti.app.analytics import ANALYTICS_SESSIONS
-from nti.app.analytics import END_ANALYTICS_SESSION
-
-from nti.app.analytics.utils import set_research_status
-
-SET_RESEARCH_VIEW = 'SetUserResearch'
 GEO_LOCATION_VIEW = 'GeoLocations'
-
-def _is_true(t):
-	result = bool(t and str(t).lower() in TRUE_VALUES)
-	return result
+SET_RESEARCH_VIEW = 'SetUserResearch'
 
 def _get_last_mod(progress, max_last_mod):
 	"""
@@ -86,7 +85,7 @@ def _get_last_mod(progress, max_last_mod):
 	result = max_last_mod
 
 	if 		not max_last_mod \
-		or 	(	progress.last_modified
+		or 	(progress.last_modified
 			and	progress.last_modified > max_last_mod):
 		result = progress.last_modified
 	return result
@@ -103,8 +102,8 @@ def _process_batch_events(events):
 	for event in events:
 		factory = internalization.find_factory_for(event)
 		if factory is None:
-			logger.warn( 'Malformed events received (mime_type=%s) (event=%s)',
-						event.get( 'MimeType' ), event)
+			logger.warn('Malformed events received (mime_type=%s) (event=%s)',
+						event.get('MimeType'), event)
 			malformed_count += 1
 			continue
 
@@ -112,7 +111,7 @@ def _process_batch_events(events):
 		try:
 			internalization.update_from_external_object(new_event, event)
 			batch_events.append(new_event)
-		except (ValidationError,ValueError) as e:
+		except (ValidationError, ValueError) as e:
 			# The app may resend events if we err; so we should just log.
 			# String values in int fields throw ValueErrors instead of validation
 			# errors.
@@ -263,35 +262,35 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
 				results.append(val)
 		return results
 
-def _get_ntiids( obj, accum ):
+def _get_ntiids(obj, accum):
 	for attr in ('ntiid', 'target_ntiid', 'target'):
 		ntiid_val = getattr(obj, attr, None)
 		if ntiid_val is not None:
-			accum.add( ntiid_val )
+			accum.add(ntiid_val)
 	try:
 		for item in obj.items or ():
-			_get_ntiids( item, accum )
+			_get_ntiids(item, accum)
 	except AttributeError:
 		pass
 
 def _get_legacy_children_ntiids(unit, accum):
-	_get_ntiids( unit, accum )
+	_get_ntiids(unit, accum)
 	for ntiid in unit.embeddedContainerNTIIDs:
 		accum.add(ntiid)
-		obj = find_object_with_ntiid( ntiid )
+		obj = find_object_with_ntiid(ntiid)
 		# If a related work ref, get the target.
-		if hasattr( obj, 'target' ):
-			accum.add( obj.target )
+		if hasattr(obj, 'target'):
+			accum.add(obj.target)
 	for child in unit.children:
 		_get_legacy_children_ntiids(child, accum)
 
-def _get_lesson_items( lesson ):
+def _get_lesson_items(lesson):
 	"""
 	For lessons, iterate and retrieve ntiids.
 	"""
 	result = set()
 	for group in lesson or ():
-		result.update( group.items or () )
+		result.update(group.items or ())
 	return result
 
 def _get_children_ntiid(lesson, lesson_ntiid):
@@ -302,10 +301,10 @@ def _get_children_ntiid(lesson, lesson_ntiid):
 	results = set()
 	if not contained_objects and lesson is not None:
 		# If we have a lesson, iterate through
-		contained_objects = _get_lesson_items( lesson )
+		contained_objects = _get_lesson_items(lesson)
 
 	for contained_object in contained_objects or ():
-		_get_ntiids( contained_object, results )
+		_get_ntiids(contained_object, results)
 	return results
 
 @view_config(route_name='objects.generic.traversal',
@@ -338,8 +337,8 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 			# Legacy
 			node_ntiids = set()
 			ntiid = self.context.ContentNTIID
-			lesson = find_object_with_ntiid( ntiid )
-			_get_legacy_children_ntiids( lesson, node_ntiids )
+			lesson = find_object_with_ntiid(ntiid)
+			_get_legacy_children_ntiids(lesson, node_ntiids)
 
 		result = LocatedExternalDict()
 		result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
@@ -359,10 +358,10 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 
 		# Get progress for self-assessments and assignments
 		try:
-			course = find_interface( lesson, ICourseInstance, strict=False )
+			course = find_interface(lesson, ICourseInstance, strict=False)
 			if course is None:
-				content_unit = find_object_with_ntiid( self.context.ContentNTIID )
-				course = ICourseInstance( content_unit )
+				content_unit = find_object_with_ntiid(self.context.ContentNTIID)
+				course = ICourseInstance(content_unit)
 		except TypeError:
 			logger.warn('No course found for content unit; cannot return progress for assessments (%s)',
 						ntiid)
@@ -434,10 +433,10 @@ class UserResearchStudyView(AbstractAuthenticatedView,
 	def __call__(self):
 		values = CaseInsensitiveDict(self.readInput())
 		allow_research = values.get('allow_research')
-		allow_research = _is_true(allow_research)
+		allow_research = is_true(allow_research)
 		user = self.request.context
 
-		set_research_status( user, allow_research )
+		set_research_status(user, allow_research)
 
 		logger.info('Setting research status for user (user=%s) (allow_research=%s)',
 					user.username, allow_research)
@@ -462,25 +461,25 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 	def course(self):
 		return ICourseInstance(self.context)
 
-	def generate_semester( self ):
+	def generate_semester(self):
 		start_date = self.course_start_date
 		start_month = start_date.month if start_date else None
 		if start_month < 5:
-			semester = _( 'Spring' )
+			semester = _('Spring')
 		elif start_month < 8:
-			semester = _( 'Summer' )
+			semester = _('Summer')
 		else:
-			semester = _( 'Fall' )
+			semester = _('Fall')
 
 		start_year = start_date.year if start_date else None
-		return '%s %s' % ( semester, start_year ) if start_date else ''
+		return '%s %s' % (semester, start_year) if start_date else ''
 
 	def get_data(self, course):
 		enrollment_scope = self.request.params.get('enrollment_scope')
 		data = get_location_list(course, enrollment_scope)
 		return data
 
-@view_config( route_name='objects.generic.traversal',
+@view_config(route_name='objects.generic.traversal',
 			  renderer='rest',
   			  permission=nauth.ACT_NTI_ADMIN,
 			  context=ICourseInstance,
@@ -564,12 +563,12 @@ class UserLocationHtmlView(AbstractUserLocationView):
 		for location in location_data:
 			locations.append([location['latitude'],
 							  location['longitude'],
-							  _tx_string( location['label'] )])
+							  _tx_string(location['label'])])
 
 		options['locations'] = locations
 		# Pass the data separate (and as-is) since our template engine handles encoded items.
 		options['location_data'] = location_data
-		friendly_name = '%s %s' % ( self.context.__name__, self.generate_semester() )
+		friendly_name = '%s %s' % (self.context.__name__, self.generate_semester())
 		options['course_info'] = {'course_friendly_name': friendly_name,
 								'course_section': self.context.__name__}
 
