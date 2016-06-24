@@ -16,11 +16,11 @@ from zope import interface
 
 from zope.location.interfaces import ILocation
 
-from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
-
 from nti.analytics import has_analytics
 
 from nti.analytics.progress import get_topic_progress
+
+from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode

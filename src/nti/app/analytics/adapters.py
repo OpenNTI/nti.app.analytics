@@ -17,6 +17,24 @@ from six import integer_types
 from zope import component
 from zope import interface
 
+from nti.analytics import has_analytics
+
+from nti.analytics.assessments import get_assignment_for_user
+from nti.analytics.assessments import get_self_assessments_for_user_and_id
+
+from nti.analytics.boards import get_topic_views
+from nti.analytics.boards import get_topic_last_view
+
+from nti.analytics.interfaces import IProgress
+
+from nti.analytics.progress import DefaultProgress
+
+from nti.analytics.resource_tags import get_note_views
+from nti.analytics.resource_tags import get_note_last_view
+
+from nti.app.analytics.usage_stats import CourseVideoUsageStats
+from nti.app.analytics.usage_stats import CourseResourceUsageStats
+
 from nti.app.products.courseware.interfaces import IViewStats
 from nti.app.products.courseware.interfaces import IVideoUsageStats
 from nti.app.products.courseware.interfaces import IResourceUsageStats
@@ -29,23 +47,6 @@ from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.dataserver.interfaces import INote
 from nti.dataserver.interfaces import IUser
 from nti.dataserver.contenttypes.forums.interfaces import ITopic
-
-from nti.analytics import has_analytics
-from nti.analytics.interfaces import IProgress
-
-from nti.analytics.assessments import get_assignment_for_user
-from nti.analytics.assessments import get_self_assessments_for_user_and_id
-
-from nti.analytics.boards import get_topic_views
-from nti.analytics.boards import get_topic_last_view
-
-from nti.analytics.resource_tags import get_note_views
-from nti.analytics.resource_tags import get_note_last_view
-
-from nti.analytics.progress import DefaultProgress
-
-from nti.app.analytics.usage_stats import CourseVideoUsageStats
-from nti.app.analytics.usage_stats import CourseResourceUsageStats
 
 @interface.implementer(IProgress)
 @component.adapter(IUser, IQAssignment)

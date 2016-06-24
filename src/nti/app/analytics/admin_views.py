@@ -34,10 +34,6 @@ from ZODB.POSException import POSError
 from nti.app.analytics import ANALYTICS
 from nti.app.analytics import VIEW_STATS
 
-from nti.app.base.abstract_views import AbstractAuthenticatedView
-
-from nti.app.products.courseware.views import CourseAdminPathAdapter
-
 from nti.analytics import get_factory
 from nti.analytics import QUEUE_NAMES
 
@@ -53,6 +49,10 @@ from nti.analytics.resource_views import get_video_views_for_ntiid
 from nti.analytics.resource_views import get_resource_views_for_ntiid
 
 from nti.analytics.stats.utils import get_time_stats
+
+from nti.app.base.abstract_views import AbstractAuthenticatedView
+
+from nti.app.products.courseware.views import CourseAdminPathAdapter
 
 from nti.common.maps import CaseInsensitiveDict
 

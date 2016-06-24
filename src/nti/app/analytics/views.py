@@ -12,13 +12,30 @@ logger = __import__('logging').getLogger(__name__)
 import csv
 from io import BytesIO
 
-from nti.app.analytics import MessageFactory as _
-
 from zope.schema.interfaces import ValidationError
 
 from pyramid.view import view_config
 
 from pyramid import httpexceptions as hexc
+
+from nti.analytics.interfaces import IAnalyticsSessions
+from nti.analytics.interfaces import IBatchResourceEvents
+
+from nti.analytics.locations import get_location_list
+
+from nti.analytics.model import AnalyticsClientParams
+
+from nti.analytics.resource_views import handle_events
+from nti.analytics.resource_views import get_progress_for_ntiid
+from nti.analytics.resource_views import get_video_progress_for_course
+
+from nti.analytics.sessions import update_session
+from nti.analytics.sessions import handle_end_session
+from nti.analytics.sessions import handle_new_session
+
+from nti.analytics.progress import get_assessment_progresses_for_course
+
+from nti.app.analytics import MessageFactory as _
 
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import BATCH_EVENTS
@@ -32,23 +49,6 @@ from nti.app.base.abstract_views import AbstractAuthenticatedView
 
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
-from nti.analytics.locations import get_location_list
-
-from nti.analytics.model import AnalyticsClientParams
-
-from nti.analytics.sessions import update_session
-from nti.analytics.sessions import handle_end_session
-from nti.analytics.sessions import handle_new_session
-
-from nti.analytics.resource_views import handle_events
-from nti.analytics.resource_views import get_progress_for_ntiid
-from nti.analytics.resource_views import get_video_progress_for_course
-
-from nti.analytics.interfaces import IAnalyticsSessions
-from nti.analytics.interfaces import IBatchResourceEvents
-
-from nti.analytics.progress import get_assessment_progresses_for_course
-
 from nti.common.maps import CaseInsensitiveDict
 
 from nti.common.property import Lazy
@@ -61,13 +61,16 @@ from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 from nti.contenttypes.courses.interfaces import ICourseCatalogEntry
 
-from nti.dataserver.interfaces import IUser
 from nti.dataserver import authorization as nauth
 
+from nti.dataserver.interfaces import IUser
+
 from nti.externalization import internalization
+
+from nti.externalization.externalization import to_external_object
+
 from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
-from nti.externalization.externalization import to_external_object
 
 from nti.ntiids.ntiids import find_object_with_ntiid
 

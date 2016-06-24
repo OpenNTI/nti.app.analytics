@@ -18,6 +18,18 @@ from zope.container.contained import Contained
 
 from zope.location.interfaces import ILocation
 
+from nti.analytics import has_analytics
+
+from nti.app.analytics import ANALYTICS
+from nti.app.analytics import SYNC_PARAMS
+from nti.app.analytics import BATCH_EVENTS
+from nti.app.analytics import ANALYTICS_TITLE
+from nti.app.analytics import ANALYTICS_SESSION
+from nti.app.analytics import ANALYTICS_SESSIONS
+from nti.app.analytics import END_ANALYTICS_SESSION
+
+from nti.app.analytics.interfaces import IAnalyticsWorkspace
+
 from nti.appserver.workspaces.interfaces import IWorkspace
 from nti.appserver.workspaces.interfaces import IUserService
 from nti.appserver.workspaces.interfaces import IContainerCollection
@@ -27,18 +39,6 @@ from nti.common.property import Lazy
 from nti.dataserver.interfaces import IDataserverFolder
 
 from nti.links.links import Link
-
-from nti.analytics import has_analytics
-
-from . import ANALYTICS
-from . import SYNC_PARAMS
-from . import BATCH_EVENTS
-from . import ANALYTICS_TITLE
-from . import ANALYTICS_SESSION
-from . import ANALYTICS_SESSIONS
-from . import END_ANALYTICS_SESSION
-
-from .interfaces import IAnalyticsWorkspace
 
 @interface.implementer(IWorkspace)
 @component.adapter(IUserService)

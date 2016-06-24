@@ -11,16 +11,16 @@ logger = __import__('logging').getLogger(__name__)
 
 from datetime import datetime
 
-from ZODB.interfaces import IBroken
-
 from zope.event import notify
+
+from ZODB.interfaces import IBroken
 
 from nti.analytics.interfaces import IUserResearchStatus
 
 from nti.analytics.model import delete_research_status
 from nti.analytics.model import UserResearchStatusEvent
 
-def set_research_status( user, allow_research ):
+def set_research_status(user, allow_research):
 	"""
 	For a user, set the research status.
 	"""

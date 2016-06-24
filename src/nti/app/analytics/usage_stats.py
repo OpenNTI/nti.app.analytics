@@ -11,10 +11,10 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
+from heapq import nlargest
+
 from collections import namedtuple
 from collections import defaultdict
-
-from heapq import nlargest
 
 from zope import interface
 
@@ -58,7 +58,7 @@ EMPTY_VIDEO_DROP_OFF = _VideoDropOffRate('-', '-', '-', '-',
 _AverageWatchTimes = namedtuple('_AverageWatchTimes',
 								('average_total_watch_time', 'average_session_watch_time'))
 
-ALL_USERS = 'AllUsers'
+ALL_USERS = u'AllUsers'
 
 def _get_enrollment_scope_dict(course, instructors=set()):
 	"""
@@ -117,9 +117,9 @@ class _AbstractUsageStats( object ):
 	def _get_scope(self, scope_name):
 		result = ALL_USERS
 		if scope_name and scope_name.lower() in ('public', 'open'):
-			result = 'Public'
+			result = u'Public'
 		elif scope_name:
-			result = 'ForCredit'
+			result = u'ForCredit'
 		return result
 
 	def _get_user_base(self, scope_name):
