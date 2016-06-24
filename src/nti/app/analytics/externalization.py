@@ -57,6 +57,7 @@ class AsyncJobExternalizer(object):
 		result['callable'] = self._ex_callable(job_call)
 		result['args'] = [self._ext_obj(x) for x in job_args]
 		result['kwargs'] = {x:self._ext_obj(y) for x,y in job_kwargs.items()}
+		result['error'] = repr(self.job.error) if self.job.error else None
 		return result
 
 def to_external_job(job, **kwargs):
