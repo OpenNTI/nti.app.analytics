@@ -37,9 +37,9 @@ class AsyncJobExternalizer(object):
 
 	def toExternalObject(self, **kwargs):
 		result = LocatedExternalDict()
-		args = self.job.args or ()
 		job_call = self.job.callable
-		kwargs = self.job.kwargs or dict()
+		job_args = self.job.args or ()
+		job_kwargs = self.job.kwargs or dict()
 		result[ID] = self.job.id
 		result['status'] = self.job.status
 		result['callable'] = {
@@ -47,8 +47,8 @@ class AsyncJobExternalizer(object):
 			'name': 	getattr(job_call, '__name__', None) \
 					or	getattr(job_call, 'func_name', None)
 		}
-		result['args'] = [self._ext_obj(x) for x in args or ()]
-		result['kwargs'] = {x:self._ext_obj(y) for x,y in kwargs.values()}
+		result['args'] = [self._ext_obj(x) for x in job_args]
+		result['kwargs'] = {x:self._ext_obj(y) for x,y in job_kwargs.items()}
 		return result
 
 def to_external_job(job, **kwargs):
