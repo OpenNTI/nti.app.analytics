@@ -58,6 +58,8 @@ from nti.app.products.courseware.views import CourseAdminPathAdapter
 
 from nti.common.maps import CaseInsensitiveDict
 
+from nti.common.string import is_true
+
 from nti.contentlibrary.interfaces import IContentUnit
 
 from nti.contenttypes.courses.interfaces import ICourseCatalog
@@ -178,10 +180,17 @@ def queue_jobs(request):
 	factory = get_factory()
 	result = LocatedExternalDict()
 	items = result[ITEMS] = dict()
+	failed = is_true(request.params.get('failed'))
 	for name in QUEUE_NAMES:
 		queue = factory.get_queue(name)
-		items[name] = [to_external_job(x) for x in queue.all() or ()]
-		total += len(items[name])
+		queue_jobs = [to_external_job(x) for x in queue.all() or ()]
+		if failed:
+			failed_jobs = [to_external_job(x) for x in queue.failed() or ()]
+			items[name] = {'queue': queue_jobs, 'failed':failed_jobs}
+			total += len(failed_jobs)
+		else:
+			items[name] = queue_jobs
+		total += len(queue_jobs)
 	result[ITEM_COUNT] = result[TOTAL] = total
 	return result
 
