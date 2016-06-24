@@ -90,6 +90,7 @@ from nti.ntiids.ntiids import find_object_with_ntiid
 CLASS = StandardExternalFields.CLASS
 ITEMS = StandardExternalFields.ITEMS
 TOTAL = StandardExternalFields.TOTAL
+ITEM_COUNT = StandardExternalFields.ITEM_COUNT
 LAST_MODIFIED = StandardExternalFields.LAST_MODIFIED
 
 @interface.implementer(IPathAdapter)
@@ -173,13 +174,15 @@ def queue_jobs(request):
 	"""
 	Report on the analytics jobs.
 	"""
-
+	total = 0
 	factory = get_factory()
 	result = LocatedExternalDict()
 	items = result[ITEMS] = dict()
 	for name in QUEUE_NAMES:
 		queue = factory.get_queue(name)
 		items[name] = [to_external_job(x) for x in queue.all() or ()]
+		total += len(items[name])
+	result[ITEM_COUNT] = result[TOTAL] = total
 	return result
 
 @view_config(route_name='objects.generic.traversal',
