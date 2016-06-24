@@ -12,6 +12,8 @@ logger = __import__('logging').getLogger(__name__)
 from zope import component
 from zope import interface
 
+from zope.interface.interfaces import IMethod
+
 from nti.async.interfaces import IJob
 
 from nti.externalization.externalization import to_external_object
@@ -29,9 +31,19 @@ class AsyncJobExternalizer(object):
 	def __init__(self, obj):
 		self.job = obj
 
+	def _ex_callable(self, x):
+		return {
+			'module': getattr(x, '__module__', None),
+			'name': 	getattr(x, '__name__', None) \
+					or	getattr(x, 'func_name', None)
+		}
+
 	def _ext_obj(self, x):
 		try:
-			return to_external_object(x)
+			if callable(x) or IMethod.providedBy(x):
+				return self._ex_callable(x)
+			else:
+				return to_external_object(x)
 		except Exception:
 			return repr(x)
 
@@ -42,11 +54,7 @@ class AsyncJobExternalizer(object):
 		job_kwargs = self.job.kwargs or dict()
 		result[ID] = self.job.id
 		result['status'] = self.job.status
-		result['callable'] = {
-			'module': getattr(job_call, '__module__', None),
-			'name': 	getattr(job_call, '__name__', None) \
-					or	getattr(job_call, 'func_name', None)
-		}
+		result['callable'] = self._ex_callable(job_call)
 		result['args'] = [self._ext_obj(x) for x in job_args]
 		result['kwargs'] = {x:self._ext_obj(y) for x,y in job_kwargs.items()}
 		return result
