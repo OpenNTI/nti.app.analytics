@@ -31,9 +31,6 @@ from zope.traversing.interfaces import IPathAdapter
 
 from ZODB.POSException import POSError
 
-from nti.app.analytics import ANALYTICS
-from nti.app.analytics import VIEW_STATS
-
 from nti.analytics import get_factory
 from nti.analytics import QUEUE_NAMES
 
@@ -49,6 +46,11 @@ from nti.analytics.resource_views import get_video_views_for_ntiid
 from nti.analytics.resource_views import get_resource_views_for_ntiid
 
 from nti.analytics.stats.utils import get_time_stats
+
+from nti.app.analytics import ANALYTICS
+from nti.app.analytics import VIEW_STATS
+
+from nti.app.analytics.externalization import to_external_job
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
@@ -86,6 +88,7 @@ from nti.externalization.interfaces import StandardExternalFields
 from nti.ntiids.ntiids import find_object_with_ntiid
 
 CLASS = StandardExternalFields.CLASS
+ITEMS = StandardExternalFields.ITEMS
 TOTAL = StandardExternalFields.TOTAL
 LAST_MODIFIED = StandardExternalFields.LAST_MODIFIED
 
@@ -158,6 +161,25 @@ def empty_queue(request):
 
 	elapsed = time.time() - now
 	logger.info('Emptied analytics processing queue (time=%s)', elapsed)
+	return result
+
+@view_config(route_name='objects.generic.traversal',
+			 name='queue_jobs',
+			 renderer='rest',
+			 request_method='GET',
+			 permission=ACT_NTI_ADMIN,
+			 context=AnalyticsPathAdapter)
+def queue_jobs(request):
+	"""
+	Report on the analytics jobs.
+	"""
+
+	factory = get_factory()
+	result = LocatedExternalDict()
+	items = result[ITEMS] = dict()
+	for name in QUEUE_NAMES:
+		queue = factory.get_queue(name)
+		items[name] = [to_external_job(x) for x in queue.all() or ()]
 	return result
 
 @view_config(route_name='objects.generic.traversal',

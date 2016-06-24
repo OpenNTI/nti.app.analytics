@@ -24,7 +24,7 @@ ID = StandardExternalFields.ID
 
 @component.adapter(IJob)
 @interface.implementer(IInternalObjectExternalizer)
-class _AsyncJobExternalizer(object):
+class AsyncJobExternalizer(object):
 
 	def __init__(self, obj):
 		self.job = obj
@@ -50,3 +50,6 @@ class _AsyncJobExternalizer(object):
 		result['args'] = [self._ext_obj(x) for x in args or ()]
 		result['kwargs'] = {x:self._ext_obj(y) for x,y in kwargs.values()}
 		return result
+
+def to_external_job(job, **kwargs):
+	return AsyncJobExternalizer(job).toExternalObject(**kwargs)
