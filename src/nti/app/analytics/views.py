@@ -277,15 +277,18 @@ def _get_ntiids(obj, accum):
 		pass
 
 def _get_legacy_children_ntiids(unit, accum):
-	_get_ntiids(unit, accum)
-	for ntiid in unit.embeddedContainerNTIIDs:
-		accum.add(ntiid)
-		obj = find_object_with_ntiid(ntiid)
-		# If a related work ref, get the target.
-		if hasattr(obj, 'target'):
-			accum.add(obj.target)
-	for child in unit.children:
-		_get_legacy_children_ntiids(child, accum)
+	if unit is None:
+		return
+	else:
+		_get_ntiids(unit, accum)
+		for ntiid in unit.embeddedContainerNTIIDs:
+			accum.add(ntiid)
+			obj = find_object_with_ntiid(ntiid)
+			# If a related work ref, get the target.
+			if hasattr(obj, 'target'):
+				accum.add(obj.target)
+		for child in unit.children:
+			_get_legacy_children_ntiids(child, accum)
 
 def _get_lesson_items(lesson):
 	"""
@@ -297,11 +300,11 @@ def _get_lesson_items(lesson):
 	return result
 
 def _get_children_ntiid(lesson, lesson_ntiid):
+	results = set()
 	catalog = get_catalog()
 	rs = catalog.search_objects(container_ntiids=lesson_ntiid,
 								sites=get_component_hierarchy_names())
 	contained_objects = tuple(rs)
-	results = set()
 	if not contained_objects and lesson is not None:
 		# If we have a lesson, iterate through
 		contained_objects = _get_lesson_items(lesson)
