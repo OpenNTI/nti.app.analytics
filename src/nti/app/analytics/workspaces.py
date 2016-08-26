@@ -34,9 +34,9 @@ from nti.appserver.workspaces.interfaces import IWorkspace
 from nti.appserver.workspaces.interfaces import IUserService
 from nti.appserver.workspaces.interfaces import IContainerCollection
 
-from nti.common.property import Lazy
-
 from nti.dataserver.interfaces import IDataserverFolder
+
+from nti.property.property import Lazy
 
 from nti.links.links import Link
 

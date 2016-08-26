@@ -51,8 +51,6 @@ from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtils
 
 from nti.common.maps import CaseInsensitiveDict
 
-from nti.common.property import Lazy
-
 from nti.common.string import is_true
 
 from nti.contentlibrary.indexed_data import get_catalog
@@ -73,6 +71,8 @@ from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
 
 from nti.ntiids.ntiids import find_object_with_ntiid
+
+from nti.property.property import Lazy
 
 from nti.site.site import get_component_hierarchy_names
 
