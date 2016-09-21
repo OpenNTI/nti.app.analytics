@@ -59,6 +59,11 @@ from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 from nti.contenttypes.courses.interfaces import ICourseCatalogEntry
 
+from nti.contenttypes.presentation import ALL_PRESENTATION_ASSETS_INTERFACES
+
+from nti.contenttypes.presentation.interfaces import IConcreteAsset
+from nti.contenttypes.presentation.interfaces import INTIRelatedWorkRef
+
 from nti.dataserver import authorization as nauth
 
 from nti.dataserver.interfaces import IUser
@@ -266,17 +271,22 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
 		return results
 
 def _get_ntiids(obj, accum):
-	for attr in ('ntiid', 'target_ntiid', 'target'):
+	obj = IConcreteAsset( obj, obj )
+	attrs_to_check = ('ntiid',)
+	if INTIRelatedWorkRef.providedBy( obj ):
+		attrs_to_check = ('ntiid', 'href')
+	for attr in attrs_to_check:
 		ntiid_val = getattr(obj, attr, None)
 		if ntiid_val is not None:
 			accum.add(ntiid_val)
+
 	try:
 		for item in obj.items or ():
 			_get_ntiids(item, accum)
 	except AttributeError:
 		pass
 
-def _get_legacy_children_ntiids(unit, accum):
+def _get_legacy_progress_ntiids(unit, accum):
 	if unit is None:
 		return
 	else:
@@ -288,7 +298,7 @@ def _get_legacy_children_ntiids(unit, accum):
 			if hasattr(obj, 'target'):
 				accum.add(obj.target)
 		for child in unit.children:
-			_get_legacy_children_ntiids(child, accum)
+			_get_legacy_progress_ntiids(child, accum)
 
 def _get_lesson_items(lesson):
 	"""
@@ -299,11 +309,12 @@ def _get_lesson_items(lesson):
 		result.update(group.items or ())
 	return result
 
-def _get_children_ntiid(lesson, lesson_ntiid):
+def _get_lesson_progress_ntiids(lesson, lesson_ntiid):
 	results = set()
 	catalog = get_catalog()
 	rs = catalog.search_objects(container_ntiids=lesson_ntiid,
-								sites=get_component_hierarchy_names())
+								sites=get_component_hierarchy_names(),
+								provided=ALL_PRESENTATION_ASSETS_INTERFACES)
 	contained_objects = tuple(rs)
 	if not contained_objects and lesson is not None:
 		# If we have a lesson, iterate through
@@ -338,13 +349,13 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 
 		if ntiid:
 			lesson = find_object_with_ntiid(ntiid)
-			node_ntiids = _get_children_ntiid(lesson, ntiid)
+			node_ntiids = _get_lesson_progress_ntiids(lesson, ntiid)
 		else:
 			# Legacy
 			node_ntiids = set()
 			ntiid = self.context.ContentNTIID
 			lesson = find_object_with_ntiid(ntiid)
-			_get_legacy_children_ntiids(lesson, node_ntiids)
+			_get_legacy_progress_ntiids(lesson, node_ntiids)
 
 		result = LocatedExternalDict()
 		result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
