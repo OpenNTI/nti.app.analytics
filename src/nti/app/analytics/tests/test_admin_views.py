@@ -121,7 +121,7 @@ class TestAnalytics(ApplicationLayerTest):
 
 	@WithSharedApplicationMockDS(testapp=True, users=True)
 	def test_research_status_link(self):
-		url = '/dataserver2/users/sjohnson%40nextthought.com/' + SET_RESEARCH_VIEW
+		url = '/dataserver2/users/sjohnson@nextthought.com/' + SET_RESEARCH_VIEW
 		res = self.resolve_user()
 		href = self.require_link_href_with_rel( res, SET_RESEARCH_VIEW )
 		assert_that( href, is_( url ) )
