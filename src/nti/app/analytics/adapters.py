@@ -34,6 +34,8 @@ from nti.analytics.resource_tags import get_note_last_view
 
 from nti.app.analytics.usage_stats import CourseVideoUsageStats
 from nti.app.analytics.usage_stats import CourseResourceUsageStats
+from nti.app.analytics.usage_stats import UserCourseVideoUsageStats
+from nti.app.analytics.usage_stats import UserCourseResourceUsageStats
 
 from nti.app.products.courseware.interfaces import IViewStats
 from nti.app.products.courseware.interfaces import IVideoUsageStats
@@ -160,6 +162,22 @@ def _video_usage_stats(context):
 	result = None
 	if has_analytics():
 		result = CourseVideoUsageStats( context )
+	return result
+
+@interface.implementer(IVideoUsageStats)
+@component.adapter(ICourseInstance, IUser)
+def _user_video_usage_stats(context, user):
+	result = None
+	if has_analytics():
+		result = UserCourseVideoUsageStats( context, user )
+	return result
+
+@interface.implementer(IResourceUsageStats)
+@component.adapter(ICourseInstance, IUser)
+def _user_resource_usage_stats(context, user):
+	result = None
+	if has_analytics():
+		result = UserCourseResourceUsageStats( context, user )
 	return result
 
 @interface.implementer(IResourceUsageStats)

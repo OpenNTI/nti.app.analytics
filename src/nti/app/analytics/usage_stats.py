@@ -22,7 +22,9 @@ from nti.analytics.resource_views import get_video_views
 from nti.analytics.resource_views import get_resource_views
 
 from nti.app.products.courseware.interfaces import IVideoUsageStats
+from nti.app.products.courseware.interfaces import IUserVideoUsageStats
 from nti.app.products.courseware.interfaces import IResourceUsageStats
+from nti.app.products.courseware.interfaces import IUserResourceUsageStats
 
 from nti.dataserver.interfaces import IEnumerableEntityContainer
 
@@ -56,7 +58,8 @@ EMPTY_VIDEO_DROP_OFF = _VideoDropOffRate('-', '-', '-', '-',
 										 '-', '-', '-', '-')
 
 _AverageWatchTimes = namedtuple('_AverageWatchTimes',
-								('average_total_watch_time', 'average_session_watch_time'))
+								('average_total_watch_time',
+								 'average_session_watch_time'))
 
 ALL_USERS = u'AllUsers'
 
@@ -130,7 +133,7 @@ class _AbstractUsageStats( object ):
 		scope_name = self._get_scope( scope )
 		if scope_name not in self.scope_result_set_map:
 			user_base = self._get_user_base( scope_name )
-			result = self._build_data_for_scope( user_base )
+			result = self._build_data_for_users( user_base )
 			self.scope_result_set_map[scope_name] = result
 		else:
 			result = self.scope_result_set_map.get( scope_name )
@@ -197,21 +200,21 @@ class _AbstractUsageStats( object ):
 		results.sort(key=lambda x: x.title)
 		return results
 
-	def _build_data_for_scope(self, scope_users):
+	def _build_data_for_users(self, users):
 		"""
-		For the given users, build stats based on events and return.
+		For the given set of usernames, build stats based on events and return.
 		"""
 		accum = ResourceEventAccumulator()
 		for event in self.events:
 
 			if 		event is None \
 				or 	event.user is None \
-				or 	event.user.username.lower() not in scope_users:
+				or 	event.user.username.lower() not in users:
 				continue
 
 			accum.accum( event )
 
-		result = self.build_results( accum, scope_users )
+		result = self.build_results( accum, users )
 		return result
 
 class BaseStats( object ):
@@ -290,6 +293,27 @@ class CourseResourceUsageStats(_AbstractUsageStats):
 								stats.event_count,
 								watch_data)
 		return data
+
+
+@interface.implementer(IUserResourceUsageStats)
+class UserCourseResourceUsageStats(CourseResourceUsageStats):
+	"""
+	Usage stats that know how to build results for basic resource
+	view stats for a course and user.
+	"""
+
+	def __init__(self, course, user):
+		self.course = course
+		self.user = user
+
+	@property
+	def events(self):
+		results = get_resource_views( course=self.course, user=self.user )
+		return results or ()
+
+	def get_stats(self):
+		return self._build_data_for_users( (self.user.username.lower(),) )
+
 
 @interface.implementer(IVideoUsageStats)
 class CourseVideoUsageStats(_AbstractUsageStats):
@@ -376,3 +400,22 @@ class CourseVideoUsageStats(_AbstractUsageStats):
 							str_perc_watched_completely,
 							drop_off_data)
 		return data
+
+@interface.implementer(IUserVideoUsageStats)
+class UserCourseVideoUsageStats(CourseVideoUsageStats):
+	"""
+	Usage stats that know how to build results for video resource
+	view stats for a course and user.
+	"""
+
+	def __init__(self, course, user):
+		self.course = course
+		self.user = user
+
+	@property
+	def events(self):
+		results = get_video_views( course=self.course, user=self.user )
+		return results or ()
+
+	def get_stats(self):
+		return self._build_data_for_users( (self.user.username.lower(),) )

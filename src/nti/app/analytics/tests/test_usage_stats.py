@@ -17,6 +17,8 @@ from hamcrest import contains_string
 from nti.app.analytics.usage_stats import ALL_USERS
 from nti.app.analytics.usage_stats import CourseVideoUsageStats
 from nti.app.analytics.usage_stats import CourseResourceUsageStats
+from nti.app.analytics.usage_stats import UserCourseVideoUsageStats
+from nti.app.analytics.usage_stats import UserCourseResourceUsageStats
 
 from nti.dataserver.tests.mock_dataserver import WithMockDSTrans
 
@@ -78,13 +80,27 @@ class TestUsageStats( NTIAnalyticsTestCase ):
 		stats = CourseVideoUsageStats( course )
 		return stats
 
+	def get_user_resource_stats(self, username):
+		# We mock out our course attrs; so this is ignored
+		course = object()
+		user = MockUser(username)
+		stats = UserCourseResourceUsageStats( course, user )
+		return stats
+
+	def get_user_video_stats(self, username):
+		# We mock out our course attrs; so this is ignored
+		course = object()
+		user = MockUser(username)
+		stats = UserCourseVideoUsageStats( course, user )
+		return stats
+
 	@WithMockDSTrans
 	@fudge.patch( 	'nti.app.analytics.usage_stats.get_resource_views',
 					'nti.app.analytics.usage_stats._AbstractUsageStats._get_title',
 					'nti.app.analytics.usage_stats._AbstractUsageStats.instructor_usernames',
 					'nti.app.analytics.usage_stats._get_enrollment_scope_dict' )
 	def test_resource_usage_stats(self, mock_events, mock_get_title,
-								mock_instructors, mock_enrollment):
+								  mock_instructors, mock_enrollment):
 		mock_get_title.is_callable().returns( 'test title' )
 		mock_instructors.is_callable().returns( set() )
 		mock_enrollment.is_callable().returns( self.enrollment_dict )
@@ -92,6 +108,9 @@ class TestUsageStats( NTIAnalyticsTestCase ):
 
 		# Empty
 		resource_stats = self.get_resource_stats()
+		results = resource_stats.get_stats()
+		assert_that( results, has_length( 0 ) )
+		resource_stats = self.get_user_resource_stats( 'Public1' )
 		results = resource_stats.get_stats()
 		assert_that( results, has_length( 0 ) )
 
@@ -112,6 +131,23 @@ class TestUsageStats( NTIAnalyticsTestCase ):
 					contains_string( ':02' ))
 		assert_that( resource_stat.watch_times.average_session_watch_time,
 					contains_string( str( event.Duration ) ))
+
+		# User stats
+		resource_stats = self.get_user_resource_stats( 'Public1' )
+		results = resource_stats.get_stats()
+		assert_that( results, has_length( 1 ) )
+		resource_stat = results[0]
+		assert_that( resource_stat.ntiid, is_( single_resource_id ))
+		assert_that( resource_stat.session_count, is_( 1 ))
+		assert_that( resource_stat.view_event_count, is_( 1 ))
+		assert_that( resource_stat.watch_times.average_total_watch_time,
+					 contains_string( ':20' ))
+		assert_that( resource_stat.watch_times.average_session_watch_time,
+					 contains_string( str( event.Duration ) ))
+
+		resource_stats = self.get_user_resource_stats( 'Public2' )
+		results = resource_stats.get_stats()
+		assert_that( results, has_length( 0 ) )
 
 		# Multiple events, single resource
 		# 7 events. 6 non-instructor events, 5 non-instructor sessions
@@ -142,6 +178,23 @@ class TestUsageStats( NTIAnalyticsTestCase ):
 		assert_that( resource_stat.watch_times.average_session_watch_time,
 					contains_string( avg_session_time ))
 
+		# User stats
+		resource_stats = self.get_user_resource_stats( 'Public1' )
+		results = resource_stats.get_stats()
+		assert_that( results, has_length( 1 ) )
+		resource_stat = results[0]
+		assert_that( resource_stat.ntiid, is_( single_resource_id ))
+		assert_that( resource_stat.session_count, is_( 2 ))
+		assert_that( resource_stat.view_event_count, is_( 3 ))
+		assert_that( resource_stat.watch_times.average_total_watch_time,
+					 contains_string( ':30' ))
+		assert_that( resource_stat.watch_times.average_session_watch_time,
+					 contains_string( ':15' ))
+
+		resource_stats = self.get_user_resource_stats( 'Public2' )
+		results = resource_stats.get_stats()
+		assert_that( results, has_length( 0 ) )
+
 	@WithMockDSTrans
 	@fudge.patch( 	'nti.app.analytics.usage_stats.get_video_views',
 					'nti.app.analytics.usage_stats._AbstractUsageStats._get_title',
@@ -156,6 +209,10 @@ class TestUsageStats( NTIAnalyticsTestCase ):
 
 		# Empty
 		video_stats = self.get_video_stats()
+		results = video_stats.get_stats()
+		assert_that( results, has_length( 0 ) )
+
+		video_stats = self.get_user_video_stats( 'Public1' )
 		results = video_stats.get_stats()
 		assert_that( results, has_length( 0 ) )
 
@@ -179,6 +236,26 @@ class TestUsageStats( NTIAnalyticsTestCase ):
 					contains_string( ':02' ))
 		assert_that( video_stat.watch_times.average_session_watch_time,
 					contains_string( str( event.Duration ) ))
+
+		# User stats
+		video_stats = self.get_user_video_stats('Public1')
+		results = video_stats.get_stats()
+		assert_that( results, has_length( 1 ) )
+
+		video_stat = results[0]
+		assert_that( video_stat.ntiid, is_( single_resource_id ))
+		assert_that( video_stat.video_duration,
+					 contains_string( str( video_duration ) ))
+		assert_that( video_stat.session_count, is_( 1 ))
+		assert_that( video_stat.view_event_count, is_( 1 ))
+		assert_that( video_stat.watch_times.average_total_watch_time,
+					 contains_string( ':20' ))
+		assert_that( video_stat.watch_times.average_session_watch_time,
+					 contains_string( str( event.Duration ) ))
+
+		video_stats = self.get_user_video_stats('Public2')
+		results = video_stats.get_stats()
+		assert_that( results, has_length( 0 ) )
 
 		# Multiple events, single resource
 		events = []
@@ -230,3 +307,27 @@ class TestUsageStats( NTIAnalyticsTestCase ):
 		assert_that( drop_off.drop75percentage, is_( 13.0 ))
 		assert_that( drop_off.drop100count, is_( 4 ))
 		assert_that( drop_off.drop100percentage, is_( 50 ))
+
+		# User stats
+		video_stats = self.get_user_video_stats('Public1')
+		results = video_stats.get_stats()
+		assert_that( results, has_length( 1 ) )
+
+		video_stat = results[0]
+		assert_that( video_stat.ntiid, is_( single_resource_id ))
+		assert_that( video_stat.video_duration,
+					 contains_string( str( video_duration ) ))
+		assert_that( video_stat.session_count, is_( 2 ))
+		assert_that( video_stat.view_event_count, is_( 4 ))
+		assert_that( video_stat.watch_times.average_total_watch_time,
+					 contains_string( ':40' ))
+		assert_that( video_stat.watch_times.average_session_watch_time,
+					 contains_string( ':20' ))
+
+		video_stats = self.get_user_video_stats('Public2')
+		results = video_stats.get_stats()
+		assert_that( results, has_length( 1 ) )
+
+		video_stats = self.get_user_video_stats('Public3')
+		results = video_stats.get_stats()
+		assert_that( results, has_length( 0 ) )
