@@ -12,6 +12,8 @@ logger = __import__('logging').getLogger(__name__)
 import csv
 from io import BytesIO
 
+from requests.structures import CaseInsensitiveDict
+
 from zope.schema.interfaces import ValidationError
 
 from pyramid.view import view_config
@@ -48,8 +50,6 @@ from nti.app.analytics.utils import set_research_status
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
-
-from nti.common.maps import CaseInsensitiveDict
 
 from nti.common.string import is_true
 

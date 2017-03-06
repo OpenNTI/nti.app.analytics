@@ -17,6 +17,8 @@ from datetime import timedelta
 
 from io import BytesIO
 
+from requests.structures import CaseInsensitiveDict
+
 from pyramid.view import view_config
 from pyramid.view import view_defaults
 
@@ -55,8 +57,6 @@ from nti.app.analytics.externalization import to_external_job
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
 from nti.app.products.courseware.views import CourseAdminPathAdapter
-
-from nti.common.maps import CaseInsensitiveDict
 
 from nti.common.string import is_true
 
