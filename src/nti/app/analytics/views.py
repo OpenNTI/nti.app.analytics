@@ -14,6 +14,8 @@ from io import BytesIO
 
 from requests.structures import CaseInsensitiveDict
 
+from zope.cachedescriptors.property import Lazy
+
 from zope.schema.interfaces import ValidationError
 
 from pyramid.view import view_config
@@ -76,8 +78,6 @@ from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
 
 from nti.ntiids.ntiids import find_object_with_ntiid
-
-from nti.property.property import Lazy
 
 from nti.site.site import get_component_hierarchy_names
 

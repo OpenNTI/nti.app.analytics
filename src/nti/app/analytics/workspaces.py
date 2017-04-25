@@ -14,6 +14,8 @@ logger = __import__('logging').getLogger(__name__)
 from zope import component
 from zope import interface
 
+from zope.cachedescriptors.property import Lazy
+
 from zope.container.contained import Contained
 
 from zope.location.interfaces import ILocation
@@ -35,8 +37,6 @@ from nti.appserver.workspaces.interfaces import IUserService
 from nti.appserver.workspaces.interfaces import IContainerCollection
 
 from nti.dataserver.interfaces import IDataserverFolder
-
-from nti.property.property import Lazy
 
 from nti.links.links import Link
 
