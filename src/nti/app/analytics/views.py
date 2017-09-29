@@ -10,6 +10,11 @@ __docformat__ = "restructuredtext en"
 logger = __import__('logging').getLogger(__name__)
 
 import csv
+
+import datetime
+
+import time
+
 from io import BytesIO
 
 from requests.structures import CaseInsensitiveDict
@@ -22,6 +27,7 @@ from pyramid.view import view_config
 
 from pyramid import httpexceptions as hexc
 
+from nti.analytics.interfaces import IAnalyticsSession
 from nti.analytics.interfaces import IAnalyticsSessions
 from nti.analytics.interfaces import IBatchResourceEvents
 
@@ -33,9 +39,10 @@ from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
 from nti.analytics.resource_views import get_video_progress_for_course
 
-from nti.analytics.sessions import update_session
+from nti.analytics.sessions import get_user_sessions
 from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import handle_new_session
+from nti.analytics.sessions import update_session
 
 from nti.analytics.progress import get_assessment_progresses_for_course
 
@@ -82,6 +89,12 @@ from nti.ntiids.ntiids import find_object_with_ntiid
 from nti.site.site import get_component_hierarchy_names
 
 from nti.traversal.traversal import find_interface
+
+from . import HISTORICAL_SESSIONS_VIEW_NAME
+
+ITEMS = StandardExternalFields.ITEMS
+TOTAL = StandardExternalFields.TOTAL
+ITEM_COUNT = StandardExternalFields.ITEM_COUNT
 
 GEO_LOCATION_VIEW = 'GeoLocations'
 SET_RESEARCH_VIEW = 'SetUserResearch'
@@ -589,4 +602,55 @@ class UserLocationHtmlView(AbstractUserLocationView):
 		options['course_info'] = {'course_friendly_name': friendly_name,
 								'course_section': self.context.__name__}
 
+		return options
+
+@view_config(route_name='objects.generic.traversal',
+			 renderer='rest',
+			 permission=nauth.ACT_NTI_ADMIN,
+			 context=IUser,
+			 request_method='GET',
+			 name=HISTORICAL_SESSIONS_VIEW_NAME)
+class UserRecentSessions(AbstractUserLocationView):
+	"""
+	Provides a collection of recent sessions the users has had.
+	By default this view returns 30 days worth of sessions. Query
+	params of start and end can be provided to give a date range
+	"""
+
+	DEFAULT_WINDOW_DAYS = 30
+
+	def _make_session(self, session):
+		return IAnalyticsSession(session)
+
+	def _time_param(self, pname):
+		time = self.request.params.get(pname)
+		time = float(time) if time is not None else None
+		return datetime.datetime.utcfromtimestamp(time) if time else None
+
+	@property
+	def not_before(self):
+		return self._time_param('notBefore')
+
+	@property
+	def not_after(self):
+		return self._time_param('notAfter')
+
+	def __call__(self):
+		not_after = self.not_after
+		not_before = self.not_before
+
+		if not_after is None and not_before is None:
+			not_after = datetime.datetime.utcnow()
+			not_before = not_after - datetime.timedelta( days=self.DEFAULT_WINDOW_DAYS )
+
+		sessions = get_user_sessions(self.context,
+		                             timestamp=not_before,
+		                             max_timestamp=not_after)
+		sessions = [self._make_session(s) for s in sessions]
+
+		options = LocatedExternalDict()
+		options.__parent__ = self.request.context
+		options.__name__ = self.request.view_name
+		options[ITEMS] = sessions
+		options[ITEM_COUNT] = options[TOTAL] = len(sessions)
 		return options

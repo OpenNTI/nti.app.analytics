@@ -11,6 +11,7 @@ import time
 import fudge
 
 from datetime import datetime
+from datetime import timedelta
 
 from webob.datetime_utils import serialize_date
 
@@ -20,11 +21,13 @@ from hamcrest import contains_string
 from hamcrest import assert_that
 from hamcrest import has_length
 from hamcrest import is_
+from hamcrest import is_not as does_not
 from hamcrest import none
 from hamcrest import not_none
 from hamcrest import contains_inanyorder
 from hamcrest import contains
 from hamcrest import has_key
+from hamcrest import has_key as have_key
 from hamcrest import has_item
 from hamcrest import has_entry
 from hamcrest import has_entries
@@ -36,6 +39,7 @@ from nti.contenttypes.courses.sharing import CourseInstanceSharingScope
 
 from nti.dataserver.tests import mock_dataserver
 
+from nti.dataserver.users import Community
 from nti.dataserver.users import User
 
 from nti.externalization import internalization
@@ -65,6 +69,7 @@ from nti.analytics.model import VideoPlaySpeedChangeEvent
 from nti.analytics.model import SelfAssessmentViewEvent
 from nti.analytics.model import AssignmentViewEvent
 
+from nti.analytics.sessions import _add_session
 from nti.analytics.sessions import _get_cookie_id
 from nti.analytics.sessions import get_current_session_id
 from nti.analytics.sessions import ANALYTICS_SESSION_HEADER
@@ -1156,3 +1161,85 @@ class TestUserLocationView( _AbstractTestViews ):
 		assert_that( result.body, contains_string( first_location ) )
 		second_location = get_csv_string(convert_to_utf8(json_data[1]))
 		assert_that( result.body, contains_string( second_location ) )
+
+class TestHistoricalSessions(ApplicationLayerTest):
+
+	default_origin = str('http://platform.ou.edu')
+
+	@WithSharedApplicationMockDS(testapp=True,users=True)
+	def test_most_recent_session(self):
+		with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
+			user1 = self._create_user('new_user1', external_value={'realname':'Billy Bob', 'email':'foo@bar.com'})
+			user2 = self._create_user('new_user2', external_value={'realname':'Billy Rob', 'email':'foo@bar.com'})
+
+		href = '/dataserver2/ResolveUser/new_user2'
+		res = self.testapp.get(href, status=200, extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+		res = res.json_body
+
+		user = res['Items'][0]
+		assert_that(user, not_none())
+
+		#As an admin fetching we should see the property, but we have no sessions currently
+		assert_that(user, has_entry('MostRecentSession', none()))
+		#We also should ahve a HistoricalSessions link
+		self.require_link_href_with_rel( user, 'HistoricalSessions' )
+
+		#As ourselves we can see the property
+		res = self.testapp.get(href, status=200, extra_environ=self._make_extra_environ(username='new_user2'))
+		res = res.json_body
+
+		user = res['Items'][0]
+		assert_that(user, not_none())
+		assert_that(user, has_entry('MostRecentSession', none()))
+
+		#But as another user we cannot
+		res = self.testapp.get(href, status=200, extra_environ=self._make_extra_environ(username='new_user1'))
+		res = res.json_body
+
+		user = res['Items'][0]
+		assert_that(user, not_none())
+		assert_that(user, does_not(have_key('MostRecentSession')))
+
+		#Now simulate a couple of sessions from new_user2
+		with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
+			start = datetime.utcnow() - timedelta( days=1 )
+			start2 = start + timedelta( seconds=30 )
+			duration = 3600
+			end = start2 + timedelta( seconds=duration )
+
+			# Test start = end
+			sesh1 = _add_session( user2.username, '', '', start_time=start, end_time=start )
+			# 30 seconds later, a longer session
+			sesh2 = _add_session( user2.username, '', '', start_time=start2, end_time=end )
+			# and a session a long time ago
+			longago = start - timedelta(days=60)
+			sesh3 = _add_session( user2.username, '', '', start_time=longago, end_time=longago + timedelta(hours=1) )
+
+		res = self.testapp.get(href, status=200, extra_environ=self._make_extra_environ(username='new_user2'))
+		res = res.json_body
+
+		user = res['Items'][0]
+		assert_that(user, not_none())
+		assert_that(user, has_entry('MostRecentSession', has_entry('SessionID', sesh2.SessionID)))
+
+		#If we fetch our historical sessions we have 2 (default window is 30 days)
+		href = '/dataserver2/users/new_user2/@@HistoricalSessions'
+		res = self.testapp.get(href, status=200, extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+		res = res.json_body
+		assert_that(res['Items'], has_length(2))
+
+		#This can also be fetched by yourself
+		self.testapp.get(href, status=200, extra_environ=self._make_extra_environ(username='new_user2'))
+
+		#But not by others
+		self.testapp.get(href, status=403, extra_environ=self._make_extra_environ(username='new_user1'))
+
+
+
+
+
+
+
+
+
+

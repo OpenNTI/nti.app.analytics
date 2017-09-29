@@ -11,6 +11,8 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
+import time
+
 from zope import component
 from zope import interface
 
@@ -18,14 +20,24 @@ from zope.location.interfaces import ILocation
 
 from nti.analytics import has_analytics
 
+from nti.analytics.interfaces import IAnalyticsSession
+
 from nti.analytics.progress import get_topic_progress
 
+from nti.analytics.sessions import get_recent_user_sessions
+
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
+
+from nti.appserver.pyramid_authorization import has_permission
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
+from nti.dataserver import authorization as nauth
+
 from nti.dataserver.contenttypes.forums.interfaces import ITopic
+
+from nti.dataserver.interfaces import IUser
 
 from nti.externalization.externalization import to_external_object
 
@@ -33,6 +45,8 @@ from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.interfaces import IExternalMappingDecorator
 
 from nti.links.links import Link
+
+from . import HISTORICAL_SESSIONS_VIEW_NAME
 
 LINKS = StandardExternalFields.LINKS
 
@@ -107,3 +121,28 @@ class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
 		link.__name__ = ''
 		link.__parent__ = context
 		links.append(link)
+
+@component.adapter(IUser)
+@interface.implementer(IExternalMappingDecorator)
+class _UserSessionDecorator(AbstractAuthenticatedRequestAwareDecorator):
+
+	def _predicate(self, context, result):
+		return self._is_authenticated \
+				and has_analytics() \
+				and has_permission(nauth.ACT_NTI_ADMIN, context, self.request)
+
+	def _do_decorate_external(self, context, result):
+		most_recent_sessions = get_recent_user_sessions(context, limit=1)
+		session = most_recent_sessions[0] if most_recent_sessions else None
+		if session:
+			session = IAnalyticsSession(session)
+		result['MostRecentSession'] = session
+
+		#This is also the best place to decorate a link to fetch recent sessions
+		links = result.setdefault(LINKS, [])
+		link = Link(context, rel=HISTORICAL_SESSIONS_VIEW_NAME, elements=('@@'+HISTORICAL_SESSIONS_VIEW_NAME,))
+		interface.alsoProvides(link, ILocation)
+		link.__name__ = ''
+		link.__parent__ = context
+		links.append(link)
+

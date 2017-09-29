@@ -32,6 +32,12 @@
 				for="nti.contenttypes.courses.interfaces.ICourseInstance
 					 pyramid.interfaces.IRequest"  />
 
+	<!-- User Session Decorators -->
+	<subscriber factory=".decorators._UserSessionDecorator"
+				provides="nti.externalization.interfaces.IExternalObjectDecorator"
+				for="nti.dataserver.interfaces.IUser
+					 pyramid.interfaces.IRequest"  />
+
 	<!-- JZ 1.15.2015 - Disable until needed
 	<subscriber factory=".decorators._TopicProgressDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
