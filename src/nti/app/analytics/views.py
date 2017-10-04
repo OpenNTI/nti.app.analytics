@@ -188,7 +188,7 @@ class BatchEventParams(AbstractAuthenticatedView):
 
 @view_config(route_name='objects.generic.traversal',
 			 name=ANALYTICS_SESSION,
-			 context=IAnalyticsWorkspace,
+			 context=ISessionsCollection,
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
@@ -206,7 +206,7 @@ class AnalyticsSession(AbstractAuthenticatedView):
 
 @view_config(route_name='objects.generic.traversal',
 			 name=END_ANALYTICS_SESSION,
-			 context=IAnalyticsWorkspace,
+			 context=ISessionsCollection,
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)

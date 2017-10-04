@@ -56,6 +56,10 @@ def AnalyticsWorkspace(user_service, root=None):
 def analytics_path_adapter(ds_root, request):
 	return AnalyticsWorkspace(None, root=ds_root)
 
+def _workspace_link(ctx, rel, name=None):
+	elements = ('@@'+name, ) if name else None
+	return Link(ctx, rel=rel, elements=elements)
+
 @interface.implementer(IAnalyticsWorkspace)
 @component.adapter(IDataserverFolder)
 class _AnalyticsWorkspace(Contained):
@@ -73,23 +77,30 @@ class _AnalyticsWorkspace(Contained):
 		super(_AnalyticsWorkspace, self).__init__()
 		if parent:
 			self.__parent__ = parent
+		self.events = EventsCollection(self)
+		self.sessions = SessionsCollection(self)
 
 	@property
 	def collections(self):
-		return (EventsCollection(self), SessionsCollection(self))
+		if not has_analytics():
+			return ()
+		return (self.events, self.sessions)
 
 	@property
 	def links(self):
+		if not has_analytics():
+			return ()
+
 		result = []
-		if has_analytics():
-			link_names = (BATCH_EVENTS, ANALYTICS_SESSION, ANALYTICS_SESSIONS,
-						  END_ANALYTICS_SESSION, SYNC_PARAMS)
-			for name in link_names:
-				link = Link(ANALYTICS, rel=name, elements=(name,))
-				link.__name__ = link.target
-				link.__parent__ = self.__parent__
-				interface.alsoProvides(link, ILocation)
-				result.append(link)
+		result.append(_workspace_link(self, SYNC_PARAMS, name=SYNC_PARAMS))
+
+		#For BWC provide workspace level links to our events and sessions collection
+		result.append(_workspace_link(self.events, BATCH_EVENTS))
+		result.append(_workspace_link(self.sessions, ANALYTICS_SESSIONS))
+
+		#For BWC surface some links for sessions at the workspace level
+		for rel in (ANALYTICS_SESSION, END_ANALYTICS_SESSION):
+			result.append(_workspace_link(self.sessions, rel, name=rel))
 
 		return result
 
@@ -140,4 +151,13 @@ class SessionsCollection(object):
 	@Lazy
 	def container(self):
 		return ()
+
+	@Lazy
+	def links(self):
+		if not has_analytics():
+			return ()
+		links = []
+		for rel in (ANALYTICS_SESSION, END_ANALYTICS_SESSION):
+			links.append(_workspace_link(self, rel, name=rel))
+		return links
 

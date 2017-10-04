@@ -413,7 +413,7 @@ class TestBatchEvents( _AbstractTestViews ):
 
 	@WithSharedApplicationMockDS(users=True,testapp=True,default_authenticate=True)
 	def test_batch_params( self ):
-		batch_url = '/dataserver2/analytics/' + SYNC_PARAMS
+		batch_url = '/dataserver2/analytics/@@' + SYNC_PARAMS
 		result = self.testapp.get( batch_url, status=200 )
 		result = result.json_body
 		assert_that( result, has_entries(
@@ -431,7 +431,7 @@ class TestAnalyticsSession( _AbstractTestViews ):
 		assert_that( results, has_length( 0 ) )
 
 		# New session
-		session_url = '/dataserver2/analytics/analytics_session'
+		session_url = '/dataserver2/analytics/sessions/@@analytics_session'
 		self.testapp.post_json( session_url,
 								None,
 								status=200 )
@@ -474,7 +474,7 @@ class TestAnalyticsSession( _AbstractTestViews ):
 		batch_events = toExternalObject(io)
 
 		# End our session
-		end_session_url = '/dataserver2/analytics/end_analytics_session'
+		end_session_url = '/dataserver2/analytics/sessions/@@end_analytics_session'
 
 		timestamp = timestamp_type( 1 )
 		self.testapp.post_json( end_session_url,
