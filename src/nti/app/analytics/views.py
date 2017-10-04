@@ -54,6 +54,10 @@ from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import END_ANALYTICS_SESSION
 
+from nti.app.analytics.interfaces import IAnalyticsWorkspace
+from nti.app.analytics.interfaces import ISessionsCollection
+from nti.app.analytics.interfaces import IEventsCollection
+
 from nti.app.analytics.utils import set_research_status
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
@@ -143,7 +147,7 @@ def _process_batch_events(events):
 	return event_count, malformed_count
 
 @view_config(route_name='objects.generic.traversal',
-			 name=BATCH_EVENTS,
+			 context=IEventsCollection,
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
@@ -172,6 +176,7 @@ class BatchEvents(AbstractAuthenticatedView,
 
 @view_config(route_name='objects.generic.traversal',
 			 name=SYNC_PARAMS,
+			 context=IAnalyticsWorkspace,
 			 renderer='rest',
 			 request_method='GET')
 class BatchEventParams(AbstractAuthenticatedView):
@@ -183,6 +188,7 @@ class BatchEventParams(AbstractAuthenticatedView):
 
 @view_config(route_name='objects.generic.traversal',
 			 name=ANALYTICS_SESSION,
+			 context=IAnalyticsWorkspace,
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
@@ -200,6 +206,7 @@ class AnalyticsSession(AbstractAuthenticatedView):
 
 @view_config(route_name='objects.generic.traversal',
 			 name=END_ANALYTICS_SESSION,
+			 context=IAnalyticsWorkspace,
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)
@@ -243,7 +250,7 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
 		return hexc.HTTPNoContent()
 
 @view_config(route_name='objects.generic.traversal',
-			 name=ANALYTICS_SESSIONS,
+			 context=ISessionsCollection,
 			 renderer='rest',
 			 request_method='POST',
 			 permission=nauth.ACT_READ)

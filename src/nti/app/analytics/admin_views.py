@@ -29,8 +29,6 @@ from zope import interface
 
 from zope.container.contained import Contained
 
-from zope.traversing.interfaces import IPathAdapter
-
 from ZODB.POSException import POSError
 
 from nti.analytics import get_factory
@@ -51,6 +49,8 @@ from nti.analytics.stats.utils import get_time_stats
 
 from nti.app.analytics import ANALYTICS
 from nti.app.analytics import VIEW_STATS
+
+from nti.app.analytics.interfaces import IAnalyticsWorkspace
 
 from nti.app.analytics.externalization import to_external_job
 
@@ -95,22 +95,12 @@ TOTAL = StandardExternalFields.TOTAL
 ITEM_COUNT = StandardExternalFields.ITEM_COUNT
 LAST_MODIFIED = StandardExternalFields.LAST_MODIFIED
 
-@interface.implementer(IPathAdapter)
-class AnalyticsPathAdapter(Contained):
-
-	__name__ = ANALYTICS
-
-	def __init__(self, context, request):
-		self.context = context
-		self.request = request
-		self.__parent__ = context
-
 @view_config(route_name='objects.generic.traversal',
 			 name='queue_info',
 			 renderer='rest',
 			 request_method='GET',
 			 permission=ACT_NTI_ADMIN,
-			 context=AnalyticsPathAdapter)
+			 context=IAnalyticsWorkspace)
 def queue_info(request):
 	"""
 	Report on the analytics queue sizes.
@@ -133,7 +123,7 @@ def queue_info(request):
 			 renderer='rest',
 			 request_method='POST',
 			 permission=ACT_NTI_ADMIN,
-			 context=AnalyticsPathAdapter)
+			 context=IAnalyticsWorkspace)
 def empty_queue(request):
 	"""
 	Empty the analytics job queues, including the fail queues.
@@ -171,7 +161,7 @@ def empty_queue(request):
 			 renderer='rest',
 			 request_method='GET',
 			 permission=ACT_NTI_ADMIN,
-			 context=AnalyticsPathAdapter)
+			 context=IAnalyticsWorkspace)
 def queue_jobs(request):
 	"""
 	Report on the analytics jobs.
@@ -199,7 +189,7 @@ def queue_jobs(request):
 			 renderer='rest',
 			 request_method='GET',
 			 permission=ACT_NTI_ADMIN,
-			 context=AnalyticsPathAdapter)
+			 context=IAnalyticsWorkspace)
 class UserResearchStatsView(AbstractAuthenticatedView):
 
 	def __call__(self):
@@ -267,7 +257,7 @@ def _parse_catalog_entry(params, names=('ntiid', 'entry', 'course')):
 	return result
 
 @view_config(context=IDataserverFolder)
-@view_config(context=AnalyticsPathAdapter)
+@view_config(context=IAnalyticsWorkspace)
 @view_config(context=CourseAdminPathAdapter)
 @view_defaults(route_name='objects.generic.traversal',
 				renderer='rest',
@@ -324,7 +314,7 @@ class UserCourseAssessmentsTakenCountsView(AbstractAuthenticatedView):
 		response.body_file = stream
 		return response
 
-@view_config(context=AnalyticsPathAdapter)
+@view_config(context=IAnalyticsWorkspace)
 @view_defaults(route_name='objects.generic.traversal',
 				renderer='rest',
 				permission=ACT_NTI_ADMIN,

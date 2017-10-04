@@ -20,6 +20,8 @@ from zope.container.contained import Contained
 
 from zope.location.interfaces import ILocation
 
+from zope.traversing.interfaces import IPathAdapter
+
 from nti.analytics import has_analytics
 
 from nti.app.analytics import ANALYTICS
@@ -31,6 +33,8 @@ from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import END_ANALYTICS_SESSION
 
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
+from nti.app.analytics.interfaces import IEventsCollection
+from nti.app.analytics.interfaces import ISessionsCollection
 
 from nti.appserver.workspaces.interfaces import IWorkspace
 from nti.appserver.workspaces.interfaces import IUserService
@@ -42,10 +46,15 @@ from nti.links.links import Link
 
 @interface.implementer(IWorkspace)
 @component.adapter(IUserService)
-def AnalyticsWorkspace(user_service):
-	analytics_ws = _AnalyticsWorkspace(parent=user_service.__parent__)
+def AnalyticsWorkspace(user_service, root=None):
+	root = root or user_service.__parent__
+	analytics_ws = _AnalyticsWorkspace(parent=root)
 	assert analytics_ws.__parent__
 	return analytics_ws
+
+@interface.implementer(IPathAdapter)
+def analytics_path_adapter(ds_root, request):
+	return AnalyticsWorkspace(None, root=ds_root)
 
 @interface.implementer(IAnalyticsWorkspace)
 @component.adapter(IDataserverFolder)
@@ -84,7 +93,19 @@ class _AnalyticsWorkspace(Contained):
 
 		return result
 
-@interface.implementer(IContainerCollection)
+	def __getitem__(self, key):
+		"""
+		Make us traversable to collections.
+		"""
+		for i in self.collections:
+			if i.__name__ == key:
+				return i
+		raise KeyError(key)
+
+	def __len__(self):
+		return len(self.collections)
+
+@interface.implementer(IEventsCollection)
 class EventsCollection(object):
 	"""
 	Pseudo-collection of analytics events.
@@ -102,7 +123,7 @@ class EventsCollection(object):
 	def container(self):
 		return ()
 
-@interface.implementer(IContainerCollection)
+@interface.implementer(ISessionsCollection)
 class SessionsCollection(object):
 	"""
 	Pseudo-collection of analytics sessions.
@@ -119,3 +140,4 @@ class SessionsCollection(object):
 	@Lazy
 	def container(self):
 		return ()
+
