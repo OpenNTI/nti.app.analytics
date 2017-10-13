@@ -3,15 +3,11 @@
 """
 Externalization decorators.
 
-.. $Id$
+.. $Id: decorators.py 122490 2017-09-29 03:36:57Z chris.utz $
 """
 
 from __future__ import print_function, unicode_literals, absolute_import, division
 __docformat__ = "restructuredtext en"
-
-logger = __import__('logging').getLogger(__name__)
-
-import time
 
 from zope import component
 from zope import interface
@@ -25,6 +21,8 @@ from nti.analytics.interfaces import IAnalyticsSession
 from nti.analytics.progress import get_topic_progress
 
 from nti.analytics.sessions import get_recent_user_sessions
+
+from nti.app.analytics import HISTORICAL_SESSIONS_VIEW_NAME
 
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
 
@@ -46,9 +44,10 @@ from nti.externalization.interfaces import IExternalMappingDecorator
 
 from nti.links.links import Link
 
-from . import HISTORICAL_SESSIONS_VIEW_NAME
-
 LINKS = StandardExternalFields.LINKS
+
+logger = __import__('logging').getLogger(__name__)
+
 
 @component.adapter(ICourseOutlineContentNode)
 @interface.implementer(IExternalMappingDecorator)
@@ -69,6 +68,7 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
 		link.__parent__ = context
 		links.append(link)
 
+
 @component.adapter(ICourseInstance)
 @interface.implementer(IExternalMappingDecorator)
 class _CourseVideoProgressLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
@@ -88,6 +88,7 @@ class _CourseVideoProgressLinkDecorator(AbstractAuthenticatedRequestAwareDecorat
 		link.__parent__ = context
 		links.append(link)
 
+
 @component.adapter(ITopic)
 @interface.implementer(IExternalMappingDecorator)
 class _TopicProgressDecorator(AbstractAuthenticatedRequestAwareDecorator):
@@ -103,6 +104,7 @@ class _TopicProgressDecorator(AbstractAuthenticatedRequestAwareDecorator):
 	def _do_decorate_external(self, context, result):
 		progress = get_topic_progress(self.remoteUser, context)
 		result['Progress'] = to_external_object(progress)
+
 
 @component.adapter(ICourseInstance)
 @interface.implementer(IExternalMappingDecorator)
@@ -122,6 +124,7 @@ class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
 		link.__parent__ = context
 		links.append(link)
 
+
 @component.adapter(IUser)
 @interface.implementer(IExternalMappingDecorator)
 class _UserSessionDecorator(AbstractAuthenticatedRequestAwareDecorator):
@@ -138,9 +141,11 @@ class _UserSessionDecorator(AbstractAuthenticatedRequestAwareDecorator):
 			session = IAnalyticsSession(session)
 		result['MostRecentSession'] = session
 
-		#This is also the best place to decorate a link to fetch recent sessions
+		# This is also the best place to decorate a link to fetch recent sessions
 		links = result.setdefault(LINKS, [])
-		link = Link(context, rel=HISTORICAL_SESSIONS_VIEW_NAME, elements=('@@'+HISTORICAL_SESSIONS_VIEW_NAME,))
+		link = Link(context,
+				rel=HISTORICAL_SESSIONS_VIEW_NAME,
+					elements=('@@'+HISTORICAL_SESSIONS_VIEW_NAME,))
 		interface.alsoProvides(link, ILocation)
 		link.__name__ = ''
 		link.__parent__ = context

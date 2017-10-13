@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-.. $Id$
+.. $Id: admin_views.py 122767 2017-10-04 20:59:12Z chris.utz $
 """
 
 from __future__ import print_function, unicode_literals, absolute_import, division
 __docformat__ = "restructuredtext en"
-
-logger = __import__('logging').getLogger(__name__)
 
 import csv
 import time
@@ -25,9 +23,6 @@ from pyramid.view import view_defaults
 from pyramid import httpexceptions as hexc
 
 from zope import component
-from zope import interface
-
-from zope.container.contained import Contained
 
 from ZODB.POSException import POSError
 
@@ -47,7 +42,6 @@ from nti.analytics.resource_views import get_resource_views_for_ntiid
 
 from nti.analytics.stats.utils import get_time_stats
 
-from nti.app.analytics import ANALYTICS
 from nti.app.analytics import VIEW_STATS
 
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
@@ -95,13 +89,16 @@ TOTAL = StandardExternalFields.TOTAL
 ITEM_COUNT = StandardExternalFields.ITEM_COUNT
 LAST_MODIFIED = StandardExternalFields.LAST_MODIFIED
 
+logger = __import__('logging').getLogger(__name__)
+
+
 @view_config(route_name='objects.generic.traversal',
 			 name='queue_info',
 			 renderer='rest',
 			 request_method='GET',
 			 permission=ACT_NTI_ADMIN,
 			 context=IAnalyticsWorkspace)
-def queue_info(request):
+def queue_info(unused_request):
 	"""
 	Report on the analytics queue sizes.
 	"""
@@ -118,13 +115,14 @@ def queue_info(request):
 
 	return result
 
+
 @view_config(route_name='objects.generic.traversal',
 			 name='empty_queue',
 			 renderer='rest',
 			 request_method='POST',
 			 permission=ACT_NTI_ADMIN,
 			 context=IAnalyticsWorkspace)
-def empty_queue(request):
+def empty_queue(unused_request):
 	"""
 	Empty the analytics job queues, including the fail queues.
 	"""
@@ -156,6 +154,7 @@ def empty_queue(request):
 	logger.info('Emptied analytics processing queue (time=%s)', elapsed)
 	return result
 
+
 @view_config(route_name='objects.generic.traversal',
 			 name='queue_jobs',
 			 renderer='rest',
@@ -183,6 +182,7 @@ def queue_jobs(request):
 		total += len(queue_jobs)
 	result[ITEM_COUNT] = result[TOTAL] = total
 	return result
+
 
 @view_config(route_name='objects.generic.traversal',
 			 name='user_research_stats',
@@ -230,12 +230,13 @@ class UserResearchStatsView(AbstractAuthenticatedView):
 		result['ToBePromptedCount'] = neither_count
 		return result
 
-# Assessments
+
 def replace_username(username):
 	policy = component.queryUtility(IUsernameSubstitutionPolicy)
 	if policy is not None:
 		return policy.replace(username) or username
 	return username
+
 
 def _parse_catalog_entry(params, names=('ntiid', 'entry', 'course')):
 	ntiid = None
@@ -255,6 +256,7 @@ def _parse_catalog_entry(params, names=('ntiid', 'entry', 'course')):
 		except KeyError:
 			pass
 	return result
+
 
 @view_config(context=IDataserverFolder)
 @view_config(context=IAnalyticsWorkspace)
@@ -314,6 +316,7 @@ class UserCourseAssessmentsTakenCountsView(AbstractAuthenticatedView):
 		response.body_file = stream
 		return response
 
+
 @view_config(context=IAnalyticsWorkspace)
 @view_defaults(route_name='objects.generic.traversal',
 				renderer='rest',
@@ -329,6 +332,7 @@ class UpdateGeoLocationsView(AbstractAuthenticatedView):
 		updated_count = update_missing_locations()
 		logger.info('Updated %s missing geo locations', updated_count)
 		return hexc.HTTPNoContent()
+
 
 # XXX: Tests
 class AbstractViewStatsView(AbstractAuthenticatedView):
@@ -385,6 +389,7 @@ class AbstractViewStatsView(AbstractAuthenticatedView):
 		result[LAST_MODIFIED] = self.last_modified
 		return result
 
+
 @view_config(context=IAssetRef)
 @view_config(context=IContentUnit)
 @view_config(context=IPresentationAsset)
@@ -407,6 +412,7 @@ class AssetViewStats(AbstractViewStatsView):
 		ntiid = self._get_context_ntiid()
 		return get_resource_views_for_ntiid(ntiid, **kwargs)
 
+
 @view_config(context=INTIVideo)
 @view_config(context=INTIVideoRef)
 @view_defaults(route_name='objects.generic.traversal',
@@ -426,6 +432,7 @@ class VideoViewStats(AbstractViewStatsView):
 		ntiid = self._get_context_ntiid()
 		return get_video_views_for_ntiid(ntiid, **kwargs)
 
+
 @view_config(route_name='objects.generic.traversal',
 			 name=VIEW_STATS,
 			 renderer='rest',
@@ -441,6 +448,7 @@ class TopicViewStats(AbstractViewStatsView):
 
 	def _get_records(self, **kwargs):
 		return self._get_topic_records(self.context, **kwargs)
+
 
 @view_config(route_name='objects.generic.traversal',
 			 	name=VIEW_STATS,

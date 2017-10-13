@@ -1,19 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-.. $Id$
+.. $Id: views.py 122769 2017-10-04 21:56:03Z chris.utz $
 """
 
 from __future__ import print_function, unicode_literals, absolute_import, division
 __docformat__ = "restructuredtext en"
 
-logger = __import__('logging').getLogger(__name__)
-
 import csv
 
 import datetime
-
-import time
 
 from io import BytesIO
 
@@ -49,9 +45,7 @@ from nti.analytics.progress import get_assessment_progresses_for_course
 from nti.app.analytics import MessageFactory as _
 
 from nti.app.analytics import SYNC_PARAMS
-from nti.app.analytics import BATCH_EVENTS
 from nti.app.analytics import ANALYTICS_SESSION
-from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import END_ANALYTICS_SESSION
 
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
@@ -103,6 +97,9 @@ ITEM_COUNT = StandardExternalFields.ITEM_COUNT
 GEO_LOCATION_VIEW = 'GeoLocations'
 SET_RESEARCH_VIEW = 'SetUserResearch'
 
+logger = __import__('logging').getLogger(__name__)
+
+
 def _get_last_mod(progress, max_last_mod):
 	"""
 	For progress, get the most recent date as our last modified.
@@ -114,6 +111,7 @@ def _get_last_mod(progress, max_last_mod):
 			and	progress.last_modified > max_last_mod):
 		result = progress.last_modified
 	return result
+
 
 def _process_batch_events(events):
 	"""
@@ -146,6 +144,7 @@ def _process_batch_events(events):
 	event_count = handle_events(batch_events)
 	return event_count, malformed_count
 
+
 @view_config(route_name='objects.generic.traversal',
 			 context=IEventsCollection,
 			 renderer='rest',
@@ -174,6 +173,7 @@ class BatchEvents(AbstractAuthenticatedView,
 		result['MalformedEventCount'] = malformed_count
 		return result
 
+
 @view_config(route_name='objects.generic.traversal',
 			 name=SYNC_PARAMS,
 			 context=IAnalyticsWorkspace,
@@ -185,6 +185,7 @@ class BatchEventParams(AbstractAuthenticatedView):
 		# Return our default analytic client params
 		client_params = AnalyticsClientParams()
 		return client_params
+
 
 @view_config(route_name='objects.generic.traversal',
 			 name=ANALYTICS_SESSION,
@@ -203,6 +204,7 @@ class AnalyticsSession(AbstractAuthenticatedView):
 		if user is not None:
 			handle_new_session(user, request)
 		return request.response
+
 
 @view_config(route_name='objects.generic.traversal',
 			 name=END_ANALYTICS_SESSION,
@@ -249,6 +251,7 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
 		handle_end_session(user, request, timestamp=timestamp)
 		return hexc.HTTPNoContent()
 
+
 @view_config(route_name='objects.generic.traversal',
 			 context=ISessionsCollection,
 			 renderer='rest',
@@ -290,6 +293,7 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
 				results.append(val)
 		return results
 
+
 def _get_ntiids(obj, accum):
 	obj = IConcreteAsset( obj, obj )
 	attrs_to_check = ('ntiid',)
@@ -306,6 +310,7 @@ def _get_ntiids(obj, accum):
 	except AttributeError:
 		pass
 
+
 def _get_legacy_progress_ntiids(unit, accum):
 	if unit is None:
 		return
@@ -320,6 +325,7 @@ def _get_legacy_progress_ntiids(unit, accum):
 		for child in unit.children:
 			_get_legacy_progress_ntiids(child, accum)
 
+
 def _get_lesson_items(lesson):
 	"""
 	For lessons, iterate and retrieve ntiids.
@@ -328,6 +334,7 @@ def _get_lesson_items(lesson):
 	for group in lesson or ():
 		result.update(group.items or ())
 	return result
+
 
 def _get_lesson_progress_ntiids(lesson, lesson_ntiid):
 	results = set()
@@ -343,6 +350,7 @@ def _get_lesson_progress_ntiids(lesson, lesson_ntiid):
 	for contained_object in contained_objects or ():
 		_get_ntiids(contained_object, results)
 	return results
+
 
 @view_config(route_name='objects.generic.traversal',
 			 renderer='rest',
@@ -420,6 +428,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
 		self.request.response.last_modified = node_last_modified
 		return result
 
+
 @view_config(route_name='objects.generic.traversal',
 			 renderer='rest',
 			 context=ICourseInstance,
@@ -456,6 +465,7 @@ class UserCourseVideoProgress(AbstractAuthenticatedView,
 		self.request.response.last_modified = node_last_modified
 		return result
 
+
 @view_config(route_name='objects.generic.traversal',
 			 renderer='rest',
 			 context=IUser,
@@ -478,6 +488,7 @@ class UserResearchStudyView(AbstractAuthenticatedView,
 		logger.info('Setting research status for user (user=%s) (allow_research=%s)',
 					user.username, allow_research)
 		return hexc.HTTPNoContent()
+
 
 class AbstractUserLocationView(AbstractAuthenticatedView):
 	"""
@@ -516,6 +527,7 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
 		data = get_location_list(course, enrollment_scope)
 		return data
 
+
 @view_config(route_name='objects.generic.traversal',
 			  renderer='rest',
   			  permission=nauth.ACT_NTI_ADMIN,
@@ -536,6 +548,7 @@ def _tx_string(label):
 	if label and isinstance(label, unicode):
 		label = label.encode('utf-8')
 	return label
+
 
 @view_config(route_name='objects.generic.traversal',
 			 renderer='rest',
@@ -576,6 +589,7 @@ class UserLocationCsvView(AbstractUserLocationView):
 		response.content_disposition = b'attachment; filename="locations.csv"'
 		return response
 
+
 @view_config(route_name='objects.generic.traversal',
 			 renderer='templates/user_location_map.pt',
 			 permission=nauth.ACT_NTI_ADMIN,
@@ -610,6 +624,7 @@ class UserLocationHtmlView(AbstractUserLocationView):
 								'course_section': self.context.__name__}
 
 		return options
+
 
 @view_config(route_name='objects.generic.traversal',
 			 renderer='rest',

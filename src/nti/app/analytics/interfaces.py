@@ -13,10 +13,11 @@ from nti.appserver.workspaces.interfaces import IContainerCollection
 
 from nti.appserver.workspaces.interfaces import IWorkspace
 
+
 class IAnalyticsWorkspace(IWorkspace):
-	"""
-	A workspace containing data for analytics.
-	"""
+    """
+    A workspace containing data for analytics.
+    """
 
 class ISessionsCollection(IContainerCollection):
     """
