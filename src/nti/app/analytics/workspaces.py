@@ -3,13 +3,11 @@
 """
 Implementation of an Atom/OData workspace and collection for analytics.
 
-.. $Id$
+.. $Id: workspaces.py 122769 2017-10-04 21:56:03Z chris.utz $
 """
 
 from __future__ import print_function, unicode_literals, absolute_import, division
 __docformat__ = "restructuredtext en"
-
-logger = __import__('logging').getLogger(__name__)
 
 from zope import component
 from zope import interface
@@ -17,8 +15,6 @@ from zope import interface
 from zope.cachedescriptors.property import Lazy
 
 from zope.container.contained import Contained
-
-from zope.location.interfaces import ILocation
 
 from zope.traversing.interfaces import IPathAdapter
 
@@ -32,17 +28,19 @@ from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import END_ANALYTICS_SESSION
 
-from nti.app.analytics.interfaces import IAnalyticsWorkspace
 from nti.app.analytics.interfaces import IEventsCollection
 from nti.app.analytics.interfaces import ISessionsCollection
+from nti.app.analytics.interfaces import IAnalyticsWorkspace
 
 from nti.appserver.workspaces.interfaces import IWorkspace
 from nti.appserver.workspaces.interfaces import IUserService
-from nti.appserver.workspaces.interfaces import IContainerCollection
 
 from nti.dataserver.interfaces import IDataserverFolder
 
 from nti.links.links import Link
+
+logger = __import__('logging').getLogger(__name__)
+
 
 @interface.implementer(IWorkspace)
 @component.adapter(IUserService)
@@ -52,20 +50,23 @@ def AnalyticsWorkspace(user_service, root=None):
 	assert analytics_ws.__parent__
 	return analytics_ws
 
+
 @interface.implementer(IPathAdapter)
-def analytics_path_adapter(ds_root, request):
+def analytics_path_adapter(ds_root, unused_request):
 	return AnalyticsWorkspace(None, root=ds_root)
+
 
 def _workspace_link(ctx, rel, name=None):
 	elements = ('@@'+name, ) if name else None
 	return Link(ctx, rel=rel, elements=elements)
 
+
 @interface.implementer(IAnalyticsWorkspace)
 @component.adapter(IDataserverFolder)
 class _AnalyticsWorkspace(Contained):
 	"""
-	A workspace that currently, does not have any collections, but
-	exposes links that may be useful to analytics clients.
+	A workspace that currently exposes links and collections that may be useful
+	to analytics clients.
 	"""
 
 	__name__ = ANALYTICS
@@ -94,7 +95,8 @@ class _AnalyticsWorkspace(Contained):
 		result = []
 		result.append(_workspace_link(self, SYNC_PARAMS, name=SYNC_PARAMS))
 
-		#For BWC provide workspace level links to our events and sessions collection
+		# For BWC provide workspace level links to our events and sessions
+		# collection
 		result.append(_workspace_link(self.events, BATCH_EVENTS))
 		result.append(_workspace_link(self.sessions, ANALYTICS_SESSIONS))
 
@@ -116,6 +118,7 @@ class _AnalyticsWorkspace(Contained):
 	def __len__(self):
 		return len(self.collections)
 
+
 @interface.implementer(IEventsCollection)
 class EventsCollection(object):
 	"""
@@ -133,6 +136,7 @@ class EventsCollection(object):
 	@Lazy
 	def container(self):
 		return ()
+
 
 @interface.implementer(ISessionsCollection)
 class SessionsCollection(object):
