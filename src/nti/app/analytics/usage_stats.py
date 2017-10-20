@@ -6,10 +6,9 @@ Provide analytics stats on usage for a given context.
 .. $Id$
 """
 
-from __future__ import print_function, unicode_literals, absolute_import, division
-__docformat__ = "restructuredtext en"
-
-logger = __import__('logging').getLogger(__name__)
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
 from heapq import nlargest
 
@@ -22,8 +21,8 @@ from nti.analytics.resource_views import get_video_views
 from nti.analytics.resource_views import get_resource_views
 
 from nti.app.products.courseware.interfaces import IVideoUsageStats
-from nti.app.products.courseware.interfaces import IUserVideoUsageStats
 from nti.app.products.courseware.interfaces import IResourceUsageStats
+from nti.app.products.courseware.interfaces import IUserVideoUsageStats
 from nti.app.products.courseware.interfaces import IUserResourceUsageStats
 
 from nti.dataserver.interfaces import IEnumerableEntityContainer
@@ -64,6 +63,8 @@ _AverageWatchTimes = namedtuple('_AverageWatchTimes',
 
 ALL_USERS = u'AllUsers'
 
+logger = __import__('logging').getLogger(__name__)
+
 
 def _get_enrollment_scope_dict(course, instructors=set()):
     """
@@ -90,13 +91,15 @@ def _get_enrollment_scope_dict(course, instructors=set()):
             # If our scope is not 'public'-ish, store it separately.
             # All credit-type users should end up in ForCredit.
             scope_users = {
-                x.lower() for x in IEnumerableEntityContainer(scope).iter_usernames()}
+                x.lower() for x in IEnumerableEntityContainer(scope).iter_usernames()
+            }
             scope_users = scope_users - instructors
             results[scope_name] = scope_users
             non_public_users = non_public_users.union(scope_users)
 
-    all_users = {x.lower()
-                 for x in IEnumerableEntityContainer(public_scope).iter_usernames()}
+    all_users = {
+        x.lower() for x in IEnumerableEntityContainer(public_scope).iter_usernames()
+    }
     results['Public'] = all_users - non_public_users - instructors
     results[ALL_USERS] = all_users - instructors
     return results
@@ -212,9 +215,9 @@ class _AbstractUsageStats(object):
         accum = ResourceEventAccumulator()
         for event in self.events:
 
-            if 		event is None \
-                    or 	event.user is None \
-                    or event.user.username.lower() not in users:
+            if     event is None \
+                or event.user is None \
+                or event.user.username.lower() not in users:
                 continue
 
             accum.accum(event)
@@ -296,11 +299,11 @@ class CourseResourceUsageStats(_AbstractUsageStats):
             return
 
         watch_data = self._get_watch_data(stats, student_count)
-        data = _ResourceInfo(	title,
-                              ntiid,
-                              stats.session_count,
-                              stats.event_count,
-                              watch_data)
+        data = _ResourceInfo(title,
+                             ntiid,
+                             stats.session_count,
+                             stats.event_count,
+                             watch_data)
         return data
 
 
@@ -392,26 +395,24 @@ class CourseVideoUsageStats(_AbstractUsageStats):
                 # To completely watch a video, the user must accumulate up to a threshold and
                 # watch up to a certain threshold (not just watch beginning
                 # over and over).
-                if 		user_stat.total_view_time >= video_duration * self.VIDEO_COMPLETED_THRESHOLD \
-                        and user_stat.max_end_time >= video_duration * self.VIDEO_COMPLETED_THRESHOLD:
+                if      user_stat.total_view_time >= video_duration * self.VIDEO_COMPLETED_THRESHOLD \
+                    and user_stat.max_end_time >= video_duration * self.VIDEO_COMPLETED_THRESHOLD:
                     number_users_watched_completely += 1
 
-        perc_users_watched_completely = number_users_watched_completely / \
-            student_count
-        str_perc_watched_completely = '%d%%' % int(
-            perc_users_watched_completely * 100)
+        perc_users_watched_completely = number_users_watched_completely / student_count
+        str_perc_watched_completely = '%d%%' % int(perc_users_watched_completely * 100)
 
         watch_data = self._get_watch_data(stats, student_count)
         drop_off_data = self._build_drop_off_data(stats)
-        data = _VideoInfo(	title,
-                           ntiid,
-                           stats.session_count,
-                           stats.event_count,
-                           watch_data,
-                           str_video_duration,
-                           str_perc_watched_completely,
-                           number_users_watched_completely,
-                           drop_off_data)
+        data = _VideoInfo(title,
+                          ntiid,
+                          stats.session_count,
+                          stats.event_count,
+                          watch_data,
+                          str_video_duration,
+                          str_perc_watched_completely,
+                          number_users_watched_completely,
+                          drop_off_data)
         return data
 
 
