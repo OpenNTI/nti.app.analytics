@@ -62,6 +62,7 @@ setup(
         'nti.externalization',
         'nti.links',
         'nti.ntiids',
+        'nti.site',
         'pyramid',
         'requests',
         'six',
