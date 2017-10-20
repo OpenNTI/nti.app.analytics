@@ -14,7 +14,7 @@ from zope import interface
 
 from zope.cachedescriptors.property import Lazy
 
-from zope.container.contained import Contained
+from zope.location.interfaces import IContained
 
 from zope.traversing.interfaces import IPathAdapter
 
@@ -61,9 +61,9 @@ def _workspace_link(ctx, rel, name=None):
 	return Link(ctx, rel=rel, elements=elements)
 
 
-@interface.implementer(IAnalyticsWorkspace)
+@interface.implementer(IAnalyticsWorkspace, IContained)
 @component.adapter(IDataserverFolder)
-class _AnalyticsWorkspace(Contained):
+class _AnalyticsWorkspace(object):
 	"""
 	A workspace that currently exposes links and collections that may be useful
 	to analytics clients.
