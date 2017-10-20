@@ -12,6 +12,7 @@ entry_points = {
 }
 
 TESTS_REQUIRE = [
+    'nti.app.products.courseware',
     'nti.app.testing',
     'nti.testing',
     'zope.dottedname',
@@ -73,6 +74,7 @@ setup(
         'zope.event',
         'zope.i18nmessageid',
         'zope.interface',
+        'zope.intid',
         'zope.location',
         'zope.schema',
         'zope.security',
