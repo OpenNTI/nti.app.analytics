@@ -4,6 +4,7 @@ from setuptools import setup, find_packages
 entry_points = {
     'console_scripts': [
         "nti_analytics_processor = nti.app.analytics.scripts.constructor:main",
+        "nti_analytics_fail_processor = nti.app.analytics.scripts.failure_processor:main",
     ],
     "z3c.autoinclude.plugin": [
         'target = nti.app',
