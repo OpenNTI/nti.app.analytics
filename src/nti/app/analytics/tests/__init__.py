@@ -29,8 +29,9 @@ from nti.dataserver.tests.mock_dataserver import DSInjectorMixin
 
 from nti.analytics.database.tests import MockParent
 
-from nti.contenttypes.courses.interfaces import ICourseCatalog
 from nti.contentlibrary.interfaces import IContentPackageLibrary
+
+from nti.contenttypes.courses.interfaces import ICourseCatalog
 
 from nti.testing.layers import find_test
 from nti.testing.layers import GCLayerMixin
@@ -60,8 +61,8 @@ def _do_then_enumerate_library(do, sync_libs=False):
             do()
             publish_ou_course_entries()
             if sync_libs:
-                from nti.app.contentlibrary.admin_views import _SyncAllLibrariesView
-                _SyncAllLibrariesView(None)()
+                from nti.app.contentlibrary.synchronize import syncContentPackages
+                syncContentPackages()
 
     _create()
 
@@ -71,7 +72,7 @@ class LegacyInstructedCourseApplicationTestLayer(ApplicationTestLayer):
     _library_path = 'Library'
 
     @staticmethod
-    def _setup_library(cls, *args, **kwargs):
+    def _setup_library(cls, *unused_args, **unused_kwargs):
         from nti.contentlibrary.filesystem import CachedNotifyingStaticFilesystemLibrary as Library
         lib = Library(
             paths=(

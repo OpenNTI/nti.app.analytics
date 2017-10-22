@@ -111,8 +111,6 @@ from nti.app.testing.decorators import WithSharedApplicationMockDS
 
 from nti.assessment.assignment import QAssignment
 
-from nti.base._compat import text_
-
 from nti.contenttypes.courses.courses import CourseInstance
 from nti.contenttypes.courses.courses import ContentCourseSubInstance
 
@@ -121,8 +119,6 @@ from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.sharing import CourseInstanceSharingScope
 
 from nti.dataserver.tests import mock_dataserver
-
-from nti.dataserver.users.communities import Community
 
 from nti.dataserver.users.users import User
 
@@ -1214,8 +1210,8 @@ class TestHistoricalSessions(ApplicationLayerTest):
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_most_recent_session(self):
         with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
-            user1 = self._create_user(u'new_user1', 
-                                      external_value={'realname': u'Billy Bob', 'email': u'foo@bar.com'})
+            self._create_user(u'new_user1', 
+                              external_value={'realname': u'Billy Bob', 'email': u'foo@bar.com'})
             user2 = self._create_user(u'new_user2', 
                                       external_value={'realname': u'Billy Rob', 'email': u'foo@bar.com'})
 
@@ -1259,15 +1255,15 @@ class TestHistoricalSessions(ApplicationLayerTest):
             end = start2 + timedelta(seconds=duration)
 
             # Test start = end
-            sesh1 = _add_session(user2.username, '', '',
-                                 start_time=start, end_time=start)
+            _add_session(user2.username, '', '',
+                         start_time=start, end_time=start)
             # 30 seconds later, a longer session
             sesh2 = _add_session(user2.username, '', '',
                                  start_time=start2, end_time=end)
             # and a session a long time ago
             longago = start - timedelta(days=60)
-            sesh3 = _add_session(user2.username, '', '', 
-                                 start_time=longago, end_time=longago + timedelta(hours=1))
+            _add_session(user2.username, '', '', 
+                         start_time=longago, end_time=longago + timedelta(hours=1))
 
         res = self.testapp.get(href, status=200, 
                                extra_environ=self._make_extra_environ(username='new_user2'))
