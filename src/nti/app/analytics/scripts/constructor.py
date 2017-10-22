@@ -64,7 +64,7 @@ class Constructor(Processor):
         includePluginsDirective(context, PP_ANALYTICS)
         includePluginsDirective(context, PP_ANALYTICS_GRAPHDB)
 
-    def create_context(self, env_dir, args=None):
+    def create_context(self, env_dir, unused_args=None):
         context = create_context(env_dir, with_library=True)
         self.extend_context(context)
         return context
