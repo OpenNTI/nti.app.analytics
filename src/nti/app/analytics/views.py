@@ -16,6 +16,8 @@ from io import BytesIO
 
 from requests.structures import CaseInsensitiveDict
 
+from zope import component
+
 from zope.cachedescriptors.property import Lazy
 
 from zope.schema.interfaces import ValidationError
@@ -34,6 +36,7 @@ from nti.analytics.model import AnalyticsClientParams
 
 from nti.app.analytics import MessageFactory as _
 
+from nti.app.analytics import ACTIVE_SESSION_COUNT
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import END_ANALYTICS_SESSION
@@ -47,6 +50,8 @@ from nti.analytics.sessions import get_user_sessions
 from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import handle_new_session
 from nti.analytics.sessions import update_session
+
+from nti.analytics.stats.interfaces import IActiveSessionStatsSource
 
 from nti.analytics.progress import get_assessment_progresses_for_course
 
@@ -579,7 +584,7 @@ class UserLocationCsvView(AbstractUserLocationView):
         stream = BytesIO()
         fieldnames = ['number_of_students', 'city', 'state',
                       'country', 'latitude', 'longitude']
-        csv_writer = csv.DictWriter(stream, fieldnames=fieldnames, 
+        csv_writer = csv.DictWriter(stream, fieldnames=fieldnames,
                                     extrasaction='ignore')
         csv_writer.writeheader()
 
@@ -683,3 +688,17 @@ class UserRecentSessions(AbstractUserLocationView):
         options[ITEMS] = sessions
         options[ITEM_COUNT] = options[TOTAL] = len(sessions)
         return options
+
+@view_config(route_name='objects.generic.traversal',
+           name=ACTIVE_SESSION_COUNT,
+           context=ISessionsCollection,
+           renderer='rest',
+           request_method='GET',
+           permission=nauth.ACT_NTI_ADMIN)
+class AnalyticsSessionCount(AbstractAuthenticatedView):
+
+  def __call__(self):
+      stats_provider = component.queryUtility(IActiveSessionStatsSource)
+      if not stats_provider:
+          raise hexc.HTTPNotFound()
+      return stats_provider()

@@ -21,6 +21,7 @@ from zope.traversing.interfaces import IPathAdapter
 
 from nti.analytics import has_analytics
 
+from nti.app.analytics import ACTIVE_SESSION_COUNT
 from nti.app.analytics import ANALYTICS
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import BATCH_EVENTS
@@ -162,6 +163,6 @@ class SessionsCollection(object):
         if not has_analytics():
             return ()
         links = []
-        for rel in (ANALYTICS_SESSION, END_ANALYTICS_SESSION):
+        for rel in (ANALYTICS_SESSION, END_ANALYTICS_SESSION, ACTIVE_SESSION_COUNT):
             links.append(_workspace_link(self, rel, name=rel))
         return links
