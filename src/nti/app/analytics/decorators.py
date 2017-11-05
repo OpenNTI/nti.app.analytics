@@ -58,7 +58,7 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
     progress information for a user.
     """
 
-    def _predicate(self, context, result):
+    def _predicate(self, unused_context, unused_result):
         return self._is_authenticated and has_analytics()
 
     def _do_decorate_external(self, context, result):
