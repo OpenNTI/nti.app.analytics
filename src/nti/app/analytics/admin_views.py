@@ -211,7 +211,7 @@ class UserResearchStatsView(AbstractAuthenticatedView):
 
             try:
                 research_status = IUserResearchStatus(user)
-            except POSError:
+            except (POSError, TypeError):
                 continue
 
             last_mod = research_status.lastModified
@@ -281,8 +281,8 @@ class UserCourseAssessmentsTakenCountsView(AbstractAuthenticatedView):
         course = ICourseInstance(context)
 
         response = self.request.response
-        response.content_encoding = str('identity')
-        response.content_type = str('text/csv; charset=UTF-8')
+        response.content_encoding = 'identity'
+        response.content_type = 'text/csv; charset=UTF-8'
         filename = context.ProviderUniqueID + '_self_assessment.csv'
         response.content_disposition = str('attachment; filename="%s"' % filename)
 
@@ -375,8 +375,7 @@ class AbstractViewStatsView(AbstractAuthenticatedView):
             course = find_object_with_ntiid(course_ntiid)
             course = ICourseInstance(course, None)
             if course is None:
-                raise hexc.HTTPUnprocessableEntity(
-                    'Cannot find course %s' % course_ntiid)
+                raise hexc.HTTPUnprocessableEntity('Cannot find course %s' % course_ntiid)
             result['course'] = course
         return result
 

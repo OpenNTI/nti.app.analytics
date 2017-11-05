@@ -45,9 +45,10 @@ from nti.assessment.interfaces import IQuestionSet
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
 
+from nti.dataserver.contenttypes.forums.interfaces import ITopic
+
 from nti.dataserver.interfaces import INote
 from nti.dataserver.interfaces import IUser
-from nti.dataserver.contenttypes.forums.interfaces import ITopic
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -61,16 +62,16 @@ def _assignment_progress_for_user(user, assignment):
     has made on the assignment.  If we have nothing in which to
     gauge progress, we return None.
     """
+    result = None
     # In local tests, about 100 objects are decorated in about 1s;
     # this is in UCOL with a lot of assignments but few assessments.
     assignment_id = getattr(assignment, 'ntiid', None)
     assignment_records = get_assignment_for_user(user, assignment_id)
-    result = None
     if assignment_records:
         # Simplistic implementation
         last_mod = max((x.timestamp for x in assignment_records))
-        result = DefaultProgress(assignment_id, 1, 1, True, 
-								 last_modified=last_mod)
+        result = DefaultProgress(assignment_id, 1, 1, True,
+                                 last_modified=last_mod)
     return result
 
 
@@ -95,8 +96,8 @@ def _assessment_progress_for_user(user, assessment):
     if assessment_records:
         # Simplistic implementation
         last_mod = max((x.timestamp for x in assessment_records))
-        result = DefaultProgress(assessment_id, 1, 1, 
-								 True, last_modified=last_mod)
+        result = DefaultProgress(assessment_id, 1, 1,
+                                 True, last_modified=last_mod)
     return result
 
 

@@ -58,7 +58,7 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
     progress information for a user.
     """
 
-    def _predicate(self, context, result):
+    def _predicate(self, unused_context, unused_result):
         return self._is_authenticated and has_analytics()
 
     def _do_decorate_external(self, context, result):
@@ -78,7 +78,7 @@ class _CourseVideoProgressLinkDecorator(AbstractAuthenticatedRequestAwareDecorat
     all video progress for a user.
     """
 
-    def _predicate(self, context, result):
+    def _predicate(self, unused_context, unused_result):
         return self._is_authenticated and has_analytics()
 
     def _do_decorate_external(self, context, result):
@@ -99,7 +99,7 @@ class _TopicProgressDecorator(AbstractAuthenticatedRequestAwareDecorator):
     user content.
     """
 
-    def _predicate(self, context, result):
+    def _predicate(self, unused_context, unused_result):
         return self._is_authenticated and has_analytics()
 
     def _do_decorate_external(self, context, result):
@@ -114,7 +114,7 @@ class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
     Add a geo location link on the given course.
     """
 
-    def _predicate(self, context, result):
+    def _predicate(self, unused_context, unused_result):
         return self._is_authenticated and has_analytics()
 
     def _do_decorate_external(self, context, result):
@@ -130,7 +130,7 @@ class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
 @interface.implementer(IExternalMappingDecorator)
 class _UserSessionDecorator(AbstractAuthenticatedRequestAwareDecorator):
 
-    def _predicate(self, context, result):
+    def _predicate(self, context, unused_result):
         return self._is_authenticated \
            and has_analytics() \
            and has_permission(nauth.ACT_NTI_ADMIN, context, self.request)

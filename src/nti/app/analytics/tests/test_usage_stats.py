@@ -44,7 +44,8 @@ class MockEvent(object):
 class MockVideoEvent(MockEvent):
 
     def __init__(self, username, resource_id, duration, session_id, max_duration, end_time):
-        super(MockVideoEvent, self).__init__(username, resource_id, duration, session_id)
+        super(MockVideoEvent, self).__init__(
+            username, resource_id, duration, session_id)
         self.MaxDuration = max_duration
         self.VideoEndTime = end_time
 
@@ -227,7 +228,7 @@ class TestUsageStats(NTIAnalyticsTestCase):
         # Single event
         single_resource_id = u'ntiid1'
         video_duration = 40
-        event = MockVideoEvent('Public1', single_resource_id, 20, 1, 
+        event = MockVideoEvent('Public1', single_resource_id, 20, 1,
                                video_duration, 40)
         mock_events.is_callable().returns((event,))
         video_stats = self.get_video_stats()
@@ -268,18 +269,54 @@ class TestUsageStats(NTIAnalyticsTestCase):
 
         # Multiple events, single resource
         events = []
-        events.append(MockVideoEvent('Public1', single_resource_id, 10, 1, video_duration, 10))
-        events.append(MockVideoEvent('Public1', single_resource_id, 10, 1, video_duration, 20))
-        events.append(MockVideoEvent('Public1', single_resource_id, 10, 2, video_duration, 30))
-        events.append(MockVideoEvent('Public1', single_resource_id, 10, 2, video_duration, 40))
-        events.append(MockVideoEvent('Public2', single_resource_id, 10, 3, video_duration, 10))
-        events.append(MockVideoEvent('Public2', single_resource_id, 10, 3, video_duration, 20))
-        events.append(MockVideoEvent('Public2', single_resource_id, 10, 4, video_duration, 30))
-        events.append(MockVideoEvent('Public2', single_resource_id, 10, 4, video_duration, 30))
-        events.append(MockVideoEvent('ForCredit1', single_resource_id, 20, 5, video_duration, 40))
-        events.append(MockVideoEvent('ForCredit2', single_resource_id, 30, 6, video_duration, 40))
-        events.append(MockVideoEvent('ForCredit3', single_resource_id, 40, 7, video_duration, 40))
-        events.append(MockVideoEvent('ForCredit4', single_resource_id, 40, 8, video_duration, 20))
+        events.append(
+            MockVideoEvent('Public1', single_resource_id,
+                           10, 1, video_duration, 10)
+        )
+        events.append(
+            MockVideoEvent('Public1', single_resource_id,
+                           10, 1, video_duration, 20)
+        )
+        events.append(
+            MockVideoEvent('Public1', single_resource_id,
+                           10, 2, video_duration, 30)
+        )
+        events.append(
+            MockVideoEvent('Public1', single_resource_id,
+                           10, 2, video_duration, 40)
+        )
+        events.append(
+            MockVideoEvent('Public2', single_resource_id,
+                           10, 3, video_duration, 10)
+        )
+        events.append(
+            MockVideoEvent('Public2', single_resource_id,
+                           10, 3, video_duration, 20)
+        )
+        events.append(
+            MockVideoEvent('Public2', single_resource_id,
+                           10, 4, video_duration, 30)
+        )
+        events.append(
+            MockVideoEvent('Public2', single_resource_id,
+                           10, 4, video_duration, 30)
+        )
+        events.append(
+            MockVideoEvent('ForCredit1', single_resource_id,
+                           20, 5, video_duration, 40)
+        )
+        events.append(
+            MockVideoEvent('ForCredit2', single_resource_id,
+                           30, 6, video_duration, 40)
+        )
+        events.append(
+            MockVideoEvent('ForCredit3', single_resource_id,
+                           40, 7, video_duration, 40)
+        )
+        events.append(
+            MockVideoEvent('ForCredit4', single_resource_id,
+                           40, 8, video_duration, 20)
+        )
         total_watch_time = sum([x.Duration for x in events])
         session_count = len({x.SessionID for x in events})
         avg_session_time = u':%s' % (int(total_watch_time / session_count))

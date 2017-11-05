@@ -49,7 +49,7 @@ class AsyncJobExternalizer(object):
         except Exception:
             return repr(x)
 
-    def toExternalObject(self, **kwargs):
+    def toExternalObject(self, **unused_kwargs):
         result = LocatedExternalDict()
         job_call = self.job.callable
         job_args = self.job.args or ()
