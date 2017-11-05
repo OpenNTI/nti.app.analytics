@@ -629,7 +629,8 @@ class UserLocationHtmlView(AbstractUserLocationView):
         # encoded items.
         options['location_data'] = location_data
         friendly_name = '%s %s' % (
-            self.context.__name__, self.generate_semester())
+            self.context.__name__, self.generate_semester()
+        )
         options['course_info'] = {
             'course_friendly_name': friendly_name,
             'course_section': self.context.__name__
@@ -689,16 +690,17 @@ class UserRecentSessions(AbstractUserLocationView):
         options[ITEM_COUNT] = options[TOTAL] = len(sessions)
         return options
 
+
 @view_config(route_name='objects.generic.traversal',
-           name=ACTIVE_SESSION_COUNT,
-           context=ISessionsCollection,
-           renderer='rest',
-           request_method='GET',
-           permission=nauth.ACT_NTI_ADMIN)
+             name=ACTIVE_SESSION_COUNT,
+             context=ISessionsCollection,
+             renderer='rest',
+             request_method='GET',
+             permission=nauth.ACT_NTI_ADMIN)
 class AnalyticsSessionCount(AbstractAuthenticatedView):
 
-  def __call__(self):
-      stats_provider = component.queryUtility(IActiveSessionStatsSource)
-      if not stats_provider:
-          raise hexc.HTTPNotFound()
-      return stats_provider()
+    def __call__(self):
+        stats_provider = component.queryUtility(IActiveSessionStatsSource)
+        if not stats_provider:
+            raise hexc.HTTPNotFound()
+        return stats_provider()
