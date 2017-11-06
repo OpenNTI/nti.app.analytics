@@ -676,8 +676,8 @@ class UserRecentSessions(AbstractUserLocationView):
         return self._time_param('notAfter')
 
     def __call__(self):
-        if not self.remoteUser == self.context \
-           and not is_admin_or_site_admin(self.remoteUser):
+        if     not self.remoteUser == self.context \
+            and not is_admin_or_site_admin(self.remoteUser):
             raise hexc.HTTPForbidden()
 
         not_after = self.not_after
@@ -730,7 +730,6 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
         """
         We want `weeks` full weeks of data.
         """
-
         if not as_of_time:
             as_of_time = datetime.datetime.now()
 

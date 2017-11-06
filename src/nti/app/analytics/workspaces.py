@@ -100,12 +100,12 @@ class _AnalyticsWorkspace(object):
             return ()
 
         result = []
-
         if is_admin_or_site_admin(get_remote_user()):
             result.append(
-              _workspace_link(self, ACTIVE_TIMES_SUMMARY,
-                              name=ACTIVE_TIMES_SUMMARY)
+                _workspace_link(self, ACTIVE_TIMES_SUMMARY,
+                                name=ACTIVE_TIMES_SUMMARY)
             )
+
         result.append(
             _workspace_link(self, SYNC_PARAMS, name=SYNC_PARAMS)
         )
@@ -178,7 +178,10 @@ class SessionsCollection(object):
         links = []
 
         if is_admin_or_site_admin(get_remote_user()):
-            links.append(_workspace_link(self, ACTIVE_SESSION_COUNT, name=ACTIVE_SESSION_COUNT))
+            links.append(
+                _workspace_link(self, ACTIVE_SESSION_COUNT,
+                                name=ACTIVE_SESSION_COUNT)
+            )
 
         for rel in (ANALYTICS_SESSION, END_ANALYTICS_SESSION):
             links.append(_workspace_link(self, rel, name=rel))
