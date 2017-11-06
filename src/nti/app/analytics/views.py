@@ -583,12 +583,7 @@ class UserLocationCsvView(AbstractUserLocationView):
 
         location_data = self.get_data(self.context)
         if len(location_data) == 0:
-            raise_json_error(self.request,
-                             hexc.HTTPUnprocessableEntity,
-                             {
-                                 'message': _(u"No locations were found."),
-                             },
-                             None)
+            return hexc.HTTPUnprocessableEntity(_(u"No locations were found."))
 
         stream = BytesIO()
         fieldnames = ['number_of_students', 'city', 'state',
@@ -623,12 +618,7 @@ class UserLocationHtmlView(AbstractUserLocationView):
     def __call__(self):
         location_data = self.get_data(self.context)
         if not location_data:
-            raise_json_error(self.request,
-                             hexc.HTTPUnprocessableEntity,
-                             {
-                                 'message': _(u"No locations were found."),
-                             },
-                             None)
+            return hexc.HTTPUnprocessableEntity(_(u"No locations were found"))
 
         locations = []
         options = LocatedExternalDict()
