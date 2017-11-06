@@ -34,6 +34,8 @@ from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
 from nti.dataserver import authorization as nauth
 
+from nti.dataserver.authorization import is_admin_or_site_admin
+
 from nti.dataserver.contenttypes.forums.interfaces import ITopic
 
 from nti.dataserver.interfaces import IUser
@@ -133,7 +135,8 @@ class _UserSessionDecorator(AbstractAuthenticatedRequestAwareDecorator):
     def _predicate(self, context, unused_result):
         return self._is_authenticated \
            and has_analytics() \
-           and has_permission(nauth.ACT_NTI_ADMIN, context, self.request)
+           and (self.remoteUser == context \
+                or is_admin_or_site_admin(self.remoteUser))
 
     def _do_decorate_external(self, context, result):
         most_recent_sessions = get_recent_user_sessions(context, limit=1)

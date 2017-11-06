@@ -35,8 +35,12 @@ from nti.app.analytics.interfaces import IEventsCollection
 from nti.app.analytics.interfaces import ISessionsCollection
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
 
+from nti.app.authentication import get_remote_user
+
 from nti.appserver.workspaces.interfaces import IWorkspace
 from nti.appserver.workspaces.interfaces import IUserService
+
+from nti.dataserver.authorization import is_admin_or_site_admin
 
 from nti.dataserver.interfaces import IDataserverFolder
 
@@ -96,10 +100,12 @@ class _AnalyticsWorkspace(object):
             return ()
 
         result = []
-        result.append(
-            _workspace_link(self, ACTIVE_TIMES_SUMMARY,
-                            name=ACTIVE_TIMES_SUMMARY)
-        )
+
+        if is_admin_or_site_admin(get_remote_user()):
+            result.append(
+              _workspace_link(self, ACTIVE_TIMES_SUMMARY,
+                              name=ACTIVE_TIMES_SUMMARY)
+            )
         result.append(
             _workspace_link(self, SYNC_PARAMS, name=SYNC_PARAMS)
         )
@@ -170,6 +176,10 @@ class SessionsCollection(object):
         if not has_analytics():
             return ()
         links = []
-        for rel in (ANALYTICS_SESSION, END_ANALYTICS_SESSION, ACTIVE_SESSION_COUNT):
+
+        if is_admin_or_site_admin(get_remote_user()):
+            links.append(_workspace_link(self, ACTIVE_SESSION_COUNT, name=ACTIVE_SESSION_COUNT))
+
+        for rel in (ANALYTICS_SESSION, END_ANALYTICS_SESSION):
             links.append(_workspace_link(self, rel, name=rel))
         return links

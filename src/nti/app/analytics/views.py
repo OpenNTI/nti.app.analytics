@@ -84,6 +84,8 @@ from nti.contenttypes.presentation.interfaces import INTIRelatedWorkRef
 
 from nti.dataserver import authorization as nauth
 
+from nti.dataserver.authorization import is_admin_or_site_admin
+
 from nti.dataserver.interfaces import IUser
 
 from nti.externalization import internalization
@@ -645,7 +647,6 @@ class UserLocationHtmlView(AbstractUserLocationView):
 
 @view_config(route_name='objects.generic.traversal',
              renderer='rest',
-             permission=nauth.ACT_NTI_ADMIN,
              context=IUser,
              request_method='GET',
              name=HISTORICAL_SESSIONS_VIEW_NAME)
@@ -675,6 +676,10 @@ class UserRecentSessions(AbstractUserLocationView):
         return self._time_param('notAfter')
 
     def __call__(self):
+        if not self.remoteUser == self.context \
+           and not is_admin_or_site_admin(self.remoteUser):
+            raise hexc.HTTPForbidden()
+
         not_after = self.not_after
         not_before = self.not_before
 
@@ -699,11 +704,12 @@ class UserRecentSessions(AbstractUserLocationView):
              name=ACTIVE_SESSION_COUNT,
              context=ISessionsCollection,
              renderer='rest',
-             request_method='GET',
-             permission=nauth.ACT_NTI_ADMIN)
+             request_method='GET')
 class AnalyticsSessionCount(AbstractAuthenticatedView):
 
     def __call__(self):
+        if not is_admin_or_site_admin(self.remoteUser):
+            raise hexc.HTTPForbidden()
         stats_provider = component.queryUtility(IActiveSessionStatsSource)
         if not stats_provider:
             raise hexc.HTTPNotFound()
@@ -714,8 +720,7 @@ class AnalyticsSessionCount(AbstractAuthenticatedView):
            name=ACTIVE_TIMES_SUMMARY,
            context=IAnalyticsWorkspace,
            renderer='rest',
-           request_method='GET',
-           permission=nauth.ACT_NTI_ADMIN)
+           request_method='GET')
 class AnalyticsTimeSummary(AbstractAuthenticatedView):
     """
     Builds heat map information for a matrix of weekday and hours.
@@ -741,6 +746,9 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
 
 
     def __call__(self):
+        if not is_admin_or_site_admin(self.remoteUser):
+            raise hexc.HTTPForbidden()
+
         weeks = self.request.params.get('weeks', 4)
         try:
             weeks = int(weeks)
