@@ -8,12 +8,10 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import calendar
 import csv
 import six
+import calendar
 import datetime
-
-
 from io import BytesIO
 
 from requests.structures import CaseInsensitiveDict
@@ -54,10 +52,10 @@ from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import handle_new_session
 from nti.analytics.sessions import update_session
 
-from nti.analytics.stats.interfaces import IActiveSessionStatsSource
-from nti.analytics.stats.interfaces import IActiveTimesStatsSource
-
 from nti.analytics.progress import get_assessment_progresses_for_course
+
+from nti.analytics.stats.interfaces import IActiveTimesStatsSource
+from nti.analytics.stats.interfaces import IActiveSessionStatsSource
 
 from nti.app.analytics.interfaces import IEventsCollection
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
@@ -66,6 +64,8 @@ from nti.app.analytics.interfaces import ISessionsCollection
 from nti.app.analytics.utils import set_research_status
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
+
+from nti.app.externalization.error import raise_json_error
 
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
@@ -525,11 +525,11 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
         start_date = self.course_start_date
         start_month = start_date.month if start_date else None
         if start_month < 5:
-            semester = _('Spring')
+            semester = _(u'Spring')
         elif start_month < 8:
-            semester = _('Summer')
+            semester = _(u'Summer')
         else:
-            semester = _('Fall')
+            semester = _(u'Fall')
 
         start_year = start_date.year if start_date else None
         return '%s %s' % (semester, start_year) if start_date else ''
@@ -585,7 +585,7 @@ class UserLocationCsvView(AbstractUserLocationView):
 
         location_data = self.get_data(self.context)
         if len(location_data) == 0:
-            return hexc.HTTPUnprocessableEntity(_("No locations were found"))
+            return hexc.HTTPUnprocessableEntity(_(u"No locations were found."))
 
         stream = BytesIO()
         fieldnames = ['number_of_students', 'city', 'state',
@@ -620,7 +620,7 @@ class UserLocationHtmlView(AbstractUserLocationView):
     def __call__(self):
         location_data = self.get_data(self.context)
         if not location_data:
-            return hexc.HTTPUnprocessableEntity(_("No locations were found"))
+            return hexc.HTTPUnprocessableEntity(_(u"No locations were found"))
 
         locations = []
         options = LocatedExternalDict()
@@ -676,8 +676,8 @@ class UserRecentSessions(AbstractUserLocationView):
         return self._time_param('notAfter')
 
     def __call__(self):
-        if not self.remoteUser == self.context \
-           and not is_admin_or_site_admin(self.remoteUser):
+        if     not self.remoteUser == self.context \
+            and not is_admin_or_site_admin(self.remoteUser):
             raise hexc.HTTPForbidden()
 
         not_after = self.not_after
@@ -730,7 +730,6 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
         """
         We want `weeks` full weeks of data.
         """
-
         if not as_of_time:
             as_of_time = datetime.datetime.now()
 
@@ -753,10 +752,14 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
         try:
             weeks = int(weeks)
         except ValueError:
-            raise hexc.HTTPUnprocessableEntity('Weeks must be an integer')
-
+            raise_json_error(self.request,
+                             hexc.HTTPUnprocessableEntity,
+                             {
+                                 'message': _(u"Weeks must be an integer."),
+                             },
+                             None)
+            
         start, end = self.times_to_consider(weeks=weeks)
-
         source = component.queryUtility(IActiveTimesStatsSource)
         if not source:
             raise hexc.HTTPNotFound()
@@ -772,8 +775,7 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
 
         items = {}
         for idx, day in enumerate(calendar.day_name):
-                items[day] = [stats[idx][hour].Count for hour in range(0, 24)]
+            items[day] = [stats[idx][hour].Count for hour in range(0, 24)]
 
         result['WeekDays'] = items
-
         return result

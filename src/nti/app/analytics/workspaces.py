@@ -21,14 +21,14 @@ from zope.traversing.interfaces import IPathAdapter
 
 from nti.analytics import has_analytics
 
-from nti.app.analytics import ACTIVE_SESSION_COUNT
-from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import ANALYTICS
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import BATCH_EVENTS
 from nti.app.analytics import ANALYTICS_TITLE
 from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import ANALYTICS_SESSIONS
+from nti.app.analytics import ACTIVE_SESSION_COUNT
+from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import END_ANALYTICS_SESSION
 
 from nti.app.analytics.interfaces import IEventsCollection
@@ -100,11 +100,15 @@ class _AnalyticsWorkspace(object):
             return ()
 
         result = []
-
         if is_admin_or_site_admin(get_remote_user()):
-            result.append(_workspace_link(self, ACTIVE_TIMES_SUMMARY, name=ACTIVE_TIMES_SUMMARY))
+            result.append(
+                _workspace_link(self, ACTIVE_TIMES_SUMMARY,
+                                name=ACTIVE_TIMES_SUMMARY)
+            )
 
-        result.append(_workspace_link(self, SYNC_PARAMS, name=SYNC_PARAMS))
+        result.append(
+            _workspace_link(self, SYNC_PARAMS, name=SYNC_PARAMS)
+        )
 
         # For BWC provide workspace level links to our events and sessions
         # collection
@@ -174,7 +178,10 @@ class SessionsCollection(object):
         links = []
 
         if is_admin_or_site_admin(get_remote_user()):
-            links.append(_workspace_link(self, ACTIVE_SESSION_COUNT, name=ACTIVE_SESSION_COUNT))
+            links.append(
+                _workspace_link(self, ACTIVE_SESSION_COUNT,
+                                name=ACTIVE_SESSION_COUNT)
+            )
 
         for rel in (ANALYTICS_SESSION, END_ANALYTICS_SESSION):
             links.append(_workspace_link(self, rel, name=rel))
