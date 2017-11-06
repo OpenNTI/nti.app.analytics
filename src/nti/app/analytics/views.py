@@ -8,9 +8,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+import calendar
 import csv
 import six
 import datetime
+
 
 from io import BytesIO
 
@@ -37,6 +39,7 @@ from nti.analytics.model import AnalyticsClientParams
 from nti.app.analytics import MessageFactory as _
 
 from nti.app.analytics import ACTIVE_SESSION_COUNT
+from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import END_ANALYTICS_SESSION
@@ -52,6 +55,7 @@ from nti.analytics.sessions import handle_new_session
 from nti.analytics.sessions import update_session
 
 from nti.analytics.stats.interfaces import IActiveSessionStatsSource
+from nti.analytics.stats.interfaces import IActiveTimesStatsSource
 
 from nti.analytics.progress import get_assessment_progresses_for_course
 
@@ -704,3 +708,64 @@ class AnalyticsSessionCount(AbstractAuthenticatedView):
         if not stats_provider:
             raise hexc.HTTPNotFound()
         return stats_provider()
+
+
+@view_config(route_name='objects.generic.traversal',
+           name=ACTIVE_TIMES_SUMMARY,
+           context=IAnalyticsWorkspace,
+           renderer='rest',
+           request_method='GET',
+           permission=nauth.ACT_NTI_ADMIN)
+class AnalyticsTimeSummary(AbstractAuthenticatedView):
+    """
+    Builds heat map information for a matrix of weekday and hours.
+    """
+
+    def times_to_consider(self, as_of_time=None, weeks=4):
+        """
+        We want `weeks` full weeks of data.
+        """
+
+        if not as_of_time:
+            as_of_time = datetime.datetime.now()
+
+        # Go back to the beginning of today. It
+        # will be the *exclusive* end of the range
+        end_date = datetime.datetime(as_of_time.year,
+                                     as_of_time.month,
+                                     as_of_time.day)
+
+        #The start of our range will be `weeks` weeks before
+        start_date = end_date - datetime.timedelta(weeks=weeks)
+        return start_date, end_date
+
+
+    def __call__(self):
+        weeks = self.request.params.get('weeks', 4)
+        try:
+            weeks = int(weeks)
+        except ValueError:
+            raise hexc.HTTPUnprocessableEntity('Weeks must be an integer')
+
+        start, end = self.times_to_consider(weeks=weeks)
+
+        source = component.queryUtility(IActiveTimesStatsSource)
+        if not source:
+            raise hexc.HTTPNotFound()
+
+        stats = source.active_times_for_window(start, end)
+
+        result = LocatedExternalDict()
+        result.__parent__ = self.request.context
+        result.__name__ = self.request.view_name
+
+        result['StartTime'] = start
+        result['EndTime'] = end
+
+        items = {}
+        for idx, day in enumerate(calendar.day_name):
+                items[day] = [stats[idx][hour].Count for hour in range(0, 24)]
+
+        result['WeekDays'] = items
+
+        return result
