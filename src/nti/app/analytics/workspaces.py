@@ -40,11 +40,20 @@ from nti.app.authentication import get_remote_user
 from nti.appserver.workspaces.interfaces import IWorkspace
 from nti.appserver.workspaces.interfaces import IUserService
 
+from nti.dataserver.authorization import ACT_CREATE
+from nti.dataserver.authorization import ACT_READ
+from nti.dataserver.authorization_acl import ace_allowing
+from nti.dataserver.authorization_acl import ace_denying
+from nti.dataserver.authorization_acl import acl_from_aces
 from nti.dataserver.authorization import is_admin_or_site_admin
 
 from nti.dataserver.interfaces import IDataserverFolder
+from nti.dataserver.interfaces import EVERYONE_USER_NAME
+from nti.dataserver.interfaces import IUser
 
 from nti.links.links import Link
+
+from nti.traversal.traversal import find_interface
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -87,6 +96,23 @@ class _AnalyticsWorkspace(object):
             self.__parent__ = parent
         self.events = EventsCollection(self)
         self.sessions = SessionsCollection(self)
+
+    def __acl__(self):
+        aces = []
+        # admins always have read access on this.
+        user = get_remote_user()
+        if is_admin_or_site_admin(user):
+            aces.append(ace_allowing(user, ACT_READ, type(self)))
+
+        # If our parent is a user we want to grant that user
+        # read access but deny read access to others. The user lets
+        # members of the shared community have read access
+        # so we have to explicitly deny
+        if IUser.providedBy(self.__parent__):
+            aces.append(ace_allowing(self.__parent__, ACT_READ, type(self)))
+        aces.append(ace_denying(EVERYONE_USER_NAME, ACT_READ, type(self)))
+
+        return acl_from_aces(aces)
 
     @property
     def collections(self):
@@ -166,6 +192,18 @@ class SessionsCollection(object):
 
     def __init__(self, parent):
         self.__parent__ = parent
+
+    def __acl__(self):
+        user_context = find_interface(self, IUser, strict=False)
+
+        # If we are in root (no user context) everyone can create,
+        # otherwise everyone can create
+        if user_context is None:
+            user_context = EVERYONE_USER_NAME
+
+        aces = [ace_allowing(user_context, ACT_CREATE, type(self))]
+
+        return acl_from_aces(aces)
 
     @Lazy
     def container(self):

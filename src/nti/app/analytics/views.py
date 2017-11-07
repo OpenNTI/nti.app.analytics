@@ -41,7 +41,6 @@ from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import END_ANALYTICS_SESSION
-from nti.app.analytics import HISTORICAL_SESSIONS_VIEW_NAME
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
@@ -203,7 +202,7 @@ class BatchEventParams(AbstractAuthenticatedView):
              context=ISessionsCollection,
              renderer='rest',
              request_method='POST',
-             permission=nauth.ACT_READ)
+             permission=nauth.ACT_CREATE)
 class AnalyticsSession(AbstractAuthenticatedView):
 
     def __call__(self):
@@ -222,7 +221,7 @@ class AnalyticsSession(AbstractAuthenticatedView):
              context=ISessionsCollection,
              renderer='rest',
              request_method='POST',
-             permission=nauth.ACT_READ)
+             permission=nauth.ACT_CREATE)
 class EndAnalyticsSession(AbstractAuthenticatedView,
                           ModeledContentUploadRequestUtilsMixin):
     """
@@ -267,7 +266,7 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
              context=ISessionsCollection,
              renderer='rest',
              request_method='POST',
-             permission=nauth.ACT_READ)
+             permission=nauth.ACT_CREATE)
 class UpdateAnalyticsSessions(AbstractAuthenticatedView,
                               ModeledContentUploadRequestUtilsMixin):
 
@@ -647,9 +646,9 @@ class UserLocationHtmlView(AbstractUserLocationView):
 
 @view_config(route_name='objects.generic.traversal',
              renderer='rest',
-             context=IUser,
+             context=ISessionsCollection,
              request_method='GET',
-             name=HISTORICAL_SESSIONS_VIEW_NAME)
+             permission=nauth.ACT_READ)
 class UserRecentSessions(AbstractUserLocationView):
     """
     Provides a collection of recent sessions the users has had.
@@ -675,10 +674,11 @@ class UserRecentSessions(AbstractUserLocationView):
     def not_after(self):
         return self._time_param('notAfter')
 
+    def _requires_admin(self, user_context):
+        return not user_context or self.remoteUser != user_context
+
     def __call__(self):
-        if     not self.remoteUser == self.context \
-            and not is_admin_or_site_admin(self.remoteUser):
-            raise hexc.HTTPForbidden()
+        user_context = find_interface(self.context, IUser, strict=False)
 
         not_after = self.not_after
         not_before = self.not_before
@@ -687,7 +687,7 @@ class UserRecentSessions(AbstractUserLocationView):
             not_after = datetime.datetime.utcnow()
             not_before = not_after - datetime.timedelta(days=self.DEFAULT_WINDOW_DAYS)
 
-        sessions = get_user_sessions(self.context,
+        sessions = get_user_sessions(user_context,
                                      timestamp=not_before,
                                      max_timestamp=not_after)
         sessions = [self._make_session(s) for s in sessions]
@@ -704,7 +704,8 @@ class UserRecentSessions(AbstractUserLocationView):
              name=ACTIVE_SESSION_COUNT,
              context=ISessionsCollection,
              renderer='rest',
-             request_method='GET')
+             request_method='GET',
+             permission=nauth.ACT_READ)
 class AnalyticsSessionCount(AbstractAuthenticatedView):
 
     def __call__(self):
@@ -758,7 +759,7 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
                                  'message': _(u"Weeks must be an integer."),
                              },
                              None)
-            
+
         start, end = self.times_to_consider(weeks=weeks)
         source = component.queryUtility(IActiveTimesStatsSource)
         if not source:
