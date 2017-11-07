@@ -721,7 +721,8 @@ class AnalyticsSessionCount(AbstractAuthenticatedView):
            name=ACTIVE_TIMES_SUMMARY,
            context=IAnalyticsWorkspace,
            renderer='rest',
-           request_method='GET')
+           request_method='GET',
+           permission=nauth.ACT_READ)
 class AnalyticsTimeSummary(AbstractAuthenticatedView):
     """
     Builds heat map information for a matrix of weekday and hours.
