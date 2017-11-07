@@ -23,6 +23,8 @@ from nti.analytics.progress import get_topic_progress
 
 from nti.analytics.sessions import get_recent_user_sessions
 
+from nti.app.analytics import ANALYTICS
+from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import HISTORICAL_SESSIONS_VIEW_NAME
 
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
@@ -146,7 +148,7 @@ class _UserSessionDecorator(AbstractAuthenticatedRequestAwareDecorator):
         links = result.setdefault(LINKS, [])
         link = Link(context,
                     rel=HISTORICAL_SESSIONS_VIEW_NAME,
-                    elements=('@@' + HISTORICAL_SESSIONS_VIEW_NAME,))
+                    elements=(ANALYTICS, ANALYTICS_SESSIONS, ))
         interface.alsoProvides(link, ILocation)
         link.__name__ = ''
         link.__parent__ = context
