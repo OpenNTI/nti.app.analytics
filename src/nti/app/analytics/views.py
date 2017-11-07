@@ -159,7 +159,7 @@ def _process_batch_events(events):
              context=IEventsCollection,
              renderer='rest',
              request_method='POST',
-             permission=nauth.ACT_READ)
+             permission=nauth.ACT_CREATE)
 class BatchEvents(AbstractAuthenticatedView,
                   ModeledContentUploadRequestUtilsMixin):
     """

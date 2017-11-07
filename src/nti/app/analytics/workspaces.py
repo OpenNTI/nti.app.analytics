@@ -171,6 +171,18 @@ class EventsCollection(object):
 
     accepts = ()
 
+    def __acl__(self):
+        user_context = find_interface(self, IUser, strict=False)
+
+        # If we are in root (no user context) everyone can create,
+        # otherwise the user can create
+        if user_context is None:
+            user_context = EVERYONE_USER_NAME
+
+        aces = [ace_allowing(user_context, ACT_CREATE, type(self))]
+
+        return acl_from_aces(aces)
+
     def __init__(self, parent):
         self.__parent__ = parent
 
@@ -197,7 +209,7 @@ class SessionsCollection(object):
         user_context = find_interface(self, IUser, strict=False)
 
         # If we are in root (no user context) everyone can create,
-        # otherwise everyone can create
+        # otherwise the user can create
         if user_context is None:
             user_context = EVERYONE_USER_NAME
 
