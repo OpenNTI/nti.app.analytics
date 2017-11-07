@@ -16,6 +16,12 @@
 			 factory=".workspaces.analytics_path_adapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
+	<!-- Expose analytics views -->
+	<adapter name="analytics"
+			 for="nti.dataserver.interfaces.IUser pyramid.interfaces.IRequest"
+			 factory=".workspaces.analytics_path_adapter"
+			 provides="zope.traversing.interfaces.IPathAdapter" />
+
 	<!-- Progress decorators -->
 	<subscriber factory=".decorators._CourseOutlineNodeProgressLinkDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
