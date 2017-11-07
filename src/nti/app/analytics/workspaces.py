@@ -159,17 +159,7 @@ class _AnalyticsWorkspace(object):
     def __len__(self):
         return len(self.collections)
 
-
-@interface.implementer(IEventsCollection)
-class EventsCollection(object):
-    """
-    Pseudo-collection of analytics events.
-    """
-
-    __name__ = 'batch_events'
-    name = 'Events'
-
-    accepts = ()
+class AnalyticsCollectionACLMixin(object):
 
     def __acl__(self):
         user_context = find_interface(self, IUser, strict=False)
@@ -183,6 +173,18 @@ class EventsCollection(object):
 
         return acl_from_aces(aces)
 
+
+@interface.implementer(IEventsCollection)
+class EventsCollection(AnalyticsCollectionACLMixin):
+    """
+    Pseudo-collection of analytics events.
+    """
+
+    __name__ = 'batch_events'
+    name = 'Events'
+
+    accepts = ()
+
     def __init__(self, parent):
         self.__parent__ = parent
 
@@ -192,7 +194,7 @@ class EventsCollection(object):
 
 
 @interface.implementer(ISessionsCollection)
-class SessionsCollection(object):
+class SessionsCollection(AnalyticsCollectionACLMixin):
     """
     Pseudo-collection of analytics sessions.
     """
@@ -204,18 +206,6 @@ class SessionsCollection(object):
 
     def __init__(self, parent):
         self.__parent__ = parent
-
-    def __acl__(self):
-        user_context = find_interface(self, IUser, strict=False)
-
-        # If we are in root (no user context) everyone can create,
-        # otherwise the user can create
-        if user_context is None:
-            user_context = EVERYONE_USER_NAME
-
-        aces = [ace_allowing(user_context, ACT_CREATE, type(self))]
-
-        return acl_from_aces(aces)
 
     @Lazy
     def container(self):

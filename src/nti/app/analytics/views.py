@@ -674,9 +674,6 @@ class UserRecentSessions(AbstractUserLocationView):
     def not_after(self):
         return self._time_param('notAfter')
 
-    def _requires_admin(self, user_context):
-        return not user_context or self.remoteUser != user_context
-
     def __call__(self):
         user_context = find_interface(self.context, IUser, strict=False)
 
