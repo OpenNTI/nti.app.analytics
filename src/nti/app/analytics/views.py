@@ -36,20 +36,20 @@ from nti.analytics.model import AnalyticsClientParams
 
 from nti.app.analytics import MessageFactory as _
 
-from nti.app.analytics import ACTIVE_SESSION_COUNT
-from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import ANALYTICS_SESSION
+from nti.app.analytics import ACTIVE_SESSION_COUNT
+from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import END_ANALYTICS_SESSION
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
 from nti.analytics.resource_views import get_video_progress_for_course
 
+from nti.analytics.sessions import update_session
 from nti.analytics.sessions import get_user_sessions
 from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import handle_new_session
-from nti.analytics.sessions import update_session
 
 from nti.analytics.progress import get_assessment_progresses_for_course
 
@@ -116,7 +116,7 @@ def _get_last_mod(progress, max_last_mod):
     """
     result = max_last_mod
 
-    if        not max_last_mod \
+    if     not max_last_mod \
         or (    progress.last_modified
             and progress.last_modified > max_last_mod):
         result = progress.last_modified
@@ -297,8 +297,8 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
                                         ip_addr=ip_addr)
                 results.append(result)
             except ValueError as e:
-                # Append invalid session information.  We still return a 200
-                # though.
+                # Append invalid session information.  
+                # We still return a 200 though.
                 val = dict()
                 val['Error'] = e.message
                 results.append(val)
@@ -410,7 +410,8 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
             node_progress = get_progress_for_ntiid(user, node_ntiid)
             if node_progress:
                 item_dict[node_ntiid] = to_external_object(node_progress)
-                node_last_modified = _get_last_mod(node_progress, node_last_modified)
+                node_last_modified = _get_last_mod(node_progress, 
+                                                   node_last_modified)
 
         # Get progress for self-assessments and assignments
         try:
@@ -429,7 +430,8 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
             progresses = get_assessment_progresses_for_course(user, course)
             for progress in progresses:
                 item_dict[progress.progress_id] = to_external_object(progress)
-                node_last_modified = _get_last_mod(progress, node_last_modified)
+                node_last_modified = _get_last_mod(progress, 
+                                                   node_last_modified)
 
         # We could summarize progress for node. This might be difficult unless we assume
         # that every child ntiid contributes towards progress.  If we need to filter
@@ -470,7 +472,8 @@ class UserCourseVideoProgress(AbstractAuthenticatedView,
 
         for video_progress in video_progress_col:
             item_dict[video_progress.ResourceID] = to_external_object(video_progress)
-            node_last_modified = _get_last_mod(video_progress, node_last_modified)
+            node_last_modified = _get_last_mod(video_progress, 
+                                               node_last_modified)
 
         # Setting this will enable the renderer to return a 304, if needed.
         self.request.response.last_modified = node_last_modified
@@ -715,11 +718,11 @@ class AnalyticsSessionCount(AbstractAuthenticatedView):
 
 
 @view_config(route_name='objects.generic.traversal',
-           name=ACTIVE_TIMES_SUMMARY,
-           context=IAnalyticsWorkspace,
-           renderer='rest',
-           request_method='GET',
-           permission=nauth.ACT_READ)
+             name=ACTIVE_TIMES_SUMMARY,
+             context=IAnalyticsWorkspace,
+             renderer='rest',
+             request_method='GET',
+             permission=nauth.ACT_READ)
 class AnalyticsTimeSummary(AbstractAuthenticatedView):
     """
     Builds heat map information for a matrix of weekday and hours.
@@ -738,10 +741,9 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
                                      as_of_time.month,
                                      as_of_time.day)
 
-        #The start of our range will be `weeks` weeks before
+        # The start of our range will be `weeks` weeks before
         start_date = end_date - datetime.timedelta(weeks=weeks)
         return start_date, end_date
-
 
     def __call__(self):
         if not is_admin_or_site_admin(self.remoteUser):
