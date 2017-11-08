@@ -40,8 +40,8 @@ from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import ACTIVE_SESSION_COUNT
 from nti.app.analytics import ACTIVE_TIMES_SUMMARY
-from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 from nti.app.analytics import END_ANALYTICS_SESSION
+from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
@@ -253,7 +253,6 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
 
         if batch_events:
             events = batch_events.get('events')
-
             if events:
                 total_count = len(events)
                 event_count, malformed_count = _process_batch_events(events)
@@ -419,7 +418,8 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
         try:
             course = find_interface(lesson, ICourseInstance, strict=False)
             if course is None:
-                content_unit = find_object_with_ntiid(self.context.ContentNTIID)
+                ntiid = self.context.ContentNTIID
+                content_unit = find_object_with_ntiid(ntiid)
                 course = ICourseInstance(content_unit)
         except TypeError:
             logger.warn('No course found for content unit; cannot return progress for assessments (%s)',
@@ -473,7 +473,8 @@ class UserCourseVideoProgress(AbstractAuthenticatedView,
         video_progress_col = get_video_progress_for_course(user, course)
 
         for video_progress in video_progress_col:
-            item_dict[video_progress.ResourceID] = to_external_object(video_progress)
+            rid = video_progress.ResourceID
+            item_dict[rid] = to_external_object(video_progress)
             node_last_modified = _get_last_mod(video_progress,
                                                node_last_modified)
 
@@ -498,9 +499,7 @@ class UserResearchStudyView(AbstractAuthenticatedView,
         allow_research = values.get('allow_research')
         allow_research = is_true(allow_research)
         user = self.request.context
-
         set_research_status(user, allow_research)
-
         logger.info('Setting research status for user (user=%s) (allow_research=%s)',
                     user.username, allow_research)
         return hexc.HTTPNoContent()
@@ -648,6 +647,7 @@ class UserLocationHtmlView(AbstractUserLocationView):
 
         return options
 
+
 class StatsSourceMixin(object):
     """
     Something that looks up a stats source based context
@@ -662,6 +662,7 @@ class StatsSourceMixin(object):
         if user_context:
             return component.queryAdapter(user_context, source_iface)
         return component.queryUtility(source_iface)
+
 
 class WindowedViewMixin(object):
 
@@ -681,11 +682,11 @@ class WindowedViewMixin(object):
     def time_window(self):
         not_after = self.not_after
         not_before = self.not_before
-
         if not_after is None and not_before is None:
             not_after = datetime.datetime.utcnow()
             not_before = not_after - datetime.timedelta(days=self.DEFAULT_WINDOW_DAYS)
         return not_before, not_after
+
 
 @view_config(route_name='objects.generic.traversal',
              renderer='rest',
@@ -801,6 +802,7 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView, StatsSourceMixin):
         result['WeekDays'] = items
         return result
 
+
 @view_config(route_name='objects.generic.traversal',
              renderer='rest',
              name=ACTIVITY_SUMMARY_BY_DATE,
@@ -816,12 +818,8 @@ class ActivitySummaryByDate(AbstractUserLocationView, StatsSourceMixin, Windowed
 
     DEFAULT_WINDOW_DAYS = 90
 
-
     def __call__(self):
-        user_context = find_interface(self.context, IUser, strict=False)
-
         not_before, not_after = self.time_window()
-
         source = self._query_source(IDailyActivityStatsSource)
         if source is None:
             raise hexc.HTTPNotFound()
@@ -833,7 +831,7 @@ class ActivitySummaryByDate(AbstractUserLocationView, StatsSourceMixin, Windowed
 
         result['StartTime'] = not_before
         result['EndTime'] = not_after
-        result['Dates'] = {k.strftime('%Y-%m-%d'):v.Count for k,v in stats.items()}
+        result['Dates'] = {
+            k.strftime('%Y-%m-%d'): v.Count for k, v in stats.items()
+        }
         return result
-
-
