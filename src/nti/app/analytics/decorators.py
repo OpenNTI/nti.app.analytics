@@ -133,7 +133,7 @@ class _UserSessionDecorator(AbstractAuthenticatedRequestAwareDecorator):
     def _predicate(self, context, unused_result):
         return self._is_authenticated \
            and has_analytics() \
-           and (self.remoteUser == context
+           and (   self.remoteUser == context
                 or is_admin_or_site_admin(self.remoteUser))
 
     def _do_decorate_external(self, context, result):

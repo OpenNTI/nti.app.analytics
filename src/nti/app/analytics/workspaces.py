@@ -40,16 +40,17 @@ from nti.app.authentication import get_remote_user
 from nti.appserver.workspaces.interfaces import IWorkspace
 from nti.appserver.workspaces.interfaces import IUserService
 
-from nti.dataserver.authorization import ACT_CREATE
 from nti.dataserver.authorization import ACT_READ
-from nti.dataserver.authorization_acl import ace_allowing
-from nti.dataserver.authorization_acl import ace_denying
-from nti.dataserver.authorization_acl import acl_from_aces
+from nti.dataserver.authorization import ACT_CREATE
 from nti.dataserver.authorization import is_admin_or_site_admin
 
+from nti.dataserver.authorization_acl import ace_denying
+from nti.dataserver.authorization_acl import ace_allowing
+from nti.dataserver.authorization_acl import acl_from_aces
+
+from nti.dataserver.interfaces import IUser
 from nti.dataserver.interfaces import IDataserverFolder
 from nti.dataserver.interfaces import EVERYONE_USER_NAME
-from nti.dataserver.interfaces import IUser
 
 from nti.links.links import Link
 
@@ -158,6 +159,7 @@ class _AnalyticsWorkspace(object):
 
     def __len__(self):
         return len(self.collections)
+
 
 class AnalyticsCollectionACLMixin(object):
 

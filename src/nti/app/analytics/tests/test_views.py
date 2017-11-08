@@ -73,11 +73,11 @@ from nti.analytics.database.sessions import Sessions
 
 from nti.analytics.database.users import create_user
 
-from nti.analytics.model import ResourceEvent
 from nti.analytics.model import BlogViewEvent
 from nti.analytics.model import NoteViewEvent
-from nti.analytics.model import TopicViewEvent
+from nti.analytics.model import ResourceEvent
 from nti.analytics.model import SkipVideoEvent
+from nti.analytics.model import TopicViewEvent
 from nti.analytics.model import WatchVideoEvent
 from nti.analytics.model import AnalyticsSession
 from nti.analytics.model import AnalyticsSessions
@@ -102,8 +102,8 @@ from nti.app.analytics import SYNC_PARAMS
 
 from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
 
-from nti.app.analytics.views import UserLocationJsonView
 from nti.app.analytics.views import GEO_LOCATION_VIEW
+from nti.app.analytics.views import UserLocationJsonView
 
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
@@ -225,7 +225,8 @@ class _AbstractTestViews(ApplicationLayerTest):
     layer = LegacyInstructedCourseApplicationTestLayer
 
     def setUp(self):
-        self.db = AnalyticsDB(dburi='sqlite://', testmode=True, defaultSQLite=True)
+        self.db = AnalyticsDB(
+            dburi='sqlite://', testmode=True, defaultSQLite=True)
         component.getGlobalSiteManager().registerUtility(self.db,
                                                          analytic_interfaces.IAnalyticsDB)
         self.session = self.db.session
@@ -233,11 +234,12 @@ class _AbstractTestViews(ApplicationLayerTest):
         gsm = component.getGlobalSiteManager()
         self.old_intid_util = gsm.getUtility(IAnalyticsIntidIdentifier)
         self.old_ntiid_util = gsm.getUtility(IAnalyticsNTIIDIdentifier)
-        self.old_root_context_util = gsm.getUtility(IAnalyticsRootContextIdentifier)
+        self.old_root_context_util = gsm.getUtility(
+            IAnalyticsRootContextIdentifier)
 
         self.test_identifier = TestIdentifier()
         gsm.registerUtility(self.test_identifier,
-                                IAnalyticsIntidIdentifier)
+                            IAnalyticsIntidIdentifier)
         gsm.registerUtility(self.test_identifier,
                             IAnalyticsNTIIDIdentifier)
         gsm.registerUtility(self.test_identifier,
@@ -445,8 +447,8 @@ class TestBatchEvents(_AbstractTestViews):
                     has_entries('RecommendedAnalyticsSyncInterval', DEFAULT_ANALYTICS_FREQUENCY,
                                 'RecommendedBatchEventsSendFrequency', DEFAULT_ANALYTICS_FREQUENCY,
                                 'RecommendedBatchEventsSize', DEFAULT_ANALYTICS_BATCH_SIZE,
-                                 'RecommendedBatchSessionsSendFrequency', DEFAULT_ANALYTICS_FREQUENCY,
-                                  'RecommendedBatchSessionsSize', DEFAULT_ANALYTICS_BATCH_SIZE))
+                                'RecommendedBatchSessionsSendFrequency', DEFAULT_ANALYTICS_FREQUENCY,
+                                'RecommendedBatchSessionsSize', DEFAULT_ANALYTICS_BATCH_SIZE))
 
 
 class TestAnalyticsSession(_AbstractTestViews):
@@ -497,7 +499,7 @@ class TestAnalyticsSession(_AbstractTestViews):
 
         # Batch information
         io = BatchResourceEvents(events=[video_event, resource_event,
-                                 course_catalog_event])
+                                         course_catalog_event])
         batch_events = toExternalObject(io)
 
         # End our session
@@ -1180,8 +1182,7 @@ class TestUserLocationView(_AbstractTestViews):
 
         # Same thing, except we have two users in the same location.
         result = fetch_csv()
-        predicted_result = get_csv_string(
-            convert_to_utf8(json_view.get_data(self)[0]))
+        predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))
         assert_that(result.body, contains_string(predicted_result))
 
         # Add another user in the first location
