@@ -12,11 +12,13 @@ from hamcrest import has_item
 from hamcrest import has_entries
 from hamcrest import assert_that
 
-from nti.app.analytics import SYNC_PARAMS
-from nti.app.analytics import BATCH_EVENTS
+from nti.app.analytics import ACTIVE_TIMES_SUMMARY
+from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 from nti.app.analytics import ANALYTICS_TITLE
 from nti.app.analytics import ANALYTICS_SESSION
+from nti.app.analytics import BATCH_EVENTS
 from nti.app.analytics import END_ANALYTICS_SESSION
+from nti.app.analytics import SYNC_PARAMS
 
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
@@ -50,6 +52,8 @@ class TestWorkspaces(ApplicationLayerTest):
                                                      has_entries('rel', BATCH_EVENTS,
                                                                  'rel', ANALYTICS_SESSION,
                                                                  'rel', END_ANALYTICS_SESSION,
+                                                                 'rel', ACTIVE_TIMES_SUMMARY,
+                                                                 'rel', ACTIVITY_SUMMARY_BY_DATE,
                                                                  'rel', SYNC_PARAMS)),
                                          'Items', has_item(
                                                      has_entries('Title', 'Events',
