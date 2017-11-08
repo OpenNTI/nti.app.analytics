@@ -27,6 +27,8 @@ from nti.app.analytics import ANALYTICS
 from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import HISTORICAL_SESSIONS_VIEW_NAME
 
+from nti.app.analytics.workspaces import AnalyticsWorkspace
+
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
@@ -125,6 +127,26 @@ class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
         link.__parent__ = context
         links.append(link)
 
+@component.adapter(IUser)
+@interface.implementer(IExternalMappingDecorator)
+class _UserAnalyticsWorkspace(AbstractAuthenticatedRequestAwareDecorator):
+
+    def _predicate(self, context, unused_result):
+        return self._is_authenticated \
+           and has_analytics() \
+           and (self.remoteUser == context
+                or is_admin_or_site_admin(self.remoteUser))
+
+    def _do_decorate_external(self, context, result):
+        workspace = AnalyticsWorkspace(None, root=context)
+
+        links = result.setdefault(LINKS, [])
+        link = Link(workspace,
+                    rel=ANALYTICS)
+        interface.alsoProvides(link, ILocation)
+        link.__name__ = ''
+        link.__parent__ = context
+        links.append(link)
 
 @component.adapter(IUser)
 @interface.implementer(IExternalMappingDecorator)

@@ -44,6 +44,11 @@
 				for="nti.dataserver.interfaces.IUser
 					 pyramid.interfaces.IRequest"  />
 
+	<subscriber factory=".decorators._UserAnalyticsWorkspace"
+				provides="nti.externalization.interfaces.IExternalObjectDecorator"
+				for="nti.dataserver.interfaces.IUser
+					 pyramid.interfaces.IRequest"  />
+
 	<!-- JZ 1.15.2015 - Disable until needed
 	<subscriber factory=".decorators._TopicProgressDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"

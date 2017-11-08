@@ -1203,6 +1203,28 @@ class TestUserLocationView(_AbstractTestViews):
         second_location = get_csv_string(convert_to_utf8(json_data[1]))
         assert_that(result.body, contains_string(second_location))
 
+class TestUserAnalyticsWorkspace(ApplicationLayerTest):
+
+    default_origin = 'http://platform.ou.edu'
+
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_analytics_workspace_link(self):
+        with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
+            self._create_user(u'new_user1',
+                              external_value={'realname': u'Billy Bob', 'email': u'foo@bar.com'})
+            user2 = self._create_user(u'new_user2',
+                                      external_value={'realname': u'Billy Rob', 'email': u'foo@bar.com'})
+
+        href = '/dataserver2/ResolveUser/new_user2'
+        res = self.testapp.get(href, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        res = res.json_body
+
+        user = res['Items'][0]
+        assert_that(user, not_none())
+
+        # As an admin we should have a analytics link
+        self.require_link_href_with_rel(user, 'analytics')
 
 class TestHistoricalSessions(ApplicationLayerTest):
 

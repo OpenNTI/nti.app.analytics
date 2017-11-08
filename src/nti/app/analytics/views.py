@@ -297,7 +297,7 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
                                         ip_addr=ip_addr)
                 results.append(result)
             except ValueError as e:
-                # Append invalid session information.  
+                # Append invalid session information.
                 # We still return a 200 though.
                 val = dict()
                 val['Error'] = e.message
@@ -410,7 +410,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
             node_progress = get_progress_for_ntiid(user, node_ntiid)
             if node_progress:
                 item_dict[node_ntiid] = to_external_object(node_progress)
-                node_last_modified = _get_last_mod(node_progress, 
+                node_last_modified = _get_last_mod(node_progress,
                                                    node_last_modified)
 
         # Get progress for self-assessments and assignments
@@ -430,7 +430,7 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
             progresses = get_assessment_progresses_for_course(user, course)
             for progress in progresses:
                 item_dict[progress.progress_id] = to_external_object(progress)
-                node_last_modified = _get_last_mod(progress, 
+                node_last_modified = _get_last_mod(progress,
                                                    node_last_modified)
 
         # We could summarize progress for node. This might be difficult unless we assume
@@ -472,7 +472,7 @@ class UserCourseVideoProgress(AbstractAuthenticatedView,
 
         for video_progress in video_progress_col:
             item_dict[video_progress.ResourceID] = to_external_object(video_progress)
-            node_last_modified = _get_last_mod(video_progress, 
+            node_last_modified = _get_last_mod(video_progress,
                                                node_last_modified)
 
         # Setting this will enable the renderer to return a 304, if needed.
@@ -745,10 +745,17 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
         start_date = end_date - datetime.timedelta(weeks=weeks)
         return start_date, end_date
 
-    def __call__(self):
-        if not is_admin_or_site_admin(self.remoteUser):
-            raise hexc.HTTPForbidden()
+    def _query_source(self):
+        """
+        If we have a user_context we must use the user specific adapter,
+        not the global utility (which queries all users)
+        """
+        user_context = find_interface(self.context, IUser, strict=False)
+        if user_context:
+            return component.queryAdapter(user_context, IActiveTimesStatsSource)
+        return component.queryUtility(IActiveTimesStatsSource)
 
+    def __call__(self):
         weeks = self.request.params.get('weeks', 4)
         try:
             weeks = int(weeks)
@@ -760,10 +767,11 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
                              },
                              None)
 
-        start, end = self.times_to_consider(weeks=weeks)
-        source = component.queryUtility(IActiveTimesStatsSource)
-        if not source:
+        source = self._query_source()
+        if source is None:
             raise hexc.HTTPNotFound()
+
+        start, end = self.times_to_consider(weeks=weeks)
 
         stats = source.active_times_for_window(start, end)
 
