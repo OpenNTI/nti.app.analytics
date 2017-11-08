@@ -40,6 +40,7 @@ from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import ACTIVE_SESSION_COUNT
 from nti.app.analytics import ACTIVE_TIMES_SUMMARY
+from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 from nti.app.analytics import END_ANALYTICS_SESSION
 
 from nti.analytics.resource_views import handle_events
@@ -55,6 +56,7 @@ from nti.analytics.progress import get_assessment_progresses_for_course
 
 from nti.analytics.stats.interfaces import IActiveTimesStatsSource
 from nti.analytics.stats.interfaces import IActiveSessionStatsSource
+from nti.analytics.stats.interfaces import IDailyActivityStatsSource
 
 from nti.app.analytics.interfaces import IEventsCollection
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
@@ -646,23 +648,22 @@ class UserLocationHtmlView(AbstractUserLocationView):
 
         return options
 
-
-@view_config(route_name='objects.generic.traversal',
-             renderer='rest',
-             context=ISessionsCollection,
-             request_method='GET',
-             permission=nauth.ACT_READ)
-class UserRecentSessions(AbstractUserLocationView):
+class StatsSourceMixin(object):
     """
-    Provides a collection of recent sessions the users has had.
-    By default this view returns 30 days worth of sessions. Query
-    params of start and end can be provided to give a date range
+    Something that looks up a stats source based context
     """
 
-    DEFAULT_WINDOW_DAYS = 30
+    def _query_source(self, source_iface):
+        """
+        If we have a user_context we must use the user specific adapter,
+        not the global utility (which queries all users)
+        """
+        user_context = find_interface(self.context, IUser, strict=False)
+        if user_context:
+            return component.queryAdapter(user_context, source_iface)
+        return component.queryUtility(source_iface)
 
-    def _make_session(self, session):
-        return IAnalyticsSession(session)
+class WindowedViewMixin(object):
 
     def _time_param(self, pname):
         time = self.request.params.get(pname)
@@ -677,15 +678,36 @@ class UserRecentSessions(AbstractUserLocationView):
     def not_after(self):
         return self._time_param('notAfter')
 
-    def __call__(self):
-        user_context = find_interface(self.context, IUser, strict=False)
-
+    def time_window(self):
         not_after = self.not_after
         not_before = self.not_before
 
         if not_after is None and not_before is None:
             not_after = datetime.datetime.utcnow()
             not_before = not_after - datetime.timedelta(days=self.DEFAULT_WINDOW_DAYS)
+        return not_before, not_after
+
+@view_config(route_name='objects.generic.traversal',
+             renderer='rest',
+             context=ISessionsCollection,
+             request_method='GET',
+             permission=nauth.ACT_READ)
+class UserRecentSessions(AbstractUserLocationView, WindowedViewMixin):
+    """
+    Provides a collection of recent sessions the users has had.
+    By default this view returns 30 days worth of sessions. Query
+    params of start and end can be provided to give a date range
+    """
+
+    DEFAULT_WINDOW_DAYS = 30
+
+    def _make_session(self, session):
+        return IAnalyticsSession(session)
+
+    def __call__(self):
+        user_context = find_interface(self.context, IUser, strict=False)
+
+        not_before, not_after = self.time_window()
 
         sessions = get_user_sessions(user_context,
                                      timestamp=not_before,
@@ -723,7 +745,7 @@ class AnalyticsSessionCount(AbstractAuthenticatedView):
              renderer='rest',
              request_method='GET',
              permission=nauth.ACT_READ)
-class AnalyticsTimeSummary(AbstractAuthenticatedView):
+class AnalyticsTimeSummary(AbstractAuthenticatedView, StatsSourceMixin):
     """
     Builds heat map information for a matrix of weekday and hours.
     """
@@ -745,16 +767,6 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
         start_date = end_date - datetime.timedelta(weeks=weeks)
         return start_date, end_date
 
-    def _query_source(self):
-        """
-        If we have a user_context we must use the user specific adapter,
-        not the global utility (which queries all users)
-        """
-        user_context = find_interface(self.context, IUser, strict=False)
-        if user_context:
-            return component.queryAdapter(user_context, IActiveTimesStatsSource)
-        return component.queryUtility(IActiveTimesStatsSource)
-
     def __call__(self):
         weeks = self.request.params.get('weeks', 4)
         try:
@@ -767,7 +779,7 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
                              },
                              None)
 
-        source = self._query_source()
+        source = self._query_source(IActiveTimesStatsSource)
         if source is None:
             raise hexc.HTTPNotFound()
 
@@ -788,3 +800,40 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView):
 
         result['WeekDays'] = items
         return result
+
+@view_config(route_name='objects.generic.traversal',
+             renderer='rest',
+             name=ACTIVITY_SUMMARY_BY_DATE,
+             context=IAnalyticsWorkspace,
+             request_method='GET',
+             permission=nauth.ACT_READ)
+class ActivitySummaryByDate(AbstractUserLocationView, StatsSourceMixin, WindowedViewMixin):
+    """
+    Provides a collection of recent sessions the users has had.
+    By default this view returns 30 days worth of sessions. Query
+    params of start and end can be provided to give a date range
+    """
+
+    DEFAULT_WINDOW_DAYS = 90
+
+
+    def __call__(self):
+        user_context = find_interface(self.context, IUser, strict=False)
+
+        not_before, not_after = self.time_window()
+
+        source = self._query_source(IDailyActivityStatsSource)
+        if source is None:
+            raise hexc.HTTPNotFound()
+        stats = source.stats_for_window(not_before, not_after)
+
+        result = LocatedExternalDict()
+        result.__parent__ = self.request.context
+        result.__name__ = self.request.view_name
+
+        result['StartTime'] = not_before
+        result['EndTime'] = not_after
+        result['Dates'] = {k.strftime('%Y-%m-%d'):v.Count for k,v in stats.items()}
+        return result
+
+
