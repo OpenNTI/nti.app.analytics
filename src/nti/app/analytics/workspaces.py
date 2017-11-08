@@ -29,8 +29,8 @@ from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import ACTIVE_SESSION_COUNT
 from nti.app.analytics import ACTIVE_TIMES_SUMMARY
-from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 from nti.app.analytics import END_ANALYTICS_SESSION
+from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 
 from nti.app.analytics.interfaces import IEventsCollection
 from nti.app.analytics.interfaces import ISessionsCollection
@@ -143,7 +143,6 @@ class _AnalyticsWorkspace(object):
         # For BWC surface some links for sessions at the workspace level
         for rel in (ANALYTICS_SESSION, END_ANALYTICS_SESSION):
             result.append(_workspace_link(self.sessions, rel, name=rel))
-
         return result
 
     def __getitem__(self, key):
@@ -170,7 +169,6 @@ class AnalyticsCollectionACLMixin(object):
             user_context = EVERYONE_USER_NAME
 
         aces = [ace_allowing(user_context, ACT_CREATE, type(self))]
-
         return acl_from_aces(aces)
 
 
