@@ -226,7 +226,7 @@ class _AbstractTestViews(ApplicationLayerTest):
 
     def setUp(self):
         self.db = AnalyticsDB(dburi='sqlite://', testmode=True, defaultSQLite=True)
-        component.getGlobalSiteManager().registerUtility(self.db, 
+        component.getGlobalSiteManager().registerUtility(self.db,
                                                          analytic_interfaces.IAnalyticsDB)
         self.session = self.db.session
 
@@ -244,7 +244,7 @@ class _AbstractTestViews(ApplicationLayerTest):
                             IAnalyticsRootContextIdentifier)
 
     def tearDown(self):
-        component.getGlobalSiteManager().unregisterUtility(self.db, 
+        component.getGlobalSiteManager().unregisterUtility(self.db,
                                                            provided=analytic_interfaces.IAnalyticsDB)
         self.session.close()
         component.getGlobalSiteManager().unregisterUtility(self.test_identifier)
@@ -266,7 +266,7 @@ class TestBatchEvents(_AbstractTestViews):
     @fudge.patch('nti.analytics.database.resource_tags._get_note_id')
     @fudge.patch('nti.analytics.database.boards._get_forum_id_from_forum')
     @fudge.patch('nti.analytics.database.boards._get_topic_id_from_topic')
-    def test_batch_event(self, mock_get_object, mock_root_context, mock_get_course, 
+    def test_batch_event(self, mock_get_object, mock_root_context, mock_get_course,
                          mock_get_blog, mock_get_note, mock_get_forum, mock_get_topic):
         mock_parent = mock_get_object.is_callable().returns_fake()
         mock_parent.has_attr(__parent__=201)
@@ -441,7 +441,7 @@ class TestBatchEvents(_AbstractTestViews):
         batch_url = '/dataserver2/analytics/@@' + SYNC_PARAMS
         result = self.testapp.get(batch_url, status=200)
         result = result.json_body
-        assert_that(result, 
+        assert_that(result,
                     has_entries('RecommendedAnalyticsSyncInterval', DEFAULT_ANALYTICS_FREQUENCY,
                                 'RecommendedBatchEventsSendFrequency', DEFAULT_ANALYTICS_FREQUENCY,
                                 'RecommendedBatchEventsSize', DEFAULT_ANALYTICS_BATCH_SIZE,
@@ -496,7 +496,7 @@ class TestAnalyticsSession(_AbstractTestViews):
             assert_that(current_session_id, none())
 
         # Batch information
-        io = BatchResourceEvents(events=[video_event, resource_event, 
+        io = BatchResourceEvents(events=[video_event, resource_event,
                                  course_catalog_event])
         batch_events = toExternalObject(io)
 
@@ -590,7 +590,7 @@ class TestAnalyticsSession(_AbstractTestViews):
         end_time = timestamp + 1
 
         new_session = AnalyticsSession(SessionStartTime=timestamp)
-        session_with_made_up_id = AnalyticsSession(SessionID=99999, SessionStartTime=timestamp, 
+        session_with_made_up_id = AnalyticsSession(SessionID=99999, SessionStartTime=timestamp,
                                                    SessionEndTime=end_time)
         sessions = [new_session, session_with_made_up_id]
 
@@ -755,7 +755,7 @@ class TestProgressView(_AbstractTestViews):
         assert_that(result, contains(video1))
 
         video_progress = result.get(video1)
-        assert_that(video_progress, 
+        assert_that(video_progress,
                     has_entry('MaxPossibleProgress', max_progress))
         assert_that(video_progress, has_entry('AbsoluteProgress', 30))
         assert_that(video_progress, has_entry('HasProgress', True))
@@ -778,7 +778,7 @@ class TestProgressView(_AbstractTestViews):
         assert_that(result, has_key(video1))
 
         video_progress = result.get(video1)
-        assert_that(video_progress, 
+        assert_that(video_progress,
                     has_entry('MaxPossibleProgress', max_progress))
         assert_that(video_progress, has_entry('AbsoluteProgress', 60))
         assert_that(video_progress, has_entry('HasProgress', True))
@@ -800,7 +800,7 @@ class TestProgressView(_AbstractTestViews):
         assert_that(result, contains_inanyorder(video1, video2))
 
         video_progress = result.get(video1)
-        assert_that(video_progress, 
+        assert_that(video_progress,
                     has_entry('MaxPossibleProgress', max_progress))
         assert_that(video_progress, has_entry('AbsoluteProgress', 60))
         assert_that(video_progress, has_entry('HasProgress', True))
@@ -837,7 +837,7 @@ class TestProgressView(_AbstractTestViews):
 
         result = response.json_body['Items']
         assert_that(result, has_length(4))
-        assert_that(result, 
+        assert_that(result,
                     contains_inanyorder(video1, video2, resource1, assignment1))
 
         resource_progress = result.get(assignment1)
@@ -1210,13 +1210,13 @@ class TestHistoricalSessions(ApplicationLayerTest):
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_most_recent_session(self):
         with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
-            self._create_user(u'new_user1', 
+            self._create_user(u'new_user1',
                               external_value={'realname': u'Billy Bob', 'email': u'foo@bar.com'})
-            user2 = self._create_user(u'new_user2', 
+            user2 = self._create_user(u'new_user2',
                                       external_value={'realname': u'Billy Rob', 'email': u'foo@bar.com'})
 
         href = '/dataserver2/ResolveUser/new_user2'
-        res = self.testapp.get(href, status=200, 
+        res = self.testapp.get(href, status=200,
                                extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
         res = res.json_body
 
@@ -1230,7 +1230,7 @@ class TestHistoricalSessions(ApplicationLayerTest):
         self.require_link_href_with_rel(user, 'HistoricalSessions')
 
         # As ourselves we can see the property
-        res = self.testapp.get(href, status=200, 
+        res = self.testapp.get(href, status=200,
                                extra_environ=self._make_extra_environ(username='new_user2'))
         res = res.json_body
 
@@ -1239,7 +1239,7 @@ class TestHistoricalSessions(ApplicationLayerTest):
         assert_that(user, has_entry('MostRecentSession', none()))
 
         # But as another user we cannot
-        res = self.testapp.get(href, status=200, 
+        res = self.testapp.get(href, status=200,
                                extra_environ=self._make_extra_environ(username='new_user1'))
         res = res.json_body
 
@@ -1262,10 +1262,10 @@ class TestHistoricalSessions(ApplicationLayerTest):
                                  start_time=start2, end_time=end)
             # and a session a long time ago
             longago = start - timedelta(days=60)
-            _add_session(user2.username, '', '', 
+            _add_session(user2.username, '', '',
                          start_time=longago, end_time=longago + timedelta(hours=1))
 
-        res = self.testapp.get(href, status=200, 
+        res = self.testapp.get(href, status=200,
                                extra_environ=self._make_extra_environ(username='new_user2'))
         res = res.json_body
 
@@ -1276,16 +1276,16 @@ class TestHistoricalSessions(ApplicationLayerTest):
 
         # If we fetch our historical sessions we have 2 (default window is 30
         # days)
-        href = '/dataserver2/users/new_user2/@@HistoricalSessions'
-        res = self.testapp.get(href, status=200, 
+        href = self.require_link_href_with_rel(user, 'HistoricalSessions')
+        res = self.testapp.get(href, status=200,
                                extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
         res = res.json_body
         assert_that(res['Items'], has_length(2))
 
         # This can also be fetched by yourself
-        self.testapp.get(href, status=200, 
+        self.testapp.get(href, status=200,
                          extra_environ=self._make_extra_environ(username='new_user2'))
 
         # But not by others
-        self.testapp.get(href, status=403, 
+        self.testapp.get(href, status=403,
                          extra_environ=self._make_extra_environ(username='new_user1'))
