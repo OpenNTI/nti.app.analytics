@@ -130,6 +130,7 @@ def _process_batch_events(events):
     Process the events, returning a tuple of events queued and malformed events.
     """
     batch_events = []
+    invalid_count = 0
     malformed_count = 0
 
     # Lets hand-internalize these objects one-by-one so that we
@@ -153,8 +154,11 @@ def _process_batch_events(events):
             logger.warn('Malformed events received (event=%s) (%s)', event, e)
             malformed_count += 1
 
-    event_count = handle_events(batch_events)
-    return event_count, malformed_count
+    event_count, invalid_exc = handle_events(batch_events)
+    for invalid_exc in invalid_exc:
+        logger.warn('Invalid events received (%s)', invalid_exc)
+        invalid_count += 1
+    return event_count, malformed_count, invalid_count
 
 
 @view_config(route_name='objects.generic.traversal',
@@ -176,12 +180,13 @@ class BatchEvents(AbstractAuthenticatedView,
         events = external_input['events']
         total_count = len(events)
 
-        event_count, malformed_count = _process_batch_events(events)
-        logger.info('Received batched analytic events (count=%s) (total_count=%s) (malformed=%s)',
-                    event_count, total_count, malformed_count)
+        event_count, malformed_count, invalid_count = _process_batch_events(events)
+        logger.info('Received batched analytic events (count=%s) (total_count=%s) (malformed=%s) (invalid=%s)',
+                    event_count, total_count, malformed_count, invalid_count)
 
         result = LocatedExternalDict()
         result['EventCount'] = event_count
+        result['InvalidCount'] = invalid_count
         result['MalformedEventCount'] = malformed_count
         return result
 
@@ -255,9 +260,9 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
             events = batch_events.get('events')
             if events:
                 total_count = len(events)
-                event_count, malformed_count = _process_batch_events(events)
-                logger.info('Process batched analytic events on session close (count=%s) (total_count=%s) (malformed=%s)',
-                            event_count, total_count, malformed_count)
+                event_count, malformed_count, invalid_count = _process_batch_events(events)
+                logger.info('Process batched analytic events on session close (count=%s) (total_count=%s) (malformed=%s) (invalid_count=%s)',
+                            event_count, total_count, malformed_count, invalid_count)
 
         handle_end_session(user, request, timestamp=timestamp)
         return hexc.HTTPNoContent()
