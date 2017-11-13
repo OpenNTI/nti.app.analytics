@@ -29,7 +29,6 @@ from pyramid import httpexceptions as hexc
 from nti.analytics.interfaces import IAnalyticsSession
 from nti.analytics.interfaces import IAnalyticsSessions
 from nti.analytics.interfaces import IBatchResourceEvents
-from nti.analytics.interfaces import AnalyticsEventValidationError
 
 from nti.analytics.locations import get_location_list
 
