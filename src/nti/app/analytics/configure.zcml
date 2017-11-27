@@ -10,17 +10,33 @@
 
 	<include package="nti.analytics" />
 
+
 	<!-- Expose analytics views -->
+	<adapter factory=".workspaces._AnalyticsRelativeLinkMaker"
+			 provides="nti.appserver.interfaces.IEditLinkMaker"
+			 for=".interfaces.IAnalyticsWorkspace"/>
+
+	<adapter factory=".workspaces._AnalyticsRelativeLinkMaker"
+			 provides="nti.appserver.interfaces.IEditLinkMaker"
+			 for=".interfaces.IAnalyticsCollection"/>
+
+	<adapter factory="nti.traversal.traversal.DefaultAdapterTraversable"
+			 for="nti.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest" />
+
+	<adapter name="analytics"
+			 for="nti.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest"
+			 factory=".workspaces.analytics_path_adapter"
+			 provides="zope.traversing.interfaces.IPathAdapter" />
+
 	<adapter name="analytics"
 			 for="nti.dataserver.interfaces.IDataserverFolder pyramid.interfaces.IRequest"
 			 factory=".workspaces.analytics_path_adapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
-	<!-- Expose analytics views -->
-	<adapter name="analytics"
-			 for="nti.dataserver.interfaces.IUser pyramid.interfaces.IRequest"
-			 factory=".workspaces.analytics_path_adapter"
-			 provides="zope.traversing.interfaces.IPathAdapter" />
+	<subscriber factory=".decorators._AnalyticsCollectionHrefRewritter"
+				provides="nti.externalization.interfaces.IExternalObjectDecorator"
+				for=".interfaces.IAnalyticsCollection
+					 pyramid.interfaces.IRequest"  />
 
 	<!-- Progress decorators -->
 	<subscriber factory=".decorators._CourseOutlineNodeProgressLinkDecorator"
@@ -44,9 +60,9 @@
 				for="nti.dataserver.interfaces.IUser
 					 pyramid.interfaces.IRequest"  />
 
-	<subscriber factory=".decorators._UserAnalyticsWorkspace"
+	<subscriber factory=".decorators._AnalyticsContextLink"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
-				for="nti.dataserver.interfaces.IUser
+				for="nti.analytics.interfaces.IAnalyticsContext
 					 pyramid.interfaces.IRequest"  />
 
 	<!-- JZ 1.15.2015 - Disable until needed

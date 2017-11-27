@@ -18,6 +18,7 @@ from zope.location.interfaces import ILocation
 from nti.analytics import has_analytics
 
 from nti.analytics.interfaces import IAnalyticsSession
+from nti.analytics.interfaces import IAnalyticsContext
 
 from nti.analytics.progress import get_topic_progress
 
@@ -27,17 +28,26 @@ from nti.app.analytics import ANALYTICS
 from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import HISTORICAL_SESSIONS_VIEW_NAME
 
+from nti.app.analytics.interfaces import IAnalyticsCollection
+
 from nti.app.analytics.workspaces import AnalyticsWorkspace
 
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
 
+from nti.appserver.interfaces import IEditLinkMaker
+
+from nti.appserver.pyramid_authorization import has_permission
+
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
+
+from nti.dataserver import authorization as nauth
 
 from nti.dataserver.authorization import is_admin_or_site_admin
 
 from nti.dataserver.contenttypes.forums.interfaces import ITopic
 
+from nti.dataserver.interfaces import ILinkExternalHrefOnly
 from nti.dataserver.interfaces import IUser
 
 from nti.externalization.externalization import to_external_object
@@ -45,6 +55,7 @@ from nti.externalization.externalization import to_external_object
 from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.interfaces import IExternalMappingDecorator
 
+from nti.links.externalization import render_link
 from nti.links.links import Link
 
 LINKS = StandardExternalFields.LINKS
@@ -127,18 +138,37 @@ class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
         link.__parent__ = context
         links.append(link)
 
-@component.adapter(IUser)
+@component.adapter(IAnalyticsCollection)
 @interface.implementer(IExternalMappingDecorator)
-class _UserAnalyticsWorkspace(AbstractAuthenticatedRequestAwareDecorator):
+class _AnalyticsCollectionHrefRewritter(AbstractAuthenticatedRequestAwareDecorator):
+    """
+    Collections by default use normal_get_resource to render their href. However
+    depending on the context we are in that may not be good enough (we likely
+    have a context that doesn't have a traversable path.)  Rewrite the href
+    for our collections using our IEditLinkMaker which knows how to account
+    for these contextually sensitive traversals
+    """
+
+    def _do_decorate_external(self, context, result):
+        link_maker = IEditLinkMaker(context)
+        link = link_maker.make(context)
+        if link:
+            interface.alsoProvides(link, ILinkExternalHrefOnly)
+            result['href'] = render_link(link)
+
+@component.adapter(IAnalyticsContext)
+@interface.implementer(IExternalMappingDecorator)
+class _AnalyticsContextLink(AbstractAuthenticatedRequestAwareDecorator):
 
     def _predicate(self, context, unused_result):
         return self._is_authenticated \
-           and has_analytics() \
-           and (self.remoteUser == context
-                or is_admin_or_site_admin(self.remoteUser))
+           and has_analytics()
 
     def _do_decorate_external(self, context, result):
         workspace = AnalyticsWorkspace(None, root=context)
+
+        if not has_permission(nauth.ACT_READ, workspace):
+            return
 
         links = result.setdefault(LINKS, [])
         link = Link(workspace,

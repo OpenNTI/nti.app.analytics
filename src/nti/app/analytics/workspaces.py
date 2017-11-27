@@ -16,10 +16,12 @@ from zope import interface
 from zope.cachedescriptors.property import Lazy
 
 from zope.location.interfaces import IContained
+from zope.location.interfaces import ILocationInfo
 
 from zope.traversing.interfaces import IPathAdapter
 
 from nti.analytics import has_analytics
+from nti.analytics.interfaces import IAnalyticsContext
 
 from nti.app.analytics import ANALYTICS
 from nti.app.analytics import SYNC_PARAMS
@@ -38,6 +40,9 @@ from nti.app.analytics.interfaces import IAnalyticsWorkspace
 
 from nti.app.authentication import get_remote_user
 
+from nti.appserver.interfaces import IEditLinkMaker
+from nti.appserver.pyramid_renderers_edit_link_decorator import DefaultEditLinkMaker
+
 from nti.appserver.workspaces.interfaces import IWorkspace
 from nti.appserver.workspaces.interfaces import IUserService
 
@@ -51,9 +56,12 @@ from nti.dataserver.authorization_acl import acl_from_aces
 
 from nti.dataserver.interfaces import IUser
 from nti.dataserver.interfaces import IDataserverFolder
+from nti.dataserver.interfaces import IShouldHaveTraversablePath
 from nti.dataserver.interfaces import EVERYONE_USER_NAME
 
 from nti.links.links import Link
+
+from nti.ntiids.oids import to_external_ntiid_oid
 
 from nti.traversal.traversal import find_interface
 
@@ -74,9 +82,60 @@ def analytics_path_adapter(ds_root, unused_request):
     return AnalyticsWorkspace(None, root=ds_root)
 
 
-def _workspace_link(ctx, rel, name=None):
-    elements = ('@@' + name, ) if name else None
-    return Link(ctx, rel=rel, elements=elements)
+def _workspace_link(ctx, rel, name=None, analytics_context=None):
+    """
+    Generates a link with the providd rel, name, and elements.  This function
+    accounts for the fact tht while our analytics links are traversable beneath
+    our analytics_context, the context itself may not always be traversable.
+    In that case we need to render a hybrid link to the object using ntiid
+    based traversal, then standard path traversal after that.
+    """
+
+    if analytics_context is None:
+        analytics_context = find_interface(ctx, IAnalyticsContext, strict=False)
+
+    # If we have no analytics_context, the link context is the
+    # analytics_context, or the analytics_context is traversable
+    # we can just render a normal link
+    if analytics_context is None \
+            or IShouldHaveTraversablePath.providedBy(analytics_context) \
+            or ctx == analytics_context:
+        elements = ('@@' + name, ) if name else None
+        return Link(ctx, rel=rel, elements=elements)
+
+
+    # Look at our location and figure out the elements we need to append
+    # after our analtyics context. This is the part we are responsible
+    # for knowing can be traversed.
+    location_info = ILocationInfo(ctx)
+    elements = (location_info.getName(), )
+    for parent in location_info.getParents():
+        if parent == analytics_context:
+            break
+        elements += (getattr(parent, '__name__', None), )
+
+    # We dug up through parents so we need to reverse this
+    elements = elements[::-1]
+
+    # If we have a named link, append that as an element as well
+    if name:
+        elements += ('@@'+name, )
+
+    return Link(to_external_ntiid_oid(analytics_context), rel=rel, elements=elements)
+
+
+@interface.implementer(IEditLinkMaker)
+class _AnalyticsRelativeLinkMaker(DefaultEditLinkMaker):
+
+    __slots__ = ('context',)
+
+    def __init__(self, context=None):
+        self.context = context
+
+    def make(self, context, unused_request=None, allow_traversable_paths=True, link_method=None):
+        return _workspace_link(context, 'edit')
+
+
 
 
 @interface.implementer(IAnalyticsWorkspace, IContained)

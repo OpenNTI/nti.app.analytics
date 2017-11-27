@@ -18,14 +18,19 @@ class IAnalyticsWorkspace(IWorkspace):
     A workspace containing data for analytics.
     """
 
+class IAnalyticsCollection(IContainerCollection):
+    """
+    An analytics related collection
+    """
 
-class ISessionsCollection(IContainerCollection):
+
+class ISessionsCollection(IAnalyticsCollection):
     """
     A collection of analytics sessions
     """
 
 
-class IEventsCollection(IContainerCollection):
+class IEventsCollection(IAnalyticsCollection):
     """
     A collection of analytics events
     """

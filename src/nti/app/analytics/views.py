@@ -26,6 +26,7 @@ from pyramid.view import view_config
 
 from pyramid import httpexceptions as hexc
 
+from nti.analytics.interfaces import IAnalyticsContext
 from nti.analytics.interfaces import IAnalyticsSession
 from nti.analytics.interfaces import IAnalyticsSessions
 from nti.analytics.interfaces import IBatchResourceEvents
@@ -660,12 +661,12 @@ class StatsSourceMixin(object):
 
     def _query_source(self, source_iface):
         """
-        If we have a user_context we must use the user specific adapter,
+        If we have a context we must use the context specific adapter,
         not the global utility (which queries all users)
         """
-        user_context = find_interface(self.context, IUser, strict=False)
-        if user_context:
-            return component.queryAdapter(user_context, source_iface)
+        context = find_interface(self.context, IAnalyticsContext, strict=False)
+        if context:
+            return component.queryAdapter(context, source_iface)
         return component.queryUtility(source_iface)
 
 
