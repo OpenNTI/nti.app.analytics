@@ -34,8 +34,6 @@ from nti.app.analytics.workspaces import AnalyticsWorkspace
 
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
 
-from nti.appserver.interfaces import IEditLinkMaker
-
 from nti.appserver.pyramid_authorization import has_permission
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
@@ -47,19 +45,14 @@ from nti.dataserver.authorization import is_admin_or_site_admin
 
 from nti.dataserver.contenttypes.forums.interfaces import ITopic
 
-from nti.dataserver.interfaces import ILinkExternalHrefOnly
 from nti.dataserver.interfaces import IUser
-from nti.dataserver.interfaces import IShouldHaveTraversablePath
 
 from nti.externalization.externalization import to_external_object
 
 from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.interfaces import IExternalMappingDecorator
 
-from nti.links.externalization import render_link
 from nti.links.links import Link
-
-from nti.ntiids.oids import to_external_ntiid_oid
 
 LINKS = StandardExternalFields.LINKS
 
@@ -141,23 +134,6 @@ class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
         link.__parent__ = context
         links.append(link)
 
-@component.adapter(IAnalyticsCollection)
-@interface.implementer(IExternalMappingDecorator)
-class _AnalyticsCollectionHrefRewritter(AbstractAuthenticatedRequestAwareDecorator):
-    """
-    Collections by default use normal_get_resource to render their href. However
-    depending on the context we are in that may not be good enough (we likely
-    have a context that doesn't have a traversable path.)  Rewrite the href
-    for our collections using our IEditLinkMaker which knows how to account
-    for these contextually sensitive traversals
-    """
-
-    def _do_decorate_external(self, context, result):
-        link_maker = IEditLinkMaker(context)
-        link = link_maker.make(context)
-        if link:
-            interface.alsoProvides(link, ILinkExternalHrefOnly)
-            result['href'] = render_link(link)
 
 @component.adapter(IAnalyticsContext)
 @interface.implementer(IExternalMappingDecorator)
@@ -174,20 +150,7 @@ class _AnalyticsContextLink(AbstractAuthenticatedRequestAwareDecorator):
             return
 
         links = result.setdefault(LINKS, [])
-
-        # some things aren't traversable, but also don't expose an `ntiid`
-        # on them. That leads to a link being rendered using lineage that can't be
-        # traversed later.  ICourseInstanceEnrollmentRecord is one such example.
-        # TODO: that is probably something that needs to be resolved rather than
-        # worked around here.  Options seem to be make the enrollment record container
-        # traversable from the course or give the record an ntiid
-        if not IShouldHaveTraversablePath.providedBy(context):
-            oid_ntiid = to_external_ntiid_oid(context)
-            if oid_ntiid is not None:
-                context = oid_ntiid
-
-        link = Link(context,
-                    elements=('analytics',),
+        link = Link(workspace,
                     rel=ANALYTICS)
         interface.alsoProvides(link, ILocation)
         link.__name__ = ''

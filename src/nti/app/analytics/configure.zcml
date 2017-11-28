@@ -12,14 +12,6 @@
 
 
 	<!-- Expose analytics views -->
-	<adapter factory=".workspaces._AnalyticsRelativeLinkMaker"
-			 provides="nti.appserver.interfaces.IEditLinkMaker"
-			 for=".interfaces.IAnalyticsWorkspace"/>
-
-	<adapter factory=".workspaces._AnalyticsRelativeLinkMaker"
-			 provides="nti.appserver.interfaces.IEditLinkMaker"
-			 for=".interfaces.IAnalyticsCollection"/>
-
 	<adapter factory="nti.traversal.traversal.DefaultAdapterTraversable"
 			 for="nti.app.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest" />
 
@@ -32,11 +24,6 @@
 			 for="nti.dataserver.interfaces.IDataserverFolder pyramid.interfaces.IRequest"
 			 factory=".workspaces.analytics_path_adapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />
-
-	<subscriber factory=".decorators._AnalyticsCollectionHrefRewritter"
-				provides="nti.externalization.interfaces.IExternalObjectDecorator"
-				for=".interfaces.IAnalyticsCollection
-					 pyramid.interfaces.IRequest"  />
 
 	<adapter factory=".adapters._active_times_for_enrollment" />
     <adapter factory=".adapters._daily_activity_for_enrollment" />
