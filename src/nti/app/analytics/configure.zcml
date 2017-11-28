@@ -38,6 +38,9 @@
 				for=".interfaces.IAnalyticsCollection
 					 pyramid.interfaces.IRequest"  />
 
+	<adapter factory=".adapters._active_times_for_enrollment" />
+    <adapter factory=".adapters._daily_activity_for_enrollment" />
+
 	<!-- Progress decorators -->
 	<subscriber factory=".decorators._CourseOutlineNodeProgressLinkDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"

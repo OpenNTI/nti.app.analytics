@@ -37,6 +37,7 @@ import fudge
 from webob.datetime_utils import serialize_date
 
 from zope import component
+from zope import interface
 
 from nti.analytics.common import timestamp_type
 
@@ -106,6 +107,8 @@ from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
 from nti.app.analytics.views import GEO_LOCATION_VIEW
 from nti.app.analytics.views import UserLocationJsonView
 
+from nti.app.products.courseware.workspaces import enrollment_from_record
+
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
 from nti.app.testing.decorators import WithSharedApplicationMockDS
@@ -120,6 +123,8 @@ from nti.contenttypes.courses.interfaces import ICourseEnrollmentManager
 
 from nti.contenttypes.courses.sharing import CourseInstanceSharingScope
 
+from nti.dataserver.interfaces import ILinkExternalHrefOnly
+
 from nti.dataserver.tests import mock_dataserver
 
 from nti.dataserver.users.users import User
@@ -130,6 +135,9 @@ from nti.externalization.externalization import toExternalObject
 
 from nti.ntiids.ntiids import find_object_with_ntiid
 from nti.ntiids.oids import to_external_ntiid_oid
+
+from nti.links.externalization import render_link
+from nti.links.links import Link
 
 timestamp = time.mktime(datetime.utcnow().timetuple())
 
@@ -1406,14 +1414,10 @@ class TestAnalyticsContexts(_AbstractTestViews):
 
             enrollment_manager = ICourseEnrollmentManager(self.course)
             er = enrollment_manager.enroll(user2)
-            ntiid = to_external_ntiid_oid(er)
-
-
-        href = '/dataserver2/Objects/'+ntiid
-        res = self.testapp.get(href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
-        res = res.json_body
-        href = self.require_link_href_with_rel(res, 'analytics')
+            er = enrollment_from_record(None, er)
+            link = Link(er, elements=('analytics',))
+            interface.alsoProvides(link, ILinkExternalHrefOnly)
+            href = render_link(link)
 
         assert_that(href, ends_with('analytics'))
 

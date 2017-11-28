@@ -10,12 +10,13 @@ from __future__ import absolute_import
 
 from zope import interface
 
+from nti.app.products.courseware.interfaces import ICourseInstanceEnrollment
+
 from nti.appserver.workspaces.interfaces import IContainerCollection
 
 from nti.appserver.workspaces.interfaces import IWorkspace
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
-from nti.contenttypes.courses.interfaces import ICourseInstanceEnrollmentRecord
 
 from nti.dataserver.interfaces import IUser
 
@@ -57,4 +58,4 @@ IUser.__bases__ += (IAnalyticsContext, )
 ICourseInstance.__bases__ += (IAnalyticsContext, )
 
 # ICourseInstanceEnrollmentRecord provides analytics context for a user in course
-ICourseInstanceEnrollmentRecord.__bases__ += (IAnalyticsContext, )
+ICourseInstanceEnrollment.__bases__ += (IAnalyticsContext, )

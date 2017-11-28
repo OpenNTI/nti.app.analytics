@@ -16,6 +16,8 @@ from zope.dottedname import resolve as dottedname
 
 from nti.analytics.tests import NTIAnalyticsTestCase
 
+from nti.app.products.courseware.workspaces import enrollment_from_record
+
 from nti.contenttypes.courses.courses import CourseInstance
 from nti.contenttypes.courses.enrollment import DefaultCourseInstanceEnrollmentRecord
 
@@ -46,6 +48,6 @@ class TestAnalyticsContext( NTIAnalyticsTestCase ):
         assert_that(course, verifiably_provides(IAnalyticsContext))
 
     def test_enrollment_record_is_context(self):
-        enrollment = DefaultCourseInstanceEnrollmentRecord()
+        enrollment = enrollment_from_record(None, DefaultCourseInstanceEnrollmentRecord())
         assert_that(enrollment, verifiably_provides(IAnalyticsContext))
 
