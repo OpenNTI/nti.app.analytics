@@ -49,6 +49,7 @@ from nti.dataserver.contenttypes.forums.interfaces import ITopic
 
 from nti.dataserver.interfaces import ILinkExternalHrefOnly
 from nti.dataserver.interfaces import IUser
+from nti.dataserver.interfaces import IShouldHaveTraversablePath
 
 from nti.externalization.externalization import to_external_object
 
@@ -57,6 +58,8 @@ from nti.externalization.interfaces import IExternalMappingDecorator
 
 from nti.links.externalization import render_link
 from nti.links.links import Link
+
+from nti.ntiids.oids import to_external_ntiid_oid
 
 LINKS = StandardExternalFields.LINKS
 
@@ -171,7 +174,20 @@ class _AnalyticsContextLink(AbstractAuthenticatedRequestAwareDecorator):
             return
 
         links = result.setdefault(LINKS, [])
-        link = Link(workspace,
+
+        # some things aren't traversable, but also don't expose an `ntiid`
+        # on them. That leads to a link being rendered using lineage that can't be
+        # traversed later.  ICourseInstanceEnrollmentRecord is one such example.
+        # TODO: that is probably something that needs to be resolved rather than
+        # worked around here.  Options seem to be make the enrollment record container
+        # traversable from the course or give the record an ntiid
+        if not IShouldHaveTraversablePath.providedBy(context):
+            oid_ntiid = to_external_ntiid_oid(context)
+            if oid_ntiid is not None:
+                context = oid_ntiid
+
+        link = Link(context,
+                    elements=('analytics',),
                     rel=ANALYTICS)
         interface.alsoProvides(link, ILocation)
         link.__name__ = ''
