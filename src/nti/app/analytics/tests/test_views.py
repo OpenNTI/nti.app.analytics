@@ -8,19 +8,20 @@ from __future__ import absolute_import
 # disable: accessing protected members, too many methods
 # pylint: disable=W0212,R0904
 
+from hamcrest import assert_that
+from hamcrest import contains
+from hamcrest import contains_inanyorder
+from hamcrest import ends_with
 from hamcrest import is_
 from hamcrest import none
 from hamcrest import has_key
-from hamcrest import contains
 from hamcrest import has_item
 from hamcrest import not_none
 from hamcrest import has_entry
 from hamcrest import has_length
-from hamcrest import assert_that
 from hamcrest import has_entries
 from hamcrest import contains_string
 from hamcrest import is_not as does_not
-from hamcrest import contains_inanyorder
 from hamcrest import has_key as have_key
 
 from nti.testing.time import time_monotonically_increases
@@ -115,6 +116,7 @@ from nti.contenttypes.courses.courses import CourseInstance
 from nti.contenttypes.courses.courses import ContentCourseSubInstance
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
+from nti.contenttypes.courses.interfaces import ICourseEnrollmentManager
 
 from nti.contenttypes.courses.sharing import CourseInstanceSharingScope
 
@@ -127,6 +129,7 @@ from nti.externalization import internalization
 from nti.externalization.externalization import toExternalObject
 
 from nti.ntiids.ntiids import find_object_with_ntiid
+from nti.ntiids.oids import to_external_ntiid_oid
 
 timestamp = time.mktime(datetime.utcnow().timetuple())
 
@@ -1312,3 +1315,123 @@ class TestHistoricalSessions(ApplicationLayerTest):
         # But not by others
         self.testapp.get(href, status=403,
                          extra_environ=self._make_extra_environ(username='new_user1'))
+
+class TestAnalyticsContexts(_AbstractTestViews):
+
+    default_origin = 'http://platform.ou.edu'
+
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_user_context(self):
+        with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
+            self._create_user(u'new_user1',
+                              external_value={'realname': u'Billy Bob', 'email': u'foo@bar.com'})
+            user2 = self._create_user(u'new_user2',
+                                      external_value={'realname': u'Billy Rob', 'email': u'foo@bar.com'})
+
+        user_href = href = '/dataserver2/ResolveUser/new_user2'
+        res = self.testapp.get(href, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        res = res.json_body
+
+        user = res['Items'][0]
+        href = self.require_link_href_with_rel(user, 'analytics')
+
+        assert_that(href, ends_with('analytics'))
+
+        # It is fetchable
+        analytics_workspace = self.testapp.get(href, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        analytics_workspace = analytics_workspace.json_body
+        assert_that(analytics_workspace, not_none())
+
+        assert_that(analytics_workspace, has_entry('href', href))
+
+        # We have two collections that are also routed beneath href
+        assert_that(analytics_workspace,
+                    has_entry('Items',
+                              contains_inanyorder(has_entry('href', href+'/batch_events'),
+                                                  has_entry('href', href+'/sessions'))))
+
+        # Find one of the links we expect and make sure that the rendered link is correctly traversable
+        activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace, 'activity_by_date_summary')
+        self.testapp.get(activity_by_date_summary, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+
+
+    def _create_course(self):
+        content_unit = find_object_with_ntiid(course)
+        course_obj = self.course = ICourseInstance(content_unit)
+        get_root_context_id(self.db, course_obj, create=True)
+
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_course_context(self):
+        with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
+            self._create_course()
+            ntiid = to_external_ntiid_oid(self.course)
+
+        href = '/dataserver2/Objects/'+ntiid
+        res = self.testapp.get(href, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        res = res.json_body
+        href = self.require_link_href_with_rel(res, 'analytics')
+
+        assert_that(href, ends_with('analytics'))
+
+        # It is fetchable
+        analytics_workspace = self.testapp.get(href, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        analytics_workspace = analytics_workspace.json_body
+        assert_that(analytics_workspace, not_none())
+
+        assert_that(analytics_workspace, has_entry('href', href))
+
+        # We have two collections that are also routed beneath href
+        assert_that(analytics_workspace,
+                    has_entry('Items',
+                              contains_inanyorder(has_entry('href', href+'/batch_events'),
+                                                  has_entry('href', href+'/sessions'))))
+
+        # Find one of the links we expect and make sure that the rendered link is correctly traversable
+        activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace, 'activity_by_date_summary')
+        self.testapp.get(activity_by_date_summary, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_enrollment_record_context(self):
+        with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
+            self._create_course()
+
+            user2 = self._create_user(u'new_user2',
+                                      external_value={'realname': u'Billy Rob', 'email': u'foo@bar.com'})
+
+            enrollment_manager = ICourseEnrollmentManager(self.course)
+            er = enrollment_manager.enroll(user2)
+            ntiid = to_external_ntiid_oid(er)
+
+
+        href = '/dataserver2/Objects/'+ntiid
+        res = self.testapp.get(href, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        res = res.json_body
+        href = self.require_link_href_with_rel(res, 'analytics')
+
+        assert_that(href, ends_with('analytics'))
+
+        # It is fetchable
+        analytics_workspace = self.testapp.get(href, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        analytics_workspace = analytics_workspace.json_body
+        assert_that(analytics_workspace, not_none())
+
+        assert_that(analytics_workspace, has_entry('href', ends_with('analytics')))
+
+        # We have two collections that are also routed beneath href
+        assert_that(analytics_workspace,
+                    has_entry('Items',
+                              contains_inanyorder(has_entry('href', ends_with('/batch_events')),
+                                                  has_entry('href', ends_with('/sessions')))))
+
+        # Find one of the links we expect and make sure that the rendered link is correctly traversable
+        activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace, 'activity_by_date_summary')
+        self.testapp.get(activity_by_date_summary, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
