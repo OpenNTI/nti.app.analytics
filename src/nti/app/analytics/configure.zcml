@@ -25,6 +25,17 @@
 			 factory=".workspaces.analytics_path_adapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
+	<!-- Mark classes that act as analytics contexts -->
+	<class class="nti.dataserver.users.User">
+		<implements interface="nti.app.analytics.interfaces.IAnalyticsContext" />
+	</class>
+	<class class="nti.contenttypes.courses.courses.CourseInstance">
+		<implements interface="nti.app.analytics.interfaces.IAnalyticsContext" />
+	</class>
+	<class class="nti.app.products.courseware.workspaces.CourseInstanceEnrollment">
+		<implements interface="nti.app.analytics.interfaces.IAnalyticsContext" />
+	</class>
+
 	<adapter factory=".adapters._active_times_for_enrollment" />
     <adapter factory=".adapters._daily_activity_for_enrollment" />
 

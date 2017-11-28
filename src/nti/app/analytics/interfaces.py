@@ -48,14 +48,4 @@ class IAnalyticsContext(interface.Interface):
     A marker interface for things that are "analytics aware"
     and can provide analytics information specific to their context
     """
-
 IAnalyticsContext.setTaggedValue('_ext_is_marker_interface', True)
-
-# IUser is an appropriate analytics context
-IUser.__bases__ += (IAnalyticsContext, )
-
-# ICourseInstance can be a context analytics scoped to the course
-ICourseInstance.__bases__ += (IAnalyticsContext, )
-
-# ICourseInstanceEnrollmentRecord provides analytics context for a user in course
-ICourseInstanceEnrollment.__bases__ += (IAnalyticsContext, )
