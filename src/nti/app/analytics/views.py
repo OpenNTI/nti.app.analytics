@@ -51,6 +51,7 @@ from nti.analytics.resource_views import get_video_progress_for_course
 
 from nti.analytics.sessions import update_session
 from nti.analytics.sessions import get_user_sessions
+from nti.analytics.sessions import get_recent_user_sessions
 from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import handle_new_session
 
@@ -708,20 +709,35 @@ class UserRecentSessions(AbstractUserLocationView, WindowedViewMixin):
     """
 
     DEFAULT_WINDOW_DAYS = 30
+    DEFAULT_LIMIT = 10
 
     def _make_session(self, session):
         return IAnalyticsSession(session)
 
+    @property
+    def _limit(self):
+        return self.request.params.get('limit', self.DEFAULT_LIMIT)
+
     def __call__(self):
         user_context = find_interface(self.context, IUser, strict=False)
 
-        not_before, not_after = self.time_window()
+        not_before = self.not_before
+        not_after = self.not_after
 
-        sessions = get_user_sessions(user_context,
-                                     timestamp=not_before,
-                                     max_timestamp=not_after)
+        #They gave us a time window
+        if not_before and not_after:
+            sessions = get_user_sessions(user_context,
+                                        timestamp=not_before,
+                                        max_timestamp=not_after)
+        else:
+            limit = self._limit
+            not_after = not_after or datetime.datetime.now()
+
+            sessions = get_recent_user_sessions(user_context,
+                                                limit=limit,
+                                                not_after=not_after)
+
         sessions = [self._make_session(s) for s in sessions]
-
         options = LocatedExternalDict()
         options.__parent__ = self.request.context
         options.__name__ = self.request.view_name

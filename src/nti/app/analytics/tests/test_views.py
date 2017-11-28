@@ -1308,10 +1308,15 @@ class TestHistoricalSessions(ApplicationLayerTest):
         assert_that(user, has_entry('MostRecentSession',
                                     has_entry('SessionID', sesh2.SessionID)))
 
-        # If we fetch our historical sessions we have 2 (default window is 30
-        # days)
+
+        notBefore = time.mktime((start - timedelta(days=30)).timetuple())
+        notAfter = time.mktime(start.timetuple())
+
         href = self.require_link_href_with_rel(user, 'HistoricalSessions')
-        res = self.testapp.get(href, status=200,
+        res = self.testapp.get(href,
+                               {'notBefore': notBefore,
+                               'notAfter': notAfter},
+                               status=200,
                                extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
         res = res.json_body
         assert_that(res['Items'], has_length(2))
@@ -1323,6 +1328,16 @@ class TestHistoricalSessions(ApplicationLayerTest):
         # But not by others
         self.testapp.get(href, status=403,
                          extra_environ=self._make_extra_environ(username='new_user1'))
+
+        # We can also fetch with notAfter and a limit
+        href = self.require_link_href_with_rel(user, 'HistoricalSessions')
+        res = self.testapp.get(href,
+                               {'limit': 2,
+                               'notAfter': notAfter},
+                               status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        res = res.json_body
+        assert_that(res['Items'], has_length(2))
 
 class TestAnalyticsContexts(_AbstractTestViews):
 
