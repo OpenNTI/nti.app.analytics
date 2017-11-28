@@ -43,6 +43,8 @@ from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import END_ANALYTICS_SESSION
 from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 
+from nti.app.analytics.interfaces import IAnalyticsContext
+
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
 from nti.analytics.resource_views import get_video_progress_for_course
@@ -660,12 +662,12 @@ class StatsSourceMixin(object):
 
     def _query_source(self, source_iface):
         """
-        If we have a user_context we must use the user specific adapter,
+        If we have a context we must use the context specific adapter,
         not the global utility (which queries all users)
         """
-        user_context = find_interface(self.context, IUser, strict=False)
-        if user_context:
-            return component.queryAdapter(user_context, source_iface)
+        context = find_interface(self.context, IAnalyticsContext, strict=False)
+        if context:
+            return component.queryAdapter(context, source_iface)
         return component.queryUtility(source_iface)
 
 

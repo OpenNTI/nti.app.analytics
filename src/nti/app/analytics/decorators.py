@@ -27,12 +27,19 @@ from nti.app.analytics import ANALYTICS
 from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import HISTORICAL_SESSIONS_VIEW_NAME
 
+from nti.app.analytics.interfaces import IAnalyticsCollection
+from nti.app.analytics.interfaces import IAnalyticsContext
+
 from nti.app.analytics.workspaces import AnalyticsWorkspace
 
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
 
+from nti.appserver.pyramid_authorization import has_permission
+
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
+
+from nti.dataserver import authorization as nauth
 
 from nti.dataserver.authorization import is_admin_or_site_admin
 
@@ -127,18 +134,20 @@ class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
         link.__parent__ = context
         links.append(link)
 
-@component.adapter(IUser)
+
+@component.adapter(IAnalyticsContext)
 @interface.implementer(IExternalMappingDecorator)
-class _UserAnalyticsWorkspace(AbstractAuthenticatedRequestAwareDecorator):
+class _AnalyticsContextLink(AbstractAuthenticatedRequestAwareDecorator):
 
     def _predicate(self, context, unused_result):
         return self._is_authenticated \
-           and has_analytics() \
-           and (self.remoteUser == context
-                or is_admin_or_site_admin(self.remoteUser))
+           and has_analytics()
 
     def _do_decorate_external(self, context, result):
         workspace = AnalyticsWorkspace(None, root=context)
+
+        if not has_permission(nauth.ACT_READ, workspace):
+            return
 
         links = result.setdefault(LINKS, [])
         link = Link(workspace,

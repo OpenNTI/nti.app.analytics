@@ -10,17 +10,34 @@
 
 	<include package="nti.analytics" />
 
+
 	<!-- Expose analytics views -->
+	<adapter factory="nti.traversal.traversal.DefaultAdapterTraversable"
+			 for="nti.app.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest" />
+
+	<adapter name="analytics"
+			 for="nti.app.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest"
+			 factory=".workspaces.analytics_path_adapter"
+			 provides="zope.traversing.interfaces.IPathAdapter" />
+
 	<adapter name="analytics"
 			 for="nti.dataserver.interfaces.IDataserverFolder pyramid.interfaces.IRequest"
 			 factory=".workspaces.analytics_path_adapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
-	<!-- Expose analytics views -->
-	<adapter name="analytics"
-			 for="nti.dataserver.interfaces.IUser pyramid.interfaces.IRequest"
-			 factory=".workspaces.analytics_path_adapter"
-			 provides="zope.traversing.interfaces.IPathAdapter" />
+	<!-- Mark classes that act as analytics contexts -->
+	<class class="nti.dataserver.users.User">
+		<implements interface="nti.app.analytics.interfaces.IAnalyticsContext" />
+	</class>
+	<class class="nti.contenttypes.courses.courses.CourseInstance">
+		<implements interface="nti.app.analytics.interfaces.IAnalyticsContext" />
+	</class>
+	<class class="nti.app.products.courseware.workspaces.CourseInstanceEnrollment">
+		<implements interface="nti.app.analytics.interfaces.IAnalyticsContext" />
+	</class>
+
+	<adapter factory=".adapters._active_times_for_enrollment" />
+    <adapter factory=".adapters._daily_activity_for_enrollment" />
 
 	<!-- Progress decorators -->
 	<subscriber factory=".decorators._CourseOutlineNodeProgressLinkDecorator"
@@ -44,9 +61,9 @@
 				for="nti.dataserver.interfaces.IUser
 					 pyramid.interfaces.IRequest"  />
 
-	<subscriber factory=".decorators._UserAnalyticsWorkspace"
+	<subscriber factory=".decorators._AnalyticsContextLink"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
-				for="nti.dataserver.interfaces.IUser
+				for="nti.app.analytics.interfaces.IAnalyticsContext
 					 pyramid.interfaces.IRequest"  />
 
 	<!-- JZ 1.15.2015 - Disable until needed

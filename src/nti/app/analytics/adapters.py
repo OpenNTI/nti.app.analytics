@@ -31,11 +31,15 @@ from nti.analytics.progress import DefaultProgress
 from nti.analytics.resource_tags import get_note_views
 from nti.analytics.resource_tags import get_note_last_view
 
+from nti.analytics.stats.interfaces import IActiveTimesStatsSource
+from nti.analytics.stats.interfaces import IDailyActivityStatsSource
+
 from nti.app.analytics.usage_stats import CourseVideoUsageStats
 from nti.app.analytics.usage_stats import CourseResourceUsageStats
 from nti.app.analytics.usage_stats import UserCourseVideoUsageStats
 from nti.app.analytics.usage_stats import UserCourseResourceUsageStats
 
+from nti.app.products.courseware.interfaces import ICourseInstanceEnrollment
 from nti.app.products.courseware.interfaces import IViewStats
 from nti.app.products.courseware.interfaces import IVideoUsageStats
 from nti.app.products.courseware.interfaces import IResourceUsageStats
@@ -49,6 +53,8 @@ from nti.dataserver.contenttypes.forums.interfaces import ITopic
 
 from nti.dataserver.interfaces import INote
 from nti.dataserver.interfaces import IUser
+
+from nti.dataserver.users import User
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -203,3 +209,22 @@ def _resource_usage_stats(context):
     if has_analytics():
         result = CourseResourceUsageStats(context)
     return result
+
+def _unwrap_and_adapt_enrollment(enrollment, iface):
+    course = enrollment.CourseInstance
+    user = User.get_user(enrollment.Username)
+
+    if not course or not user:
+        return None
+    return component.getMultiAdapter((user, course), iface)
+
+@interface.implementer(IActiveTimesStatsSource)
+@component.adapter(ICourseInstanceEnrollment)
+def _active_times_for_enrollment(enrollment):
+    return _unwrap_and_adapt_enrollment(enrollment, IActiveTimesStatsSource)
+
+@interface.implementer(IDailyActivityStatsSource)
+@component.adapter(ICourseInstanceEnrollment)
+def _daily_activity_for_enrollment(enrollment):
+    return _unwrap_and_adapt_enrollment(enrollment, IDailyActivityStatsSource)
+
