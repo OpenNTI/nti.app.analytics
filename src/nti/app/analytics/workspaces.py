@@ -21,7 +21,6 @@ from zope.location.interfaces import ILocationInfo
 from zope.traversing.interfaces import IPathAdapter
 
 from nti.analytics import has_analytics
-from nti.analytics.interfaces import IAnalyticsContext
 
 from nti.app.analytics import ANALYTICS
 from nti.app.analytics import SYNC_PARAMS
@@ -34,9 +33,10 @@ from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import END_ANALYTICS_SESSION
 from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 
+from nti.app.analytics.interfaces import IAnalyticsContext
+from nti.app.analytics.interfaces import IAnalyticsWorkspace
 from nti.app.analytics.interfaces import IEventsCollection
 from nti.app.analytics.interfaces import ISessionsCollection
-from nti.app.analytics.interfaces import IAnalyticsWorkspace
 
 from nti.app.authentication import get_remote_user
 

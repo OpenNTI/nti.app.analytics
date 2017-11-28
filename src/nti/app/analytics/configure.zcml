@@ -21,10 +21,10 @@
 			 for=".interfaces.IAnalyticsCollection"/>
 
 	<adapter factory="nti.traversal.traversal.DefaultAdapterTraversable"
-			 for="nti.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest" />
+			 for="nti.app.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest" />
 
 	<adapter name="analytics"
-			 for="nti.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest"
+			 for="nti.app.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest"
 			 factory=".workspaces.analytics_path_adapter"
 			 provides="zope.traversing.interfaces.IPathAdapter" />
 
@@ -62,7 +62,7 @@
 
 	<subscriber factory=".decorators._AnalyticsContextLink"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
-				for="nti.analytics.interfaces.IAnalyticsContext
+				for="nti.app.analytics.interfaces.IAnalyticsContext
 					 pyramid.interfaces.IRequest"  />
 
 	<!-- JZ 1.15.2015 - Disable until needed

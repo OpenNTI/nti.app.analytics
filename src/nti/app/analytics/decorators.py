@@ -18,7 +18,6 @@ from zope.location.interfaces import ILocation
 from nti.analytics import has_analytics
 
 from nti.analytics.interfaces import IAnalyticsSession
-from nti.analytics.interfaces import IAnalyticsContext
 
 from nti.analytics.progress import get_topic_progress
 
@@ -29,6 +28,7 @@ from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import HISTORICAL_SESSIONS_VIEW_NAME
 
 from nti.app.analytics.interfaces import IAnalyticsCollection
+from nti.app.analytics.interfaces import IAnalyticsContext
 
 from nti.app.analytics.workspaces import AnalyticsWorkspace
 

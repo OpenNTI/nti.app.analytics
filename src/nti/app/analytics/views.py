@@ -26,7 +26,6 @@ from pyramid.view import view_config
 
 from pyramid import httpexceptions as hexc
 
-from nti.analytics.interfaces import IAnalyticsContext
 from nti.analytics.interfaces import IAnalyticsSession
 from nti.analytics.interfaces import IAnalyticsSessions
 from nti.analytics.interfaces import IBatchResourceEvents
@@ -43,6 +42,8 @@ from nti.app.analytics import ACTIVE_SESSION_COUNT
 from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import END_ANALYTICS_SESSION
 from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
+
+from nti.app.analytics.interfaces import IAnalyticsContext
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
