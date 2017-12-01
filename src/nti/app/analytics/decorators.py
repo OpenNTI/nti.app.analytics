@@ -58,17 +58,18 @@ LINKS = StandardExternalFields.LINKS
 
 logger = __import__('logging').getLogger(__name__)
 
+class _AnalyticsEnabledDecorator(AbstractAuthenticatedRequestAwareDecorator):
+
+    def _predicate(self, unused_context, unused_result):
+        return self._is_authenticated and has_analytics()
 
 @component.adapter(ICourseOutlineContentNode)
 @interface.implementer(IExternalMappingDecorator)
-class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
+class _CourseOutlineNodeProgressLinkDecorator(_AnalyticsEnabledDecorator):
     """
     Return a link on the content node in which the client can retrieve
     progress information for a user.
     """
-
-    def _predicate(self, unused_context, unused_result):
-        return self._is_authenticated and has_analytics()
 
     def _do_decorate_external(self, context, result):
         links = result.setdefault(LINKS, [])
@@ -81,14 +82,11 @@ class _CourseOutlineNodeProgressLinkDecorator(AbstractAuthenticatedRequestAwareD
 
 @component.adapter(ICourseInstance)
 @interface.implementer(IExternalMappingDecorator)
-class _CourseVideoProgressLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
+class _CourseVideoProgressLinkDecorator(_AnalyticsEnabledDecorator):
     """
     Return a link on the course in which the client can retrieve
     all video progress for a user.
     """
-
-    def _predicate(self, unused_context, unused_result):
-        return self._is_authenticated and has_analytics()
 
     def _do_decorate_external(self, context, result):
         links = result.setdefault(LINKS, [])
@@ -101,15 +99,12 @@ class _CourseVideoProgressLinkDecorator(AbstractAuthenticatedRequestAwareDecorat
 
 @component.adapter(ITopic)
 @interface.implementer(IExternalMappingDecorator)
-class _TopicProgressDecorator(AbstractAuthenticatedRequestAwareDecorator):
+class _TopicProgressDecorator(_AnalyticsEnabledDecorator):
     """
     Return progress for the outbound Topic.  Generally useful for noting
     the last time a user viewed a topic to determine if there is new
     user content.
     """
-
-    def _predicate(self, unused_context, unused_result):
-        return self._is_authenticated and has_analytics()
 
     def _do_decorate_external(self, context, result):
         progress = get_topic_progress(self.remoteUser, context)
@@ -118,13 +113,10 @@ class _TopicProgressDecorator(AbstractAuthenticatedRequestAwareDecorator):
 
 @component.adapter(ICourseInstance)
 @interface.implementer(IExternalMappingDecorator)
-class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
+class _GeoLocationsLinkDecorator(_AnalyticsEnabledDecorator):
     """
     Add a geo location link on the given course.
     """
-
-    def _predicate(self, unused_context, unused_result):
-        return self._is_authenticated and has_analytics()
 
     def _do_decorate_external(self, context, result):
         links = result.setdefault(LINKS, [])
@@ -134,14 +126,9 @@ class _GeoLocationsLinkDecorator(AbstractAuthenticatedRequestAwareDecorator):
         link.__parent__ = context
         links.append(link)
 
-
 @component.adapter(IAnalyticsContext)
 @interface.implementer(IExternalMappingDecorator)
-class _AnalyticsContextLink(AbstractAuthenticatedRequestAwareDecorator):
-
-    def _predicate(self, context, unused_result):
-        return self._is_authenticated \
-           and has_analytics()
+class _AnalyticsContextLink(_AnalyticsEnabledDecorator):
 
     def _do_decorate_external(self, context, result):
         workspace = AnalyticsWorkspace(None, root=context)
@@ -159,11 +146,10 @@ class _AnalyticsContextLink(AbstractAuthenticatedRequestAwareDecorator):
 
 @component.adapter(IUser)
 @interface.implementer(IExternalMappingDecorator)
-class _UserSessionDecorator(AbstractAuthenticatedRequestAwareDecorator):
+class _UserSessionDecorator(_AnalyticsEnabledDecorator):
 
     def _predicate(self, context, unused_result):
-        return self._is_authenticated \
-           and has_analytics() \
+        return super(_UserSessionDecorator, self)._predicate(context, unused_result) \
            and (   self.remoteUser == context
                 or is_admin_or_site_admin(self.remoteUser))
 
@@ -184,3 +170,16 @@ class _UserSessionDecorator(AbstractAuthenticatedRequestAwareDecorator):
         link.__name__ = ''
         link.__parent__ = context
         links.append(link)
+
+@component.adapter(IAnalyticsSession)
+@interface.implementer(IExternalMappingDecorator)
+class _SessionDetailsDecorator(_AnalyticsEnabledDecorator):
+
+    def _predicate(self, context, unused_result):
+        return super(_SessionDetailsDecorator, self)._predicate(context, unused_result) \
+           and (   self.remoteUser.username == context.Username
+                or is_admin_or_site_admin(self.remoteUser))
+
+    def _do_decorate_external(self, context, result):
+        for field in ('Username', 'UserAgent', ):
+            result[field] = getattr(context, field, None)

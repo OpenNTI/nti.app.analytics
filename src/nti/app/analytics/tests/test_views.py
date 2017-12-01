@@ -1306,7 +1306,9 @@ class TestHistoricalSessions(ApplicationLayerTest):
         user = res['Items'][0]
         assert_that(user, not_none())
         assert_that(user, has_entry('MostRecentSession',
-                                    has_entry('SessionID', sesh2.SessionID)))
+                                    has_entries('SessionID', sesh2.SessionID,
+                                                'Username', 'new_user2',
+                                                'UserAgent', not_none())))
 
 
         notBefore = time.mktime((start - timedelta(days=30)).timetuple())
