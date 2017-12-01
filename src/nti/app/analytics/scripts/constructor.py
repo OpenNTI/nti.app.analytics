@@ -8,6 +8,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+# pylint: disable=W0221
+
 import logging
 
 from zope import component
@@ -17,7 +19,7 @@ from zope.location.interfaces import IContained
 
 from z3c.autoinclude.zcml import includePluginsDirective
 
-from nti.async.utils.processor import Processor
+from nti.app.asynchronous.processor import Processor
 
 from nti.analytics import QUEUE_NAMES
 
@@ -56,9 +58,9 @@ class Constructor(Processor):
         if args.verbose:
             for _, module in component.getUtilitiesFor(IObjectProcessor):
                 module.logger.setLevel(logging.DEBUG)
-            for logger in (resource_view_logger, users_logger,
-                           sessions_logger, resolvers_logger):
-                logger.setLevel(logging.DEBUG)
+            for clazz_logger in (resource_view_logger, users_logger,
+                                 sessions_logger, resolvers_logger):
+                clazz_logger.setLevel(logging.DEBUG)
 
     def extend_context(self, context):
         includePluginsDirective(context, PP_ANALYTICS)
