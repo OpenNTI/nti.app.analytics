@@ -66,6 +66,11 @@
 				for="nti.app.analytics.interfaces.IAnalyticsContext
 					 pyramid.interfaces.IRequest"  />
 
+	<subscriber factory=".decorators._SessionDetailsDecorator"
+				provides="nti.externalization.interfaces.IExternalObjectDecorator"
+				for="nti.analytics.interfaces.IAnalyticsSession
+					 pyramid.interfaces.IRequest"  />
+
 	<!-- JZ 1.15.2015 - Disable until needed
 	<subscriber factory=".decorators._TopicProgressDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
