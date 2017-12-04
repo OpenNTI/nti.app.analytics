@@ -181,5 +181,5 @@ class _SessionDetailsDecorator(_AnalyticsEnabledDecorator):
                 or is_admin_or_site_admin(self.remoteUser))
 
     def _do_decorate_external(self, context, result):
-        for field in ('Username', 'UserAgent', ):
+        for field in ('Username', 'UserAgent', 'GeographicalLocation'):
             result[field] = getattr(context, field, None)
