@@ -92,6 +92,8 @@ class _AnalyticsWorkspace(object):
     to analytics clients.
     """
 
+    mime_type = mimeType = 'application/vnd.nextthought.analytics.workspace'
+
     __name__ = ANALYTICS
     name = ANALYTICS_TITLE
 
