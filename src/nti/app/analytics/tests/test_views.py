@@ -23,6 +23,7 @@ from hamcrest import has_entries
 from hamcrest import contains_string
 from hamcrest import is_not as does_not
 from hamcrest import has_key as have_key
+from hamcrest import greater_than
 
 import fudge
 
@@ -1454,3 +1455,25 @@ class TestUserAnalyticsWorkspace(ApplicationLayerTest):
 
         # As an admin we should have a analytics link
         self.require_link_href_with_rel(user, 'analytics')
+
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_stats_caching(self):
+
+        workspace_href = '/dataserver2/analytics'
+        workspace = self.testapp.get(workspace_href, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        workspace = workspace.json_body
+
+        href = self.require_link_href_with_rel(workspace, 'activity_by_date_summary')
+        resp = self.testapp.get(href, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+
+        assert_that(resp.cache_control.max_age, greater_than(0))
+        assert_that(resp.cache_control.must_revalidate, is_(False))
+
+        href = self.require_link_href_with_rel(workspace, 'active_times_summary')
+        resp = self.testapp.get(href, status=200,
+                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+
+        assert_that(resp.cache_control.max_age, greater_than(0))
+        assert_that(resp.cache_control.must_revalidate, is_(False))
