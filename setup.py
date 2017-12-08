@@ -57,7 +57,6 @@ setup(
         'nti.app.asynchronous',
         'nti.analytics',
         'nti.assessment',
-        'nti.async',
         'nti.common',
         'nti.contentlibrary',
         'nti.contenttypes.courses',
