@@ -24,6 +24,8 @@ from hamcrest import contains_string
 from hamcrest import is_not as does_not
 from hamcrest import has_key as have_key
 
+import fudge
+
 from nti.testing.time import time_monotonically_increases
 
 import six
@@ -31,8 +33,6 @@ import time
 
 from datetime import datetime
 from datetime import timedelta
-
-import fudge
 
 from webob.datetime_utils import serialize_date
 
@@ -882,9 +882,7 @@ class TestUserLocationView(_AbstractTestViews):
                 self.db.session.add(location)
 
     def set_up_test_locations(self):
-        # Create test locations
-        # Disregard all semblance of a city name. We need to test unicode
-        # characters!
+        # Create test locations; validate unicode.
         location1 = Location(latitude='10.0000',
                              longitude='10.0000',
                              city=u'Zürich åß∂∆˚≈ç√ñ≤œ∑ø',
@@ -1214,53 +1212,35 @@ class TestUserLocationView(_AbstractTestViews):
         second_location = get_csv_string(convert_to_utf8(json_data[1]))
         assert_that(result.body, contains_string(second_location))
 
-class TestUserAnalyticsWorkspace(ApplicationLayerTest):
-
-    default_origin = 'http://platform.ou.edu'
-
-    @WithSharedApplicationMockDS(testapp=True, users=True)
-    def test_analytics_workspace_link(self):
-        with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
-            self._create_user(u'new_user1',
-                              external_value={'realname': u'Billy Bob', 'email': u'foo@bar.com'})
-            user2 = self._create_user(u'new_user2',
-                                      external_value={'realname': u'Billy Rob', 'email': u'foo@bar.com'})
-
-        href = '/dataserver2/ResolveUser/new_user2'
-        res = self.testapp.get(href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
-        res = res.json_body
-
-        user = res['Items'][0]
-        assert_that(user, not_none())
-
-        # As an admin we should have a analytics link
-        self.require_link_href_with_rel(user, 'analytics')
-
-class TestHistoricalSessions(ApplicationLayerTest):
-
-    default_origin = 'http://platform.ou.edu'
-
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_most_recent_session(self):
         with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
             self._create_user(u'new_user1',
-                              external_value={'realname': u'Billy Bob', 'email': u'foo@bar.com'})
+                              external_value={'realname': u'Billy Bob',
+                                              'email': u'foo@bar.com'})
             user2 = self._create_user(u'new_user2',
-                                      external_value={'realname': u'Billy Rob', 'email': u'foo@bar.com'})
+                                      external_value={'realname': u'Billy Rob',
+                                                      'email': u'foo@bar.com'})
+
+        ip_address_1 = IpGeoLocation(user_id=2,
+                                     ip_addr='1.1.1.1',
+                                     country_code='US',
+                                     latitude=10.0,
+                                     longitude=10.0,
+                                     location_id=1)
+        self._store_locations(ip_address_1)
+        self.set_up_test_locations()
 
         href = '/dataserver2/ResolveUser/new_user2'
-        res = self.testapp.get(href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        res = self.testapp.get(href)
         res = res.json_body
-
         user = res['Items'][0]
         assert_that(user, not_none())
 
         # As an admin fetching we should see the property, but we have no
         # sessions currently
         assert_that(user, has_entry('MostRecentSession', none()))
-        # We also should ahve a HistoricalSessions link
+        # We also should have a HistoricalSessions link
         self.require_link_href_with_rel(user, 'HistoricalSessions')
 
         # As ourselves we can see the property
@@ -1289,10 +1269,10 @@ class TestHistoricalSessions(ApplicationLayerTest):
             end = start2 + timedelta(seconds=duration)
 
             # Test start = end
-            _add_session(user2.username, '', '',
+            _add_session(user2.username, '', '1.1.1.1',
                          start_time=start, end_time=start)
             # 30 seconds later, a longer session
-            sesh2 = _add_session(user2.username, '', '',
+            sesh2 = _add_session(user2.username, '', '1.1.1.1',
                                  start_time=start2, end_time=end)
             # and a session a long time ago
             longago = start - timedelta(days=60)
@@ -1308,8 +1288,8 @@ class TestHistoricalSessions(ApplicationLayerTest):
         assert_that(user, has_entry('MostRecentSession',
                                     has_entries('SessionID', sesh2.SessionID,
                                                 'Username', 'new_user2',
-                                                'UserAgent', not_none())))
-
+                                                'UserAgent', not_none(),
+                                                'GeographicalLocation', not_none())))
 
         notBefore = time.mktime((start - timedelta(days=30)).timetuple())
         notAfter = time.mktime(start.timetuple())
@@ -1317,9 +1297,7 @@ class TestHistoricalSessions(ApplicationLayerTest):
         href = self.require_link_href_with_rel(user, 'HistoricalSessions')
         res = self.testapp.get(href,
                                {'notBefore': notBefore,
-                               'notAfter': notAfter},
-                               status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+                               'notAfter': notAfter})
         res = res.json_body
         assert_that(res['Items'], has_length(2))
 
@@ -1335,11 +1313,10 @@ class TestHistoricalSessions(ApplicationLayerTest):
         href = self.require_link_href_with_rel(user, 'HistoricalSessions')
         res = self.testapp.get(href,
                                {'limit': 2,
-                               'notAfter': notAfter},
-                               status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+                               'notAfter': notAfter})
         res = res.json_body
         assert_that(res['Items'], has_length(2))
+
 
 class TestAnalyticsContexts(_AbstractTestViews):
 
@@ -1349,15 +1326,15 @@ class TestAnalyticsContexts(_AbstractTestViews):
     def test_user_context(self):
         with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
             self._create_user(u'new_user1',
-                              external_value={'realname': u'Billy Bob', 'email': u'foo@bar.com'})
-            user2 = self._create_user(u'new_user2',
-                                      external_value={'realname': u'Billy Rob', 'email': u'foo@bar.com'})
+                              external_value={'realname': u'Billy Bob',
+                                              'email': u'foo@bar.com'})
+            self._create_user(u'new_user2',
+                              external_value={'realname': u'Billy Rob',
+                                              'email': u'foo@bar.com'})
 
-        user_href = href = '/dataserver2/ResolveUser/new_user2'
-        res = self.testapp.get(href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        href = '/dataserver2/ResolveUser/new_user2'
+        res = self.testapp.get(href)
         res = res.json_body
-
         user = res['Items'][0]
         href = self.require_link_href_with_rel(user, 'analytics')
 
@@ -1395,16 +1372,14 @@ class TestAnalyticsContexts(_AbstractTestViews):
             ntiid = to_external_ntiid_oid(self.course)
 
         href = '/dataserver2/Objects/'+ntiid
-        res = self.testapp.get(href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        res = self.testapp.get(href)
         res = res.json_body
         href = self.require_link_href_with_rel(res, 'analytics')
 
         assert_that(href, ends_with('analytics'))
 
         # It is fetchable
-        analytics_workspace = self.testapp.get(href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        analytics_workspace = self.testapp.get(href)
         analytics_workspace = analytics_workspace.json_body
         assert_that(analytics_workspace, not_none())
 
@@ -1439,8 +1414,7 @@ class TestAnalyticsContexts(_AbstractTestViews):
         assert_that(href, ends_with('analytics'))
 
         # It is fetchable
-        analytics_workspace = self.testapp.get(href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        analytics_workspace = self.testapp.get(href)
         analytics_workspace = analytics_workspace.json_body
         assert_that(analytics_workspace, not_none())
 
@@ -1454,5 +1428,29 @@ class TestAnalyticsContexts(_AbstractTestViews):
 
         # Find one of the links we expect and make sure that the rendered link is correctly traversable
         activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace, 'activity_by_date_summary')
-        self.testapp.get(activity_by_date_summary, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        self.testapp.get(activity_by_date_summary)
+
+
+class TestUserAnalyticsWorkspace(ApplicationLayerTest):
+
+    default_origin = 'http://platform.ou.edu'
+
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_analytics_workspace_link(self):
+        with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
+            self._create_user(u'new_user1',
+                              external_value={'realname': u'Billy Bob',
+                                              'email': u'foo@bar.com'})
+            self._create_user(u'new_user2',
+                              external_value={'realname': u'Billy Rob',
+                                              'email': u'foo@bar.com'})
+
+        href = '/dataserver2/ResolveUser/new_user2'
+        res = self.testapp.get(href)
+        res = res.json_body
+
+        user = res['Items'][0]
+        assert_that(user, not_none())
+
+        # As an admin we should have a analytics link
+        self.require_link_href_with_rel(user, 'analytics')
