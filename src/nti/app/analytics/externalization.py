@@ -13,7 +13,7 @@ from zope import interface
 
 from zope.interface.interfaces import IMethod
 
-from nti.async.interfaces import IJob
+from nti.asynchronous.interfaces import IJob
 
 from nti.externalization.externalization import to_external_object
 
@@ -46,7 +46,7 @@ class AsyncJobExternalizer(object):
                 return self._ex_callable(x)
             else:
                 return to_external_object(x)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return repr(x)
 
     def toExternalObject(self, **unused_kwargs):
