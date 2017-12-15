@@ -71,6 +71,16 @@
 				for="nti.analytics.interfaces.IAnalyticsSession
 					 pyramid.interfaces.IRequest"  />
 
+	<!-- For the purposes of analytics, make our persistent enrollment records
+		 look like our app layer enrollment records in case they are fetched by oid -->
+	<subscriber factory=".decorators._AnalyticsContextLink"
+			provides="nti.externalization.interfaces.IExternalObjectDecorator"
+			for="nti.contenttypes.courses.enrollment.DefaultCourseInstanceEnrollmentRecord
+				 pyramid.interfaces.IRequest"  />
+	<adapter for="nti.contenttypes.courses.enrollment.DefaultCourseInstanceEnrollmentRecord"
+			 factory="nti.app.products.courseware.workspaces.DefaultCourseInstanceEnrollment"
+			 provides=".interfaces.IAnalyticsContext" />
+
 	<!-- JZ 1.15.2015 - Disable until needed
 	<subscriber factory=".decorators._TopicProgressDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
@@ -100,5 +110,10 @@
 	<!-- And an adapter for direct access -->
 	<adapter factory=".workspaces.AnalyticsWorkspace"
 			 provides=".interfaces.IAnalyticsWorkspace" />
+
+	<!-- Analytics contexts can be adapted to a workspace -->
+	<adapter factory=".workspaces._AnalyticsWorkspace"
+			 provides=".interfaces.IAnalyticsWorkspace"
+			 for=".interfaces.IAnalyticsContext" />
 
 </configure>

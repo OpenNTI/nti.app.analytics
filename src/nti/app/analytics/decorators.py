@@ -29,6 +29,7 @@ from nti.app.analytics import HISTORICAL_SESSIONS_VIEW_NAME
 
 from nti.app.analytics.interfaces import IAnalyticsCollection
 from nti.app.analytics.interfaces import IAnalyticsContext
+from nti.app.analytics.interfaces import IAnalyticsWorkspace
 
 from nti.app.analytics.workspaces import AnalyticsWorkspace
 
@@ -131,9 +132,10 @@ class _GeoLocationsLinkDecorator(_AnalyticsEnabledDecorator):
 class _AnalyticsContextLink(_AnalyticsEnabledDecorator):
 
     def _do_decorate_external(self, context, result):
-        workspace = AnalyticsWorkspace(None, root=context)
+        context = IAnalyticsContext(context)
+        workspace = IAnalyticsWorkspace(context, None)
 
-        if not has_permission(nauth.ACT_READ, workspace):
+        if workspace is None or not has_permission(nauth.ACT_READ, workspace):
             return
 
         links = result.setdefault(LINKS, [])
@@ -143,6 +145,7 @@ class _AnalyticsContextLink(_AnalyticsEnabledDecorator):
         link.__name__ = ''
         link.__parent__ = context
         links.append(link)
+
 
 @component.adapter(IUser)
 @interface.implementer(IExternalMappingDecorator)
