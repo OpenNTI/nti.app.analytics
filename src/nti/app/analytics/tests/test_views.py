@@ -1407,6 +1407,7 @@ class TestAnalyticsContexts(_AbstractTestViews):
             enrollment_manager = ICourseEnrollmentManager(self.course)
             er = enrollment_manager.enroll(user2)
             er = enrollment_from_record(None, er)
+            er_oid = er.ntiid
             link = Link(er, elements=('analytics',))
             interface.alsoProvides(link, ILinkExternalHrefOnly)
             href = render_link(link)
@@ -1429,6 +1430,12 @@ class TestAnalyticsContexts(_AbstractTestViews):
         # Find one of the links we expect and make sure that the rendered link is correctly traversable
         activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace, 'activity_by_date_summary')
         self.testapp.get(activity_by_date_summary)
+
+        oid_object = self.testapp.get('/dataserver2/Objects/'+er_oid)
+        oid_object = oid_object.json_body
+        # we also have an analytics link if we fetch the enrollment record by oid
+        from_oid_href = self.require_link_href_with_rel(oid_object, 'analytics')
+        assert_that(from_oid_href, is_(href))
 
 
 class TestUserAnalyticsWorkspace(ApplicationLayerTest):
