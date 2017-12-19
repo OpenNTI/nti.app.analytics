@@ -37,6 +37,7 @@ from nti.app.analytics.interfaces import IAnalyticsContext
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
 from nti.app.analytics.interfaces import IEventsCollection
 from nti.app.analytics.interfaces import ISessionsCollection
+from nti.app.analytics.interfaces import IAnalyticsContextACLProvider
 
 from nti.app.authentication import get_remote_user
 
@@ -113,12 +114,10 @@ class _AnalyticsWorkspace(object):
         if is_admin_or_site_admin(user):
             aces.append(ace_allowing(user, ACT_READ, type(self)))
 
-        # If our parent is a user we want to grant that user
-        # read access but deny read access to others. The user lets
-        # members of the shared community have read access
-        # so we have to explicitly deny
-        if IUser.providedBy(self.__parent__):
-            aces.append(ace_allowing(self.__parent__, ACT_READ, type(self)))
+        context = find_interface(self, IAnalyticsContext, strict=False)
+        aces_provider = IAnalyticsContextACLProvider(context, None)
+        if aces_provider:
+            aces.extend(aces_provider.aces())
         aces.append(ace_denying(EVERYONE_USER_NAME, ACT_READ, type(self)))
 
         return acl_from_aces(aces)

@@ -18,6 +18,8 @@ from pyramid.threadlocal import get_current_request
 from zope import component
 from zope import interface
 
+from zope.security.interfaces import IPrincipal
+
 from nti.analytics import has_analytics
 
 from nti.analytics.assessments import get_assignment_for_user
@@ -39,6 +41,8 @@ from nti.analytics.stats.interfaces import IActivitySource
 from nti.analytics.stats.interfaces import IActiveTimesStatsSource
 from nti.analytics.stats.interfaces import IDailyActivityStatsSource
 
+from nti.app.analytics.interfaces import IAnalyticsContextACLProvider
+
 from nti.app.analytics.usage_stats import CourseVideoUsageStats
 from nti.app.analytics.usage_stats import CourseResourceUsageStats
 from nti.app.analytics.usage_stats import UserCourseVideoUsageStats
@@ -53,6 +57,12 @@ from nti.assessment.interfaces import IQAssignment
 from nti.assessment.interfaces import IQuestionSet
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
+
+from nti.contenttypes.courses.utils import get_course_instructors
+
+from nti.dataserver.authorization import ACT_READ
+
+from nti.dataserver.authorization_acl import ace_allowing
 
 from nti.dataserver.contenttypes.forums.interfaces import ITopic
 
@@ -271,3 +281,27 @@ class _AnalyticsSessionIdProvider(object):
 
         result = get_session_id_from_request(request)
         return result
+
+@component.adapter(IUser)
+@interface.implementer(IAnalyticsContextACLProvider)
+class UserAceProvider(object):
+
+    def __init__(self, user=None):
+        self.user = user
+
+    def aces(self):
+        return [ace_allowing(self.user, ACT_READ, type(self))]
+
+@component.adapter(ICourseInstanceEnrollment)
+@interface.implementer(IAnalyticsContextACLProvider)
+class EnrollmentAceProvider(object):
+
+    def __init__(self, enrollment=None):
+        self.enrollment = enrollment
+
+    def aces(self):
+        instructors = get_course_instructors(self.enrollment)
+        aces = [ace_allowing(IPrincipal(self.enrollment.Username), ACT_READ, type(self))]
+        for inst in instructors:
+            aces.append([ace_allowing(IPrincipal(inst), ACT_READ, type(self))])
+        return aces
