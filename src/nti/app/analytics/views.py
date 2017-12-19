@@ -12,6 +12,7 @@ import csv
 import six
 import calendar
 import datetime
+
 from io import BytesIO
 
 from requests.structures import CaseInsensitiveDict
@@ -34,17 +35,6 @@ from nti.analytics.locations import get_location_list
 
 from nti.analytics.model import AnalyticsClientParams
 
-from nti.app.analytics import MessageFactory as _
-
-from nti.app.analytics import SYNC_PARAMS
-from nti.app.analytics import ANALYTICS_SESSION
-from nti.app.analytics import ACTIVE_SESSION_COUNT
-from nti.app.analytics import ACTIVE_TIMES_SUMMARY
-from nti.app.analytics import END_ANALYTICS_SESSION
-from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
-
-from nti.app.analytics.interfaces import IAnalyticsContext
-
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_progress_for_ntiid
 from nti.analytics.resource_views import get_video_progress_for_course
@@ -61,11 +51,24 @@ from nti.analytics.stats.interfaces import IActiveTimesStatsSource
 from nti.analytics.stats.interfaces import IActiveSessionStatsSource
 from nti.analytics.stats.interfaces import IDailyActivityStatsSource
 
+
+from nti.app.analytics import SYNC_PARAMS
+from nti.app.analytics import ANALYTICS_SESSION
+from nti.app.analytics import ACTIVE_SESSION_COUNT
+from nti.app.analytics import ACTIVE_TIMES_SUMMARY
+from nti.app.analytics import END_ANALYTICS_SESSION
+from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
+from nti.app.analytics import ANALYTICS_SESSION_COOKIE_NAME
+
+from nti.app.analytics import MessageFactory as _
+
+from nti.app.analytics.interfaces import IAnalyticsContext
 from nti.app.analytics.interfaces import IEventsCollection
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
 from nti.app.analytics.interfaces import ISessionsCollection
 
 from nti.app.analytics.utils import set_research_status
+from nti.app.analytics.utils import get_session_id_from_request
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
@@ -173,7 +176,7 @@ class BatchEvents(AbstractAuthenticatedView,
                   ModeledContentUploadRequestUtilsMixin):
     """
     A view that accepts a batch of analytics events.  The view
-    will parse the input and process the events (e.g. queueing).
+    will parse the input and process the events.
     """
 
     content_predicate = IBatchResourceEvents.providedBy
@@ -184,7 +187,8 @@ class BatchEvents(AbstractAuthenticatedView,
         total_count = len(events)
 
         event_count, malformed_count, invalid_count = _process_batch_events(events)
-        logger.info('Received batched analytic events (count=%s) (total_count=%s) (malformed=%s) (invalid=%s)',
+        logger.info("""Received batched analytic events (count=%s)
+                    (total_count=%s) (malformed=%s) (invalid=%s)""",
                     event_count, total_count, malformed_count, invalid_count)
 
         result = LocatedExternalDict()
@@ -215,6 +219,20 @@ class BatchEventParams(AbstractAuthenticatedView):
              permission=nauth.ACT_CREATE)
 class AnalyticsSession(AbstractAuthenticatedView):
 
+    def _set_cookie(self, request, new_session):
+        # If we have current session, fire an event to kill it.
+        # TODO: Is this what we want?  What about multiple tabs?
+        # Will we inadvertantly kill open sessions?
+        old_id = get_session_id_from_request(request)
+        if old_id is not None:
+            user = self.remoteUser
+            if user is not None:
+                handle_end_session(user.username, old_id)
+
+        request.response.set_cookie(ANALYTICS_SESSION_COOKIE_NAME,
+                                    value=str(new_session.session_id),
+                                    overwrite=True)
+
     def __call__(self):
         """
         Create a new analytics session and place it in a cookie.
@@ -222,7 +240,8 @@ class AnalyticsSession(AbstractAuthenticatedView):
         request = self.request
         user = request.remote_user
         if user is not None:
-            handle_new_session(user, request)
+            new_session = handle_new_session(user, request)
+            self._set_cookie(request, new_session)
         return request.response
 
 
@@ -245,7 +264,8 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
             the session ended.
 
     batch_events
-            The (optional) closed batch_events, occurring at the end of session.
+            The (optional) closed batch_events, occurring at the end of
+            session.
     """
 
     def __call__(self):
@@ -264,11 +284,17 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
             if events:
                 total_count = len(events)
                 event_count, malformed_count, invalid_count = _process_batch_events(events)
-                logger.info('Process batched analytic events on session close (count=%s) (total_count=%s) (malformed=%s) (invalid_count=%s)',
-                            event_count, total_count, malformed_count, invalid_count)
+                logger.info("""Process batched analytic events on session close
+                            (count=%s) (total_count=%s) (malformed=%s)
+                            (invalid_count=%s)""",
+                            event_count, total_count, malformed_count,
+                            invalid_count)
 
-        handle_end_session(user, request, timestamp=timestamp)
-        return hexc.HTTPNoContent()
+        session_id = get_session_id_from_request(self.request)
+        handle_end_session(user, session_id, timestamp=timestamp)
+        request.response.delete_cookie(ANALYTICS_SESSION_COOKIE_NAME)
+        self.request.response.status_code = 204
+        return self.request.response
 
 
 @view_config(route_name='objects.generic.traversal',

@@ -24,3 +24,6 @@ ACTIVE_TIMES_SUMMARY = 'active_times_summary'
 END_ANALYTICS_SESSION = 'end_analytics_session'
 ACTIVITY_SUMMARY_BY_DATE = 'activity_by_date_summary'
 HISTORICAL_SESSIONS_VIEW_NAME = 'HistoricalSessions'
+
+ANALYTICS_SESSION_COOKIE_NAME = str('nti.da_session')
+ANALYTICS_SESSION_HEADER = str('x-nti-da-session')
