@@ -49,3 +49,14 @@ class IAnalyticsContext(interface.Interface):
     and can provide analytics information specific to their context
     """
 IAnalyticsContext.setTaggedValue('_ext_is_marker_interface', True)
+
+class IAnalyticsContextACLProvider(interface.Interface):
+    """
+    Queried as an adapter on IAnalyticsContext
+    to provide additional aces to include in the workspaces acl
+    """
+
+    def aces():
+        """
+        A set of aces that should be added to the workspaces acl
+        """

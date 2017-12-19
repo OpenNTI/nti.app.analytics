@@ -116,6 +116,8 @@
 			 provides=".interfaces.IAnalyticsWorkspace"
 			 for=".interfaces.IAnalyticsContext" />
 
+	<adapter factory=".adapters.UserAceProvider" />
+
 	<subscriber handler=".subscribers._user_logout_event" />
 
 	<adapter factory=".adapters._AnalyticsSessionIdProvider"
