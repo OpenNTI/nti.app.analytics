@@ -18,6 +18,7 @@ from io import BytesIO
 from requests.structures import CaseInsensitiveDict
 
 from zope import component
+from zope import interface
 
 from zope.cachedescriptors.property import Lazy
 
@@ -76,6 +77,9 @@ from nti.app.externalization.error import raise_json_error
 
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
+from nti.app.renderers.interfaces import IResponseCacheController
+from nti.app.renderers.caching import default_cache_controller
+
 from nti.common.string import is_true
 
 from nti.contentlibrary.indexed_data import get_catalog
@@ -116,6 +120,27 @@ GEO_LOCATION_VIEW = 'GeoLocations'
 SET_RESEARCH_VIEW = 'SetUserResearch'
 
 logger = __import__('logging').getLogger(__name__)
+
+class _ICacheControlHint(interface.Interface):
+    """
+    A marker interface providing a hint as to how cacheable
+    a response is.
+    """
+_ICacheControlHint.setTaggedValue('_ext_is_marker_interface', True)
+
+class _IDailyResults(_ICacheControlHint):
+    """
+    A _ICacheControlHint indicating results update daily
+    and as such can be cached for the current day
+    """
+_IDailyResults.setTaggedValue('_ext_is_marker_interface', True)
+
+class _IHistoricalResults(_ICacheControlHint):
+    """
+    A _ICacheControlHint indicating results are historical
+    and are unlikely to change with any frequency
+    """
+_IHistoricalResults.setTaggedValue('_ext_is_marker_interface', True)
 
 
 def _get_last_mod(progress, max_last_mod):
@@ -849,6 +874,10 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView, StatsSourceMixin):
             items[day] = [stats[idx][hour].Count for hour in range(0, 24)]
 
         result['WeekDays'] = items
+
+        # These results will not update more frequently than daily
+        interface.alsoProvides(result, _IDailyResults)
+
         return result
 
 
@@ -883,4 +912,46 @@ class ActivitySummaryByDate(AbstractUserLocationView, StatsSourceMixin, Windowed
         result['Dates'] = {
             k.strftime('%Y-%m-%d'): v.Count for k, v in stats.items()
         }
+
+        cache_hint = _IDailyResults
+        if not_after and not_before:
+            cache_hint = _IHistoricalResults
+        interface.alsoProvides(result, cache_hint)
+
         return result
+
+
+@interface.implementer(IResponseCacheController)
+class AbstractStatsCacheControl(object):
+
+    def __init__(self, context, request=None):
+        self.context = context
+        self.request = request
+
+    def __call__(self, context, system):
+        return default_cache_controller(context, system)
+
+class DailyCacheControl(AbstractStatsCacheControl):
+
+    def __call__(self, context, system):
+        resp = super(DailyCacheControl, self).__call__(context, system)
+        resp.cache_control.must_revalidate = False
+        now = datetime.datetime.now()
+
+        # Go back to the beginning of today. It
+        # will be the *exclusive* end of the range
+        expires = datetime.datetime(now.year,
+                                    now.month,
+                                    now.day)
+        expires = (expires + datetime.timedelta(days=1))
+        resp.cache_control.max_age = int((expires - now).total_seconds())
+        return resp
+
+class HistoricalCacheControl(AbstractStatsCacheControl):
+
+    def __call__(self, context, system):
+        resp = super(HistoricalCacheControl, self).__call__(context, system)
+        resp.cache_control.max_age = 24*60*60
+        resp.cache_control.must_revalidate = False
+        return resp
+

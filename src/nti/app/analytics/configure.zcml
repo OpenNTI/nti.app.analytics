@@ -15,6 +15,14 @@
 	<adapter factory="nti.traversal.traversal.DefaultAdapterTraversable"
 			 for="nti.app.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest" />
 
+	<adapter for=".views._IDailyResults"
+			 provides="nti.app.renderers.interfaces.IResponseCacheController"
+			 factory=".views.DailyCacheControl" />
+
+	<adapter for=".views._IHistoricalResults"
+			 provides="nti.app.renderers.interfaces.IResponseCacheController"
+			 factory=".views.HistoricalCacheControl" />
+
 	<adapter name="analytics"
 			 for="nti.app.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest"
 			 factory=".workspaces.analytics_path_adapter"
