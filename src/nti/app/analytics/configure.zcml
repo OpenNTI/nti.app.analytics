@@ -116,4 +116,10 @@
 			 provides=".interfaces.IAnalyticsWorkspace"
 			 for=".interfaces.IAnalyticsContext" />
 
+	<subscriber handler=".subscribers._user_logout_event" />
+
+	<adapter factory=".adapters._AnalyticsSessionIdProvider"
+             provides="nti.analytics.interfaces.IAnalyticsSessionIdProvider"
+             for="nti.analytics.interfaces.IAnalyticsEvent" />
+
 </configure>

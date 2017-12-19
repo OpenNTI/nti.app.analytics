@@ -13,6 +13,8 @@ from __future__ import absolute_import
 from datetime import datetime
 from six import integer_types
 
+from pyramid.threadlocal import get_current_request
+
 from zope import component
 from zope import interface
 
@@ -25,6 +27,8 @@ from nti.analytics.boards import get_topic_views
 from nti.analytics.boards import get_topic_last_view
 
 from nti.analytics.interfaces import IProgress
+from nti.analytics.interfaces import IAnalyticsEvent
+from nti.analytics.interfaces import IAnalyticsSessionIdProvider
 
 from nti.analytics.progress import DefaultProgress
 
@@ -55,6 +59,7 @@ from nti.dataserver.interfaces import INote
 from nti.dataserver.interfaces import IUser
 
 from nti.dataserver.users import User
+from nti.app.analytics.utils import get_session_id_from_request
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -210,6 +215,7 @@ def _resource_usage_stats(context):
         result = CourseResourceUsageStats(context)
     return result
 
+
 def _unwrap_and_adapt_enrollment(enrollment, iface):
     course = enrollment.CourseInstance
     user = User.get_user(enrollment.Username)
@@ -218,13 +224,45 @@ def _unwrap_and_adapt_enrollment(enrollment, iface):
         return None
     return component.getMultiAdapter((user, course), iface)
 
+
 @interface.implementer(IActiveTimesStatsSource)
 @component.adapter(ICourseInstanceEnrollment)
 def _active_times_for_enrollment(enrollment):
     return _unwrap_and_adapt_enrollment(enrollment, IActiveTimesStatsSource)
+
 
 @interface.implementer(IDailyActivityStatsSource)
 @component.adapter(ICourseInstanceEnrollment)
 def _daily_activity_for_enrollment(enrollment):
     return _unwrap_and_adapt_enrollment(enrollment, IDailyActivityStatsSource)
 
+
+@component.adapter(IAnalyticsEvent)
+@interface.implementer(IAnalyticsSessionIdProvider)
+class _AnalyticsSessionIdProvider(object):
+    """
+    For an analytics event, be able to determine the valid analytics session
+    it is tied to.
+    """
+
+    def __init__(self, event):
+        self.event = event
+
+    def get_session_id(self):
+        # Here is what we look for, in order:
+        # 1. A session id attached to the incoming event (probably ipad only)
+        # 2. A header on the request, (also ipad)
+        # 3. A cookie, which should be from webapp, that we can also validate.
+
+        given_session_id = getattr(self.event, 'SessionID', None)
+        if given_session_id is not None:
+            return given_session_id
+
+        request = get_current_request()
+
+        if     request is None \
+            or not has_analytics():
+            return None
+
+        result = get_session_id_from_request(request)
+        return result

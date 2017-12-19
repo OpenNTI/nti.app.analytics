@@ -90,9 +90,7 @@ from nti.analytics.model import SelfAssessmentViewEvent
 from nti.analytics.model import VideoPlaySpeedChangeEvent
 
 from nti.analytics.sessions import _add_session
-from nti.analytics.sessions import _get_cookie_id
 from nti.analytics.sessions import get_current_session_id
-from nti.analytics.sessions import ANALYTICS_SESSION_HEADER
 
 from nti.analytics.tests import TestIdentifier
 
@@ -101,8 +99,11 @@ from nti.analytics_database.interfaces import IAnalyticsNTIIDIdentifier
 from nti.analytics_database.interfaces import IAnalyticsRootContextIdentifier
 
 from nti.app.analytics import SYNC_PARAMS
+from nti.app.analytics import ANALYTICS_SESSION_HEADER
 
 from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
+
+from nti.app.analytics.utils import get_session_id_from_request
 
 from nti.app.analytics.views import GEO_LOCATION_VIEW
 from nti.app.analytics.views import UserLocationJsonView
@@ -471,13 +472,11 @@ class TestAnalyticsSession(_AbstractTestViews):
 
         # New session
         session_url = '/dataserver2/analytics/sessions/@@analytics_session'
-        self.testapp.post_json(session_url,
-                               None,
-                               status=200)
+        res = self.testapp.post_json(session_url)
 
-        cookie_id = first_session_id = _get_cookie_id(self.testapp)
-        assert_that(cookie_id, is_(1))
+        assert_that(res.headers['Set-Cookie'], is_('nti.da_session=1; Path=/'))
 
+        first_session_id = 1
         results = self.session.query(Sessions).all()
         assert_that(results, has_length(1))
         assert_that(results[0].session_id, first_session_id)
@@ -489,18 +488,18 @@ class TestAnalyticsSession(_AbstractTestViews):
             assert_that(current_session_id, none())
 
         # New session #2
-        self.testapp.post_json(session_url,
-                               None,
-                               status=200)
+        res = self.testapp.post_json(session_url)
+        assert_that(res.headers['Set-Cookie'], is_('nti.da_session=2; Path=/'))
 
-        cookie_id = _get_cookie_id(self.testapp)
-        assert_that(cookie_id, is_(2))
+        # Our request was with the old cookie_id
+        cookie_id = get_session_id_from_request(res.request)
+        assert_that(cookie_id, is_(first_session_id))
 
         results = self.session.query(Sessions).all()
         assert_that(results, has_length(2))
         # This last call implicitly ends the previous session.
-        first_session = self.session.query(Sessions) \
-                            .filter(Sessions.session_id == first_session_id).one()
+        first_session = self.session.query(Sessions).filter(
+                                           Sessions.session_id == first_session_id).one()
         assert_that(first_session.end_time, not_none())
 
         with mock_dataserver.mock_db_trans(self.ds):
@@ -517,18 +516,19 @@ class TestAnalyticsSession(_AbstractTestViews):
         end_session_url = '/dataserver2/analytics/sessions/@@end_analytics_session'
 
         timestamp = timestamp_type(1)
-        self.testapp.post_json(end_session_url,
-                               {'session_id': 2,
-                                'timestamp': 1,
-                                'batch_events': batch_events},
-                               status=204)
+        res = self.testapp.post_json(end_session_url,
+                                     {'session_id': 2,
+                                      'timestamp': 1,
+                                      'batch_events': batch_events})
 
-        # This cookie is set to expire; how to test that?
-#         cookie_id = _get_cookie_id( self.testapp )
-#         assert_that( cookie_id, none() )
+        # Request with second session id
+        assert_that(get_session_id_from_request(res.request), is_(2))
+        # Response cookie is deleted
+        assert_that(res.headers['Set-Cookie'],
+                    contains_string('nti.da_session=; Max-Age=0;'))
 
-        session_record = self.session.query(Sessions) \
-                             .filter(Sessions.session_id == 2).first()
+        session_record = self.session.query(Sessions).filter(
+                                            Sessions.session_id == 2).first()
         assert_that(session_record, not_none())
         assert_that(session_record.end_time, is_(timestamp))
 
