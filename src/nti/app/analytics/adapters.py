@@ -307,5 +307,4 @@ class EnrollmentAceProvider(object):
         for pid, setting in prm.getPrincipalsForRole(RID_INSTRUCTOR):
             if setting == Allow:
                 aces.append([ace_allowing(IPrincipal(pid), ACT_READ, type(self))])
-        from IPython.core.debugger import Tracer;Tracer()()
         return aces
