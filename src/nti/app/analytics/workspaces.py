@@ -115,10 +115,9 @@ class _AnalyticsWorkspace(object):
             aces.append(ace_allowing(user, ACT_READ, type(self)))
 
         context = find_interface(self, IAnalyticsContext, strict=False)
-        if context is not None:
-            aces_provider = IAnalyticsContextACLProvider(context, None)
-            if aces_provider:
-                aces.extend(aces_provider.aces())
+        aces_provider = IAnalyticsContextACLProvider(context, None)
+        if aces_provider:
+            aces.extend(aces_provider.aces())
         aces.append(ace_denying(EVERYONE_USER_NAME, ACT_READ, type(self)))
 
         return acl_from_aces(aces)
