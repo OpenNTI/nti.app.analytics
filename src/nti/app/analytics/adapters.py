@@ -35,6 +35,7 @@ from nti.analytics.progress import DefaultProgress
 from nti.analytics.resource_tags import get_note_views
 from nti.analytics.resource_tags import get_note_last_view
 
+from nti.analytics.stats.interfaces import IActivitySource
 from nti.analytics.stats.interfaces import IActiveTimesStatsSource
 from nti.analytics.stats.interfaces import IDailyActivityStatsSource
 
@@ -236,6 +237,10 @@ def _active_times_for_enrollment(enrollment):
 def _daily_activity_for_enrollment(enrollment):
     return _unwrap_and_adapt_enrollment(enrollment, IDailyActivityStatsSource)
 
+@interface.implementer(IActivitySource)
+@component.adapter(ICourseInstanceEnrollment)
+def _activity_source_for_enrollment(enrollment):
+    return _unwrap_and_adapt_enrollment(enrollment, IActivitySource)
 
 @component.adapter(IAnalyticsEvent)
 @interface.implementer(IAnalyticsSessionIdProvider)
