@@ -18,6 +18,12 @@ from pyramid.threadlocal import get_current_request
 from zope import component
 from zope import interface
 
+from zope.security.interfaces import IPrincipal
+
+from zope.securitypolicy.interfaces import IPrincipalRoleMap
+
+from zope.securitypolicy.settings import Allow
+
 from nti.analytics import has_analytics
 
 from nti.analytics.assessments import get_assignment_for_user
@@ -54,6 +60,7 @@ from nti.assessment.interfaces import IQAssignment
 from nti.assessment.interfaces import IQuestionSet
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
+from nti.contenttypes.courses.interfaces import RID_INSTRUCTOR
 
 from nti.dataserver.authorization import ACT_READ
 
@@ -282,3 +289,23 @@ class UserAceProvider(object):
 
     def aces(self):
         return [ace_allowing(self.user, ACT_READ, type(self))]
+
+@component.adapter(ICourseInstanceEnrollment)
+@interface.implementer(IAnalyticsContextACLProvider)
+class EnrollmentAceProvider(object):
+
+    def __init__(self, enrollment=None):
+        self.enrollment = enrollment
+
+    @property
+    def course_instance(self):
+        return ICourseInstance(self.enrollment)
+
+    def aces(self):
+        prm = IPrincipalRoleMap(self.course_instance)
+        aces = [ace_allowing(IPrincipal(self.enrollment.Username), ACT_READ, type(self))]
+        for pid, setting in prm.getPrincipalsForRole(RID_INSTRUCTOR):
+            if setting == Allow:
+                aces.append([ace_allowing(IPrincipal(pid), ACT_READ, type(self))])
+        from IPython.core.debugger import Tracer;Tracer()()
+        return aces

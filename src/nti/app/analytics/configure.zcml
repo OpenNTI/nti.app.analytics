@@ -117,6 +117,7 @@
 			 for=".interfaces.IAnalyticsContext" />
 
 	<adapter factory=".adapters.UserAceProvider" />
+	<adapter factory=".adapters.EnrollmentAceProvider" />
 
 	<subscriber handler=".subscribers._user_logout_event" />
 
