@@ -293,7 +293,7 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
         session_id = get_session_id_from_request(self.request)
         handle_end_session(user, session_id, timestamp=timestamp)
         request.response.delete_cookie(ANALYTICS_SESSION_COOKIE_NAME)
-        self.request.response.status_code = 204
+        #self.request.response.status_code = 204
         return self.request.response
 
 
