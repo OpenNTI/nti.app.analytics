@@ -812,7 +812,7 @@ class UserRecentSessions(AbstractHistoricalAnalyticsView):
                                         max_timestamp=not_after)
         else:
             limit = self._limit
-            not_after = not_after or datetime.datetime.now()
+            not_after = not_after or datetime.datetime.utcnow()
 
             sessions = get_recent_user_sessions(context,
                                                 limit=limit,
@@ -850,7 +850,7 @@ class GetActivity(AbstractHistoricalAnalyticsView):
                       'max_timestamp': not_after}
         else:
             limit = self._limit
-            not_after = not_after or datetime.datetime.now()
+            not_after = not_after or datetime.datetime.utcnow()
 
             kwargs = {'limit': limit,
                       'max_timestamp': not_after}
@@ -890,7 +890,7 @@ class AnalyticsTimeSummary(AbstractAuthenticatedView, StatsSourceMixin):
         We want `weeks` full weeks of data.
         """
         if not as_of_time:
-            as_of_time = datetime.datetime.now()
+            as_of_time = datetime.datetime.utcnow()
 
         # Go back to the beginning of today. It
         # will be the *exclusive* end of the range
@@ -996,7 +996,7 @@ class DailyCacheControl(AbstractStatsCacheControl):
     def __call__(self, context, system):
         resp = super(DailyCacheControl, self).__call__(context, system)
         resp.cache_control.must_revalidate = False
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
 
         # Go back to the beginning of today. It
         # will be the *exclusive* end of the range
