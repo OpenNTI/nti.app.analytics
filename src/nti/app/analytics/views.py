@@ -48,6 +48,7 @@ from nti.analytics.sessions import handle_new_session
 
 from nti.analytics.progress import get_assessment_progresses_for_course
 
+from nti.analytics.stats.interfaces import IActivitySource
 from nti.analytics.stats.interfaces import IActiveTimesStatsSource
 from nti.analytics.stats.interfaces import IActiveSessionStatsSource
 from nti.analytics.stats.interfaces import IDailyActivityStatsSource
@@ -746,13 +747,7 @@ class WindowedViewMixin(object):
             not_before = not_after - datetime.timedelta(days=self.DEFAULT_WINDOW_DAYS)
         return not_before, not_after
 
-
-@view_config(route_name='objects.generic.traversal',
-             renderer='rest',
-             context=ISessionsCollection,
-             request_method='GET',
-             permission=nauth.ACT_READ)
-class UserRecentSessions(AbstractUserLocationView, WindowedViewMixin):
+class AbstractHistoricalAnalyticsView(AbstractUserLocationView, WindowedViewMixin):
     """
     Provides a collection of recent sessions the users has had.
     By default this view returns 30 days worth of sessions. Query
@@ -762,40 +757,105 @@ class UserRecentSessions(AbstractUserLocationView, WindowedViewMixin):
     DEFAULT_WINDOW_DAYS = 30
     DEFAULT_LIMIT = 10
 
-    def _make_session(self, session):
-        return IAnalyticsSession(session)
-
     @property
     def _limit(self):
         return self.request.params.get('limit', self.DEFAULT_LIMIT)
 
+    def _make_external(self, o):
+        return o
+
+    def _analytics_context(self):
+        return find_interface(self.context, IAnalyticsContext, strict=False)
+
+    def _get_raw(self, not_before, not_after):
+        return []
+
     def __call__(self):
-        user_context = find_interface(self.context, IUser, strict=False)
+        user_context = self._analytics_context()
 
         not_before = self.not_before
         not_after = self.not_after
 
-        #They gave us a time window
+        raw = self._get_raw(not_before, not_after)
+
+        objects = [self._make_external(obj) for obj in raw]
+        options = LocatedExternalDict()
+        options.__parent__ = self.request.context
+        options.__name__ = self.request.view_name
+        options[ITEMS] = objects
+        options[ITEM_COUNT] = options[TOTAL] = len(objects)
+        return options
+
+@view_config(route_name='objects.generic.traversal',
+             renderer='rest',
+             context=ISessionsCollection,
+             request_method='GET',
+             permission=nauth.ACT_READ)
+class UserRecentSessions(AbstractHistoricalAnalyticsView):
+    """
+    Provides a collection of recent sessions the users has had.
+    By default this view returns 30 days worth of sessions. Query
+    params of start and end can be provided to give a date range
+    """
+
+    def _make_external(self, session):
+        return IAnalyticsSession(session)
+
+    def _analytics_context(self):
+        return find_interface(self.context, IUser, strict=False)
+
+    def _get_raw(self, not_before, not_after):
+        context = self._analytics_context()
         if not_before and not_after:
-            sessions = get_user_sessions(user_context,
+            sessions = get_user_sessions(context,
                                         timestamp=not_before,
                                         max_timestamp=not_after)
         else:
             limit = self._limit
             not_after = not_after or datetime.datetime.now()
 
-            sessions = get_recent_user_sessions(user_context,
+            sessions = get_recent_user_sessions(context,
                                                 limit=limit,
                                                 not_after=not_after)
+        return sessions
 
-        sessions = [self._make_session(s) for s in sessions]
-        options = LocatedExternalDict()
-        options.__parent__ = self.request.context
-        options.__name__ = self.request.view_name
-        options[ITEMS] = sessions
-        options[ITEM_COUNT] = options[TOTAL] = len(sessions)
-        return options
+    def __call__(self):
+        user_context = self._analytics_context()
 
+        if not user_context:
+            raise hexc.HTTPBadRequest()
+
+        return super(UserRecentSessions, self).__call__()
+
+@view_config(route_name='objects.generic.traversal',
+             renderer='rest',
+             context=IEventsCollection,
+             request_method='GET',
+             permission=nauth.ACT_READ)
+class GetActivity(AbstractHistoricalAnalyticsView):
+
+    def _make_external(self, event):
+        return to_external_object(event, name='summary')
+
+    def _get_raw(self, not_before, not_after):
+        context = self._analytics_context()
+        if context:
+            source = IActivitySource(self._analytics_context())
+        else:
+            source = component.getUtility(IActivitySource)
+
+        #They gave us a time window
+        if not_before and not_after:
+            kwargs = {'timestamp': not_before,
+                      'max_timestamp': not_after}
+        else:
+            limit = self._limit
+            not_after = not_after or datetime.datetime.now()
+
+            kwargs = {'limit': limit,
+                      'max_timestamp': not_after}
+
+        return source.activity(**kwargs)
 
 @view_config(route_name='objects.generic.traversal',
              name=ACTIVE_SESSION_COUNT,

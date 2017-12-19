@@ -406,6 +406,10 @@ class TestBatchEvents(_AbstractTestViews):
         results = self.session.query(VideoEvents).all()
         assert_that(results, has_length(2))
 
+        future = time.time() + 1000000
+        result = self.testapp.get(batch_url+'?notAfter='+str(future), status=200).json_body
+        assert_that(result, has_entry('Items', has_length(1)))
+
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     @fudge.patch('nti.analytics.resource_views._get_object')
     @fudge.patch('nti.analytics.resource_views._get_root_context')
