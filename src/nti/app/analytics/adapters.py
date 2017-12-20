@@ -247,10 +247,12 @@ def _active_times_for_enrollment(enrollment):
 def _daily_activity_for_enrollment(enrollment):
     return _unwrap_and_adapt_enrollment(enrollment, IDailyActivityStatsSource)
 
+
 @interface.implementer(IActivitySource)
 @component.adapter(ICourseInstanceEnrollment)
 def _activity_source_for_enrollment(enrollment):
     return _unwrap_and_adapt_enrollment(enrollment, IActivitySource)
+
 
 @component.adapter(IAnalyticsEvent)
 @interface.implementer(IAnalyticsSessionIdProvider)
@@ -282,6 +284,7 @@ class _AnalyticsSessionIdProvider(object):
         result = get_session_id_from_request(request)
         return result
 
+
 @component.adapter(IUser)
 @interface.implementer(IAnalyticsContextACLProvider)
 class UserAceProvider(object):
@@ -291,6 +294,7 @@ class UserAceProvider(object):
 
     def aces(self):
         return [ace_allowing(self.user, ACT_READ, type(self))]
+
 
 @component.adapter(ICourseInstanceEnrollment)
 @interface.implementer(IAnalyticsContextACLProvider)

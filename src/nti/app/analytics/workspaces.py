@@ -16,7 +16,6 @@ from zope import interface
 from zope.cachedescriptors.property import Lazy
 
 from zope.location.interfaces import IContained
-from zope.location.interfaces import ILocationInfo
 
 from zope.traversing.interfaces import IPathAdapter
 
@@ -54,12 +53,9 @@ from nti.dataserver.authorization_acl import acl_from_aces
 
 from nti.dataserver.interfaces import IUser
 from nti.dataserver.interfaces import IDataserverFolder
-from nti.dataserver.interfaces import IShouldHaveTraversablePath
 from nti.dataserver.interfaces import EVERYONE_USER_NAME
 
 from nti.links.links import Link
-
-from nti.ntiids.oids import to_external_ntiid_oid
 
 from nti.traversal.traversal import find_interface
 
