@@ -820,14 +820,6 @@ class UserRecentSessions(AbstractHistoricalAnalyticsView):
                                                 not_after=not_after)
         return sessions
 
-    def __call__(self):
-        user_context = self._analytics_context()
-
-        if not user_context:
-            raise hexc.HTTPBadRequest()
-
-        return super(UserRecentSessions, self).__call__()
-
 
 @view_config(route_name='objects.generic.traversal',
              renderer='rest',
