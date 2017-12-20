@@ -747,7 +747,9 @@ class WindowedViewMixin(object):
             not_before = not_after - datetime.timedelta(days=self.DEFAULT_WINDOW_DAYS)
         return not_before, not_after
 
-class AbstractHistoricalAnalyticsView(AbstractUserLocationView, WindowedViewMixin):
+
+class AbstractHistoricalAnalyticsView(AbstractUserLocationView,
+                                      WindowedViewMixin):
     """
     Provides a collection of recent sessions the users has had.
     By default this view returns 30 days worth of sessions. Query
@@ -771,8 +773,6 @@ class AbstractHistoricalAnalyticsView(AbstractUserLocationView, WindowedViewMixi
         return []
 
     def __call__(self):
-        user_context = self._analytics_context()
-
         not_before = self.not_before
         not_after = self.not_after
 
@@ -785,6 +785,7 @@ class AbstractHistoricalAnalyticsView(AbstractUserLocationView, WindowedViewMixi
         options[ITEMS] = objects
         options[ITEM_COUNT] = options[TOTAL] = len(objects)
         return options
+
 
 @view_config(route_name='objects.generic.traversal',
              renderer='rest',
@@ -808,8 +809,8 @@ class UserRecentSessions(AbstractHistoricalAnalyticsView):
         context = self._analytics_context()
         if not_before and not_after:
             sessions = get_user_sessions(context,
-                                        timestamp=not_before,
-                                        max_timestamp=not_after)
+                                         timestamp=not_before,
+                                         max_timestamp=not_after)
         else:
             limit = self._limit
             not_after = not_after or datetime.datetime.utcnow()
@@ -826,6 +827,7 @@ class UserRecentSessions(AbstractHistoricalAnalyticsView):
             raise hexc.HTTPBadRequest()
 
         return super(UserRecentSessions, self).__call__()
+
 
 @view_config(route_name='objects.generic.traversal',
              renderer='rest',
@@ -856,6 +858,7 @@ class GetActivity(AbstractHistoricalAnalyticsView):
                       'max_timestamp': not_after}
 
         return source.activity(**kwargs)
+
 
 @view_config(route_name='objects.generic.traversal',
              name=ACTIVE_SESSION_COUNT,

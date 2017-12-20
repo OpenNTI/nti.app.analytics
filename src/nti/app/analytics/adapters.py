@@ -303,5 +303,5 @@ class EnrollmentAceProvider(object):
         instructors = get_course_instructors(self.enrollment)
         aces = [ace_allowing(IPrincipal(self.enrollment.Username), ACT_READ, type(self))]
         for inst in instructors:
-            aces.append([ace_allowing(IPrincipal(inst), ACT_READ, type(self))])
+            aces.append(ace_allowing(IPrincipal(inst), ACT_READ, type(self)))
         return aces
