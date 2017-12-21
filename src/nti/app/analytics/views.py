@@ -761,7 +761,7 @@ class AbstractHistoricalAnalyticsView(AbstractUserLocationView,
 
     @property
     def _limit(self):
-        return self.request.params.get('limit', self.DEFAULT_LIMIT)
+        return int(self.request.params.get('limit', self.DEFAULT_LIMIT))
 
     def _make_external(self, o):
         return o
@@ -849,6 +849,7 @@ class GetActivity(AbstractHistoricalAnalyticsView):
             kwargs = {'limit': limit,
                       'max_timestamp': not_after}
 
+        kwargs['order_by'] = 'timestamp'
         return source.activity(**kwargs)
 
 
