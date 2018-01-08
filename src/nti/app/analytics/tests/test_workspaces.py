@@ -12,6 +12,7 @@ from hamcrest import has_item
 from hamcrest import has_entries
 from hamcrest import assert_that
 
+from nti.app.analytics import ACTIVE_USERS
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import BATCH_EVENTS
 from nti.app.analytics import ANALYTICS_TITLE
@@ -54,7 +55,8 @@ class TestWorkspaces(ApplicationLayerTest):
                                                          'rel', END_ANALYTICS_SESSION,
                                                          'rel', ACTIVE_TIMES_SUMMARY,
                                                          'rel', ACTIVITY_SUMMARY_BY_DATE,
-                                                         'rel', SYNC_PARAMS)),
+                                                         'rel', SYNC_PARAMS,
+                                                         'rel', ACTIVE_USERS)),
                                          'Items', has_item(
                                              has_entries('Title', 'Events',
                                                          'Title', 'Sessions')))))

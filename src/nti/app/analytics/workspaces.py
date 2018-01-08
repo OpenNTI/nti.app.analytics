@@ -31,6 +31,7 @@ from nti.app.analytics import ACTIVE_SESSION_COUNT
 from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import END_ANALYTICS_SESSION
 from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
+from nti.app.analytics import ACTIVE_USERS
 
 from nti.app.analytics.interfaces import IAnalyticsContext
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
@@ -130,7 +131,7 @@ class _AnalyticsWorkspace(object):
             return ()
 
         result = []
-        for rel in (ACTIVITY_SUMMARY_BY_DATE, ACTIVE_TIMES_SUMMARY, ):
+        for rel in (ACTIVITY_SUMMARY_BY_DATE, ACTIVE_TIMES_SUMMARY, ACTIVE_USERS):
             result.append(_workspace_link(self, rel, name=rel))
 
         result.append(

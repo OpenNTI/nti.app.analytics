@@ -51,6 +51,7 @@ from nti.analytics.progress import get_assessment_progresses_for_course
 from nti.analytics.stats.interfaces import IActivitySource
 from nti.analytics.stats.interfaces import IActiveTimesStatsSource
 from nti.analytics.stats.interfaces import IActiveSessionStatsSource
+from nti.analytics.stats.interfaces import IActiveUsersSource
 from nti.analytics.stats.interfaces import IDailyActivityStatsSource
 
 
@@ -61,6 +62,7 @@ from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import END_ANALYTICS_SESSION
 from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 from nti.app.analytics import ANALYTICS_SESSION_COOKIE_NAME
+from nti.app.analytics import ACTIVE_USERS
 
 from nti.app.analytics import MessageFactory as _
 
@@ -77,6 +79,7 @@ from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.error import raise_json_error
 
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
+from nti.app.externalization.view_mixins import BatchingUtilsMixin
 
 from nti.app.renderers.interfaces import IResponseCacheController
 from nti.app.renderers.caching import default_cache_controller
@@ -1010,4 +1013,27 @@ class HistoricalCacheControl(AbstractStatsCacheControl):
         resp.cache_control.max_age = 24*60*60
         resp.cache_control.must_revalidate = False
         return resp
+
+@view_config(route_name='objects.generic.traversal',
+             renderer='rest',
+             name=ACTIVE_USERS,
+             context=IAnalyticsWorkspace,
+             request_method='GET',
+             permission=nauth.ACT_READ)
+class ActiveUsers(AbstractUserLocationView, StatsSourceMixin, WindowedViewMixin, BatchingUtilsMixin):
+
+    _DEFAULT_BATCH_SIZE = 10
+    _DEFAULT_BATCH_START = 0
+
+    def __call__(self):
+        users_source = self._query_source(IActiveUsersSource)
+        if not users_source:
+            raise hexc.HTTPNotFound()
+
+        result = LocatedExternalDict()
+        result.__name__ = self.request.view_name
+        result.__parent__ = self.request.context
+        self._batch_items_iterable(result, users_source.users())
+
+        return result
 
