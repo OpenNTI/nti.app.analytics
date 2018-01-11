@@ -10,6 +10,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+from pyramid.threadlocal import get_current_request
+
 from zope import component
 from zope import interface
 
@@ -105,6 +107,8 @@ class _AnalyticsWorkspace(object):
             self.__parent__ = parent
         self.events = EventsCollection(self)
         self.sessions = SessionsCollection(self)
+        if request is None:
+            request = get_current_request()
         self._request = request
 
     def __acl__(self):

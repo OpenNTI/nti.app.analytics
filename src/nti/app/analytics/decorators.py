@@ -27,11 +27,8 @@ from nti.app.analytics import ANALYTICS
 from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import HISTORICAL_SESSIONS_VIEW_NAME
 
-from nti.app.analytics.interfaces import IAnalyticsCollection
 from nti.app.analytics.interfaces import IAnalyticsContext
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
-
-from nti.app.analytics.workspaces import AnalyticsWorkspace
 
 from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecorator
 
@@ -58,6 +55,7 @@ from nti.links.links import Link
 LINKS = StandardExternalFields.LINKS
 
 logger = __import__('logging').getLogger(__name__)
+
 
 class _AnalyticsEnabledDecorator(AbstractAuthenticatedRequestAwareDecorator):
 
