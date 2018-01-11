@@ -209,6 +209,7 @@ class AnalyticsUpdateMixin(object):
     def store_analytics(self, request):
         if should_create_analytics(request):
             return self._do_store_analytics()
+        return hexc.HTTPForbidden(_('Cannot update analytics for this user.'))
 
 
 @view_config(route_name='objects.generic.traversal',
