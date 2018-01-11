@@ -28,6 +28,8 @@ from pyramid.view import view_config
 
 from pyramid import httpexceptions as hexc
 
+from nti.analytics.common import should_create_analytics
+
 from nti.analytics.interfaces import IAnalyticsSession
 from nti.analytics.interfaces import IAnalyticsSessions
 from nti.analytics.interfaces import IBatchResourceEvents
@@ -196,13 +198,27 @@ def _process_batch_events(events):
     return event_count, malformed_count, invalid_count
 
 
+class AnalyticsUpdateMixin(object):
+    """
+    An analytics view mixin that decides when to process analytics updates.
+    """
+
+    def _do_store_analytics(self):
+        raise NotImplementedError()
+
+    def store_analytics(self, request):
+        if should_create_analytics(request):
+            return self._do_store_analytics()
+
+
 @view_config(route_name='objects.generic.traversal',
              context=IEventsCollection,
              renderer='rest',
              request_method='POST',
              permission=nauth.ACT_CREATE)
 class BatchEvents(AbstractAuthenticatedView,
-                  ModeledContentUploadRequestUtilsMixin):
+                  ModeledContentUploadRequestUtilsMixin,
+                  AnalyticsUpdateMixin):
     """
     A view that accepts a batch of analytics events.  The view
     will parse the input and process the events.
@@ -210,7 +226,7 @@ class BatchEvents(AbstractAuthenticatedView,
 
     content_predicate = IBatchResourceEvents.providedBy
 
-    def _do_call(self):
+    def _do_store_analytics(self):
         external_input = self.readInput()
         events = external_input['events']
         total_count = len(events)
@@ -225,6 +241,9 @@ class BatchEvents(AbstractAuthenticatedView,
         result['InvalidCount'] = invalid_count
         result['MalformedEventCount'] = malformed_count
         return result
+
+    def _do_call(self):
+        return self.store_analytics(self.request)
 
 
 @view_config(route_name='objects.generic.traversal',
@@ -246,7 +265,8 @@ class BatchEventParams(AbstractAuthenticatedView):
              renderer='rest',
              request_method='POST',
              permission=nauth.ACT_CREATE)
-class AnalyticsSession(AbstractAuthenticatedView):
+class AnalyticsSession(AbstractAuthenticatedView,
+                       AnalyticsUpdateMixin):
 
     def _set_cookie(self, request, new_session):
         # If we have current session, fire an event to kill it.
@@ -262,7 +282,7 @@ class AnalyticsSession(AbstractAuthenticatedView):
                                     value=str(new_session.session_id),
                                     overwrite=True)
 
-    def __call__(self):
+    def _do_store_analytics(self):
         """
         Create a new analytics session and place it in a cookie.
         """
@@ -273,6 +293,9 @@ class AnalyticsSession(AbstractAuthenticatedView):
             self._set_cookie(request, new_session)
         return request.response
 
+    def __call__(self):
+        return self.store_analytics(self.request)
+
 
 @view_config(route_name='objects.generic.traversal',
              name=END_ANALYTICS_SESSION,
@@ -281,7 +304,8 @@ class AnalyticsSession(AbstractAuthenticatedView):
              request_method='POST',
              permission=nauth.ACT_CREATE)
 class EndAnalyticsSession(AbstractAuthenticatedView,
-                          ModeledContentUploadRequestUtilsMixin):
+                          ModeledContentUploadRequestUtilsMixin,
+                          AnalyticsUpdateMixin):
     """
     Ends an analytic session, defined by information in the
     header or cookie of this request.  Optionally accepts a
@@ -297,7 +321,7 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
             session.
     """
 
-    def __call__(self):
+    def _do_store_analytics(self):
         """
         End the current analytics session.
         """
@@ -325,6 +349,9 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
         #self.request.response.status_code = 204
         return self.request.response
 
+    def __call__(self):
+        return self.store_analytics(self.request)
+
 
 @view_config(route_name='objects.generic.traversal',
              context=ISessionsCollection,
@@ -332,11 +359,12 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
              request_method='POST',
              permission=nauth.ACT_CREATE)
 class UpdateAnalyticsSessions(AbstractAuthenticatedView,
-                              ModeledContentUploadRequestUtilsMixin):
+                              ModeledContentUploadRequestUtilsMixin,
+                              AnalyticsUpdateMixin):
 
     content_predicate = IAnalyticsSessions.providedBy
 
-    def __call__(self):
+    def _do_store_analytics(self):
         """
         Will accept one or many IAnalyticsSession objects, which we will synchronously
         resolve the session_id for before returning.  If there is already a session_id,
@@ -367,6 +395,9 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
                 val['Error'] = e.message
                 results.append(val)
         return results
+
+    def __call__(self):
+        return self.store_analytics(self.request)
 
 
 def _get_ntiids(obj, accum):
