@@ -1057,15 +1057,24 @@ class ActiveUsers(AbstractUserLocationView, StatsSourceMixin, WindowedViewMixin,
     _DEFAULT_BATCH_SIZE = 10
     _DEFAULT_BATCH_START = 0
 
+    DEFAULT_WINDOW_DAYS = 30
+
     def __call__(self):
         users_source = self._query_source(IActiveUsersSource)
         if not users_source:
             raise hexc.HTTPNotFound()
 
+        not_before, not_after = self.time_window()
+
         result = LocatedExternalDict()
         result.__name__ = self.request.view_name
         result.__parent__ = self.request.context
-        self._batch_items_iterable(result, users_source.users())
+        self._batch_items_iterable(result, users_source.users(timestamp=not_before,
+                                                              max_timestamp=not_after))
 
+        cache_hint = _IDailyResults
+        if self.not_after:
+            cache_hint = _IHistoricalResults
+        interface.alsoProvides(result, cache_hint)
         return result
 
