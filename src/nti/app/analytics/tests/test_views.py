@@ -64,8 +64,9 @@ from nti.analytics.database.locations import Location
 from nti.analytics.database.locations import IpGeoLocation
 
 from nti.analytics.database.resource_tags import NotesViewed
+
 from nti.analytics.database.resource_views import VideoEvents
-from nti.analytics.database.resource_views import CourseResourceViews
+from nti.analytics.database.resource_views import ResourceViews
 from nti.analytics.database.resource_views import VideoPlaySpeedEvents
 from nti.analytics.database.resource_views import create_course_resource_view
 from nti.analytics.database.resource_views import create_video_event
@@ -333,7 +334,7 @@ class TestBatchEvents(_AbstractTestViews):
         assert_that(results, has_length(1))
         assert_that(results[0].session_id, is_(course_catalog_session_id))
 
-        results = self.session.query(CourseResourceViews).all()
+        results = self.session.query(ResourceViews).all()
         assert_that(results, has_length(1))
         assert_that(results[0].session_id, is_(session_id))
 
@@ -376,7 +377,7 @@ class TestBatchEvents(_AbstractTestViews):
         assert_that(results, has_length(1))
         assert_that(results[0].session_id, is_(course_catalog_session_id))
 
-        results = self.session.query(CourseResourceViews).all()
+        results = self.session.query(ResourceViews).all()
         assert_that(results, has_length(1))
         assert_that(results[0].session_id, is_(session_id))
 
@@ -452,7 +453,7 @@ class TestBatchEvents(_AbstractTestViews):
         assert_that(results, has_length(1))
 
         # We insert all but the single malformed event
-        results = self.session.query(CourseResourceViews).all()
+        results = self.session.query(ResourceViews).all()
         assert_that(results, has_length(0))
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
