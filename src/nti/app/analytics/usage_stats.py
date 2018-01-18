@@ -291,7 +291,7 @@ class CourseResourceUsageStats(_AbstractUsageStats):
 
     @property
     def events(self):
-        return get_resource_views(course=self.course) or ()
+        return get_resource_views(root_context=self.course) or ()
 
     def _build_resource_stats(self, ntiid, stats, student_count):
         title = self._get_title(ntiid)
@@ -320,7 +320,7 @@ class UserCourseResourceUsageStats(CourseResourceUsageStats):
 
     @property
     def events(self):
-        results = get_resource_views(course=self.course, user=self.user)
+        results = get_resource_views(root_context=self.course, user=self.user)
         return results or ()
 
     def get_stats(self):

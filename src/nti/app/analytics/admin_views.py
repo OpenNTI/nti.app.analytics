@@ -339,7 +339,7 @@ class UpdateGeoLocationsView(AbstractAuthenticatedView):
 class AbstractViewStatsView(AbstractAuthenticatedView):
     """
     An abstract view_stats view that looks for `user` and
-    `course` params, validating each.
+    `root_context` params, validating each.
 
     These views are currently only available as admin views,
     but may be opened up to instructors or others eventually.
@@ -370,13 +370,23 @@ class AbstractViewStatsView(AbstractAuthenticatedView):
             if user is None:
                 raise hexc.HTTPUnprocessableEntity('Cannot find user %s' % username)
             result['user'] = user
+
         course_ntiid = params.get('course')
+        root_context_ntiid = params.get('root_context')
+
         if course_ntiid is not None:
             course = find_object_with_ntiid(course_ntiid)
             course = ICourseInstance(course, None)
             if course is None:
-                raise hexc.HTTPUnprocessableEntity('Cannot find course %s' % course_ntiid)
-            result['course'] = course
+                raise hexc.HTTPUnprocessableEntity(
+                            'Cannot find course %s' % course_ntiid)
+            result['root_context'] = course
+        elif root_context_ntiid is not None:
+            root_context = find_object_with_ntiid(root_context_ntiid)
+            if root_context is None:
+                raise hexc.HTTPUnprocessableEntity(
+                            'Cannot find root_context %s' % root_context_ntiid)
+            result['root_context'] = root_context
         return result
 
     def __call__(self):
