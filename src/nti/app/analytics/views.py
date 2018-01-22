@@ -1062,7 +1062,10 @@ class HistoricalCacheControl(AbstractStatsCacheControl):
              context=IAnalyticsWorkspace,
              request_method='GET',
              permission=nauth.ACT_READ)
-class ActiveUsers(AbstractUserLocationView, StatsSourceMixin, WindowedViewMixin, BatchingUtilsMixin):
+class ActiveUsers(AbstractUserLocationView,
+                  StatsSourceMixin,
+                  WindowedViewMixin,
+                  BatchingUtilsMixin):
 
     _DEFAULT_BATCH_SIZE = 10
     _DEFAULT_BATCH_START = 0

@@ -102,6 +102,7 @@ from nti.analytics_database.interfaces import IAnalyticsNTIIDIdentifier
 from nti.analytics_database.interfaces import IAnalyticsRootContextIdentifier
 
 from nti.app.analytics import SYNC_PARAMS
+from nti.app.analytics import ACTIVE_USERS
 from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 from nti.app.analytics import ANALYTICS_SESSION_HEADER
@@ -1567,8 +1568,14 @@ class TestBookViews(ApplicationLayerTest):
                                                                    ACTIVITY_SUMMARY_BY_DATE)
         active_times_href = self.require_link_href_with_rel(analytics_workspace,
                                                             ACTIVE_TIMES_SUMMARY)
+        active_users_href = self.require_link_href_with_rel(analytics_workspace,
+                                                            ACTIVE_USERS)
 
         self.testapp.get(active_times_href)
+
+        res = self.testapp.get(active_users_href)
+        res = res.json_body
+        assert_that(res['ItemCount'], is_(0))
 
         res = self.testapp.get(activity_by_date_summary)
         res = res.json_body
@@ -1586,3 +1593,12 @@ class TestBookViews(ApplicationLayerTest):
         assert_that(res, has_entry('Dates', has_entries(u'2018-01-21', 2,
                                                         u'2018-01-22', 1)))
         self.testapp.get(active_times_href)
+
+        res = self.testapp.get(active_users_href)
+        res = res.json_body
+        assert_that(res['ItemCount'], is_(2))
+        items = res['Items']
+        assert_that(items, has_length(2))
+        usernames = [x[u'Username'] for x in items]
+        assert_that(usernames, contains_inanyorder('test_book_view1',
+                                                   'test_book_view2'))
