@@ -162,13 +162,14 @@ def _get_last_mod(progress, max_last_mod):
     return result
 
 
-def _process_batch_events(events):
+def _process_batch_events(events, remote_user):
     """
     Process the events, returning a tuple of events queued and malformed events.
     """
     batch_events = []
     invalid_count = 0
     malformed_count = 0
+    remote_username = remote_user.username
 
     # Lets hand-internalize these objects one-by-one so that we
     # can exclude any malformed objects and process the proper events.
@@ -183,6 +184,11 @@ def _process_batch_events(events):
         new_event = factory()
         try:
             internalization.update_from_external_object(new_event, event)
+            if new_event.user != remote_username:
+                # This shouldn't happen.
+                logger.warn('Analytics event username does not match remote user (event=%s) (%s)',
+                            new_event.user, remote_username)
+                new_event.user = remote_username
             batch_events.append(new_event)
         except (ValidationError, ValueError) as e:
             # The app may resend events if we err; so we should just log.
@@ -232,7 +238,7 @@ class BatchEvents(AbstractAuthenticatedView,
         events = external_input['events']
         total_count = len(events)
 
-        event_count, malformed_count, invalid_count = _process_batch_events(events)
+        event_count, malformed_count, invalid_count = _process_batch_events(events, self.remoteUser)
         logger.info("""Received batched analytic events (count=%s)
                     (total_count=%s) (malformed=%s) (invalid=%s)""",
                     event_count, total_count, malformed_count, invalid_count)
@@ -337,7 +343,8 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
             events = batch_events.get('events')
             if events:
                 total_count = len(events)
-                event_count, malformed_count, invalid_count = _process_batch_events(events)
+                event_count, malformed_count, invalid_count = _process_batch_events(events,
+                                                                                    self.remoteUser)
                 logger.info("""Process batched analytic events on session close
                             (count=%s) (total_count=%s) (malformed=%s)
                             (invalid_count=%s)""",
