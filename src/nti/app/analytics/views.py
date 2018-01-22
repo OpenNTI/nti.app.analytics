@@ -1022,6 +1022,7 @@ class AbstractStatsCacheControl(object):
     def __call__(self, context, system):
         return default_cache_controller(context, system)
 
+
 class DailyCacheControl(AbstractStatsCacheControl):
 
     def __call__(self, context, system):
@@ -1038,6 +1039,7 @@ class DailyCacheControl(AbstractStatsCacheControl):
         resp.cache_control.max_age = int((expires - now).total_seconds())
         return resp
 
+
 class HistoricalCacheControl(AbstractStatsCacheControl):
 
     def __call__(self, context, system):
@@ -1045,6 +1047,7 @@ class HistoricalCacheControl(AbstractStatsCacheControl):
         resp.cache_control.max_age = 24*60*60
         resp.cache_control.must_revalidate = False
         return resp
+
 
 @view_config(route_name='objects.generic.traversal',
              renderer='rest',
