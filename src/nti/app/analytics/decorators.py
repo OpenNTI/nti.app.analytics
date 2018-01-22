@@ -62,6 +62,7 @@ class _AnalyticsEnabledDecorator(AbstractAuthenticatedRequestAwareDecorator):
     def _predicate(self, unused_context, unused_result):
         return self._is_authenticated and has_analytics()
 
+
 @component.adapter(ICourseOutlineContentNode)
 @interface.implementer(IExternalMappingDecorator)
 class _CourseOutlineNodeProgressLinkDecorator(_AnalyticsEnabledDecorator):
@@ -125,6 +126,7 @@ class _GeoLocationsLinkDecorator(_AnalyticsEnabledDecorator):
         link.__parent__ = context
         links.append(link)
 
+
 @component.adapter(IAnalyticsContext)
 @interface.implementer(IExternalMappingDecorator)
 class _AnalyticsContextLink(_AnalyticsEnabledDecorator):
@@ -171,6 +173,7 @@ class _UserSessionDecorator(_AnalyticsEnabledDecorator):
         link.__name__ = ''
         link.__parent__ = context
         links.append(link)
+
 
 @component.adapter(IAnalyticsSession)
 @interface.implementer(IExternalMappingDecorator)

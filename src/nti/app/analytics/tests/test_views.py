@@ -31,6 +31,7 @@ from nti.testing.time import time_monotonically_increases
 
 import six
 import time
+import calendar
 
 from datetime import datetime
 from datetime import timedelta
@@ -40,12 +41,12 @@ from webob.datetime_utils import serialize_date
 from zope import component
 from zope import interface
 
+from nti.analytics_database.interfaces import IAnalyticsDB
+
 from nti.analytics.common import timestamp_type
 
 from nti.analytics.interfaces import DEFAULT_ANALYTICS_BATCH_SIZE
 from nti.analytics.interfaces import DEFAULT_ANALYTICS_FREQUENCY
-
-from nti.analytics.database import interfaces as analytic_interfaces
 
 from nti.analytics.database.assessments import AssignmentsTaken
 
@@ -101,6 +102,8 @@ from nti.analytics_database.interfaces import IAnalyticsNTIIDIdentifier
 from nti.analytics_database.interfaces import IAnalyticsRootContextIdentifier
 
 from nti.app.analytics import SYNC_PARAMS
+from nti.app.analytics import ACTIVE_TIMES_SUMMARY
+from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 from nti.app.analytics import ANALYTICS_SESSION_HEADER
 
 from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
@@ -117,6 +120,8 @@ from nti.app.testing.application_webtest import ApplicationLayerTest
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 
 from nti.assessment.assignment import QAssignment
+
+from nti.app.contentlibrary.tests import PersistentApplicationTestLayer
 
 from nti.contenttypes.courses.courses import CourseInstance
 from nti.contenttypes.courses.courses import ContentCourseSubInstance
@@ -142,7 +147,7 @@ from nti.ntiids.oids import to_external_ntiid_oid
 from nti.links.externalization import render_link
 from nti.links.links import Link
 
-timestamp = time.mktime(datetime.utcnow().timetuple())
+timestamp = calendar.timegm(datetime.utcnow().timetuple())
 
 user = u'sjohnson@nextthought.com'
 course = u'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.course_info'
@@ -242,7 +247,7 @@ class _AbstractTestViews(ApplicationLayerTest):
         self.db = AnalyticsDB(
             dburi='sqlite://', testmode=True, defaultSQLite=True)
         component.getGlobalSiteManager().registerUtility(self.db,
-                                                         analytic_interfaces.IAnalyticsDB)
+                                                         IAnalyticsDB)
         self.session = self.db.session
 
         gsm = component.getGlobalSiteManager()
@@ -261,7 +266,7 @@ class _AbstractTestViews(ApplicationLayerTest):
 
     def tearDown(self):
         component.getGlobalSiteManager().unregisterUtility(self.db,
-                                                           provided=analytic_interfaces.IAnalyticsDB)
+                                                           provided=IAnalyticsDB)
         self.session.close()
         component.getGlobalSiteManager().unregisterUtility(self.test_identifier)
         component.getGlobalSiteManager().registerUtility(self.old_intid_util,
@@ -1347,8 +1352,7 @@ class TestAnalyticsContexts(_AbstractTestViews):
         assert_that(href, ends_with('analytics'))
 
         # It is fetchable
-        analytics_workspace = self.testapp.get(href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        analytics_workspace = self.testapp.get(href)
         analytics_workspace = analytics_workspace.json_body
         assert_that(analytics_workspace, not_none())
 
@@ -1360,10 +1364,11 @@ class TestAnalyticsContexts(_AbstractTestViews):
                               contains_inanyorder(has_entry('href', href+'/batch_events'),
                                                   has_entry('href', href+'/sessions'))))
 
-        # Find one of the links we expect and make sure that the rendered link is correctly traversable
-        activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace, 'activity_by_date_summary')
-        self.testapp.get(activity_by_date_summary, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        # Find one of the links we expect and make sure that the rendered link
+        # is correctly traversable
+        activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace,
+                                                                   ACTIVITY_SUMMARY_BY_DATE)
+        self.testapp.get(activity_by_date_summary)
 
 
     def _create_course(self):
@@ -1397,10 +1402,11 @@ class TestAnalyticsContexts(_AbstractTestViews):
                               contains_inanyorder(has_entry('href', href+'/batch_events'),
                                                   has_entry('href', href+'/sessions'))))
 
-        # Find one of the links we expect and make sure that the rendered link is correctly traversable
-        activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace, 'activity_by_date_summary')
-        self.testapp.get(activity_by_date_summary, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        # Find one of the links we expect and make sure that the rendered link
+        # is correctly traversable
+        activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace,
+                                                                   ACTIVITY_SUMMARY_BY_DATE)
+        self.testapp.get(activity_by_date_summary)
 
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_enrollment_record_context(self):
@@ -1408,7 +1414,8 @@ class TestAnalyticsContexts(_AbstractTestViews):
             self._create_course()
 
             user2 = self._create_user(u'new_user2',
-                                      external_value={'realname': u'Billy Rob', 'email': u'foo@bar.com'})
+                                      external_value={'realname': u'Billy Rob',
+                                                      'email': u'foo@bar.com'})
 
             enrollment_manager = ICourseEnrollmentManager(self.course)
             er = enrollment_manager.enroll(user2)
@@ -1433,8 +1440,10 @@ class TestAnalyticsContexts(_AbstractTestViews):
                               contains_inanyorder(has_entry('href', ends_with('/batch_events')),
                                                   has_entry('href', ends_with('/sessions')))))
 
-        # Find one of the links we expect and make sure that the rendered link is correctly traversable
-        activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace, 'activity_by_date_summary')
+        # Find one of the links we expect and make sure that the rendered link
+        # is correctly traversable
+        activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace,
+                                                                   ACTIVITY_SUMMARY_BY_DATE)
         self.testapp.get(activity_by_date_summary)
 
         oid_object = self.testapp.get('/dataserver2/Objects/'+er_oid)
@@ -1472,20 +1481,108 @@ class TestUserAnalyticsWorkspace(ApplicationLayerTest):
     def test_stats_caching(self):
 
         workspace_href = '/dataserver2/analytics'
-        workspace = self.testapp.get(workspace_href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        workspace = self.testapp.get(workspace_href)
         workspace = workspace.json_body
 
-        href = self.require_link_href_with_rel(workspace, 'activity_by_date_summary')
-        resp = self.testapp.get(href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        href = self.require_link_href_with_rel(workspace,
+                                               ACTIVITY_SUMMARY_BY_DATE)
+        resp = self.testapp.get(href)
 
         assert_that(resp.cache_control.max_age, greater_than(0))
         assert_that(resp.cache_control.must_revalidate, is_(False))
 
-        href = self.require_link_href_with_rel(workspace, 'active_times_summary')
-        resp = self.testapp.get(href, status=200,
-                               extra_environ=self._make_extra_environ(username='sjohnson@nextthought.com'))
+        href = self.require_link_href_with_rel(workspace, ACTIVE_TIMES_SUMMARY)
+        resp = self.testapp.get(href)
 
         assert_that(resp.cache_control.max_age, greater_than(0))
         assert_that(resp.cache_control.must_revalidate, is_(False))
+
+
+class TestBookViews(ApplicationLayerTest):
+
+    layer = PersistentApplicationTestLayer
+
+    default_origin = 'http://janux.ou.edu'
+
+    bundle_ntiid = 'tag:nextthought.com,2011-10:NTI-Bundle-VisibleBundle'
+    packageA = 'tag:nextthought.com,2011-10:NTI-HTML-PackageA'
+    packageB = "tag:nextthought.com,2011-10:NTI-HTML-PackageB"
+
+    def create_book_event(self, package_ntiid, time_length, username, environ, timestamp=None):
+        if timestamp is None:
+            timestamp = datetime.utcnow()
+        timestamp = calendar.timegm(timestamp.timetuple())
+        resource_event = ResourceEvent(user=username,
+                                       timestamp=timestamp,
+                                       RootContextID=self.bundle_ntiid,
+                                       context_path=(package_ntiid,),
+                                       ResourceId=package_ntiid,
+                                       Duration=time_length)
+
+        events = BatchResourceEvents(events=(resource_event,))
+        ext_obj = toExternalObject(events)
+
+        # Add a session header
+        session_id = 9999
+        headers = {ANALYTICS_SESSION_HEADER: str(session_id)}
+
+        # Upload our events
+        batch_url = '/dataserver2/analytics/batch_events'
+        self.testapp.post_json(batch_url,
+                               ext_obj,
+                               headers=headers,
+                               extra_environ=environ)
+
+
+    @WithSharedApplicationMockDS(users=True, testapp=True)
+    def test_book_views(self):
+        with mock_dataserver.mock_db_trans(self.ds):
+            self._create_user(username='test_book_view1')
+            self._create_user(username='test_book_view2')
+        user1 = self._make_extra_environ(user='test_book_view1')
+        user2 = self._make_extra_environ(user='test_book_view2')
+
+        href = '/dataserver2/Objects/%s' % self.bundle_ntiid
+        res = self.testapp.get(href)
+        res = res.json_body
+        href = self.require_link_href_with_rel(res, 'analytics')
+        assert_that(href, ends_with('analytics'))
+
+        # It is fetchable
+        analytics_workspace = self.testapp.get(href)
+        analytics_workspace = analytics_workspace.json_body
+        assert_that(analytics_workspace, not_none())
+
+        assert_that(analytics_workspace, has_entry('href', href))
+
+        # We have two collections that are also routed beneath href
+        assert_that(analytics_workspace,
+                    has_entry('Items',
+                              contains_inanyorder(has_entry('href', href+'/batch_events'),
+                                                  has_entry('href', href+'/sessions'))))
+
+        # Find one of the links we expect and make sure that the rendered link
+        # is correctly traversable
+        activity_by_date_summary = self.require_link_href_with_rel(analytics_workspace,
+                                                                   ACTIVITY_SUMMARY_BY_DATE)
+        active_times_href = self.require_link_href_with_rel(analytics_workspace,
+                                                            ACTIVE_TIMES_SUMMARY)
+
+        self.testapp.get(active_times_href)
+
+        res = self.testapp.get(activity_by_date_summary)
+        res = res.json_body
+        assert_that(res['Dates'], has_length(0))
+
+        self.create_book_event(self.packageA, 30, 'test_book_view1', user1)
+        event2_time = datetime.utcnow() - timedelta(days=1)
+        self.create_book_event(self.packageB, 60, 'test_book_view2', user2,
+                               timestamp=event2_time)
+        self.create_book_event(self.packageB, 90, 'test_book_view1', user1,
+                               timestamp=event2_time)
+
+        res = self.testapp.get(activity_by_date_summary)
+        res = res.json_body
+        assert_that(res, has_entry('Dates', has_entries(u'2018-01-21', 2,
+                                                        u'2018-01-22', 1)))
+        self.testapp.get(active_times_href)

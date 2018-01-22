@@ -270,7 +270,6 @@ class _AnalyticsSessionIdProvider(object):
         # 1. A session id attached to the incoming event (probably ipad only)
         # 2. A header on the request, (also ipad)
         # 3. A cookie, which should be from webapp, that we can also validate.
-
         given_session_id = getattr(self.event, 'SessionID', None)
         if given_session_id is not None:
             return given_session_id
