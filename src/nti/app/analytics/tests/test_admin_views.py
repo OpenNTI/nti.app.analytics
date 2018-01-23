@@ -22,6 +22,8 @@ from nti.app.testing.application_webtest import ApplicationLayerTest
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 from nti.app.testing.decorators import WithSharedApplicationMockDSHandleChanges
 
+from nti.app.testing.webtest import TestApp
+
 from nti.dataserver.tests import mock_dataserver
 
 from nti.dataserver.users.users import User
@@ -33,22 +35,29 @@ class TestAnalytics(ApplicationLayerTest):
 
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_user_research_study(self):
-        with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
-            user = User.create_user(username=u'new_user1', dataserver=self.ds,
-                                    external_value={'realname': u'Jim Bob',
-                                                    'email': u'foo@bar.com'})
+        with mock_dataserver.mock_db_trans(self.ds):
+            self._create_user(username='new_user1')
+            self._create_user(username='new_user2')
 
+        with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
+            user = User.get_user('new_user1')
             user_research = IUserResearchStatus(user)
             assert_that(user_research, not_none())
             assert_that(user_research.allow_research, is_(False))
             recent_mod_time = user_research.lastModified
             assert_that(recent_mod_time, not_none())
 
+        user1_environ = self._make_extra_environ(user='new_user1')
+        user2_environ = self._make_extra_environ(user='new_user2')
         url = '/dataserver2/users/new_user1/' + SET_RESEARCH_VIEW
-        extra_environ = {'HTTP_ORIGIN': 'http://platform.ou.edu'}
         # Toggle
         data = {'allow_research': True}
-        self.testapp.post_json(url, data, extra_environ=extra_environ)
+
+        # Invalid permissions
+        TestApp(self.app).post_json(url, data, status=401)
+        self.testapp.post_json(url, data, extra_environ=user2_environ, status=403)
+
+        self.testapp.post_json(url, data, extra_environ=user1_environ)
 
         with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
             user = User.get_user('new_user1')
@@ -57,13 +66,13 @@ class TestAnalytics(ApplicationLayerTest):
             assert_that(user_research, not_none())
             assert_that(user_research.allow_research, is_(True))
             assert_that(user_research.lastModified, not_none())
-            assert_that(recent_mod_time, 
+            assert_that(recent_mod_time,
 						less_than_or_equal_to(user_research.lastModified))
             recent_mod_time = user_research.lastModified
 
         # And back again
         data = {'allow_research': False}
-        self.testapp.post_json(url, data, extra_environ=extra_environ)
+        self.testapp.post_json(url, data, extra_environ=user1_environ)
 
         with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
             user = User.get_user('new_user1')
@@ -71,7 +80,7 @@ class TestAnalytics(ApplicationLayerTest):
             assert_that(user_research, not_none())
             assert_that(user_research.allow_research, is_(False))
             assert_that(user_research.lastModified, not_none())
-            assert_that(recent_mod_time, 
+            assert_that(recent_mod_time,
 						less_than_or_equal_to(user_research.lastModified))
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
@@ -80,15 +89,10 @@ class TestAnalytics(ApplicationLayerTest):
         with mock_dataserver.mock_db_trans(self.ds):
             self._create_user(username=username)
 
-        environ = self._make_extra_environ()
-        environ['HTTP_ORIGIN'] = 'http://platform.ou.edu'
-
+        environ = self._make_extra_environ(user=username)
         stats_url = '/dataserver2/analytics/user_research_stats'
         testapp = self.testapp
-        res = testapp.get(stats_url,
-                          None,
-                          extra_environ=environ,
-                          status=200)
+        res = testapp.get(stats_url)
         body = res.json_body
         assert_that(body['AllowResearchCount'], is_(0))
         assert_that(body['DenyResearchCount'], is_(0))
@@ -100,10 +104,7 @@ class TestAnalytics(ApplicationLayerTest):
         testapp.post_json(url, data, extra_environ=environ)
 
         # Re-query
-        res = testapp.get(stats_url,
-                          None,
-                          extra_environ=environ,
-                          status=200)
+        res = testapp.get(stats_url)
         body = res.json_body
         assert_that(body['AllowResearchCount'], is_(1))
         assert_that(body['DenyResearchCount'], is_(0))
@@ -114,10 +115,7 @@ class TestAnalytics(ApplicationLayerTest):
         testapp.post_json(url, data, extra_environ=environ)
 
         # Re-query
-        res = testapp.get(stats_url,
-                          None,
-                          extra_environ=environ,
-                          status=200)
+        res = testapp.get(stats_url)
         body = res.json_body
         assert_that(body['AllowResearchCount'], is_(0))
         assert_that(body['DenyResearchCount'], is_(1))

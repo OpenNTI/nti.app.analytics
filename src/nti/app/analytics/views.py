@@ -589,6 +589,7 @@ class UserCourseVideoProgress(AbstractAuthenticatedView,
              renderer='rest',
              context=IUser,
              request_method='POST',
+             permission=nauth.ACT_UPDATE,
              name=SET_RESEARCH_VIEW)
 class UserResearchStudyView(AbstractAuthenticatedView,
                             ModeledContentUploadRequestUtilsMixin):
