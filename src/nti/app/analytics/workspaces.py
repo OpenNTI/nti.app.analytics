@@ -63,6 +63,7 @@ from nti.dataserver.interfaces import EVERYONE_USER_NAME
 from nti.links.links import Link
 
 from nti.traversal.traversal import find_interface
+from nti.coremetadata.interfaces import AUTHENTICATED_GROUP_NAME
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -70,6 +71,7 @@ logger = __import__('logging').getLogger(__name__)
 @interface.implementer(IWorkspace)
 @component.adapter(IUserService)
 def AnalyticsWorkspace(user_service, root=None, request=None):
+    # The parent is the ds folder in the service doc.
     root = root or user_service.__parent__
     analytics_ws = _AnalyticsWorkspace(parent=root, request=request)
     assert analytics_ws.__parent__
@@ -177,7 +179,7 @@ class AnalyticsCollectionACLMixin(object):
         # If we are in root (no user context) everyone can create,
         # otherwise the user can create
         if user_context is None:
-            user_context = EVERYONE_USER_NAME
+            user_context = AUTHENTICATED_GROUP_NAME
 
         aces = [ace_allowing(user_context, ACT_CREATE, type(self))]
         return acl_from_aces(aces)
