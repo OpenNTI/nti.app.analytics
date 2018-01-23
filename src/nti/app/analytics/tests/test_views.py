@@ -120,6 +120,8 @@ from nti.app.testing.application_webtest import ApplicationLayerTest
 
 from nti.app.testing.decorators import WithSharedApplicationMockDS
 
+from nti.app.testing.webtest import TestApp
+
 from nti.assessment.assignment import QAssignment
 
 from nti.app.contentlibrary.tests import PersistentApplicationTestLayer
@@ -316,13 +318,15 @@ class TestBatchEvents(_AbstractTestViews):
         # Add a session header
         session_id = 9999
         headers = {ANALYTICS_SESSION_HEADER: str(session_id)}
+        batch_url = '/dataserver2/analytics/batch_events'
+
+        # Must be authenticated
+        TestApp(self.app).post_json(batch_url, ext_obj, status=401)
 
         # Upload our events
-        batch_url = '/dataserver2/analytics/batch_events'
         self.testapp.post_json(batch_url,
                                ext_obj,
-                               headers=headers,
-                               status=200)
+                               headers=headers)
 
         results = self.session.query(SelfAssessmentViews).all()
         assert_that(results, has_length(1))
@@ -1581,6 +1585,7 @@ class TestBookViews(ApplicationLayerTest):
         res = res.json_body
         assert_that(res['Dates'], has_length(0))
 
+        event1_time = datetime.utcnow()
         self.create_book_event(self.packageA, 30, 'test_book_view1', user1)
         event2_time = datetime.utcnow() - timedelta(days=1)
         self.create_book_event(self.packageB, 60, 'test_book_view2', user2,
@@ -1590,8 +1595,9 @@ class TestBookViews(ApplicationLayerTest):
 
         res = self.testapp.get(activity_by_date_summary)
         res = res.json_body
-        assert_that(res, has_entry('Dates', has_entries(u'2018-01-21', 2,
-                                                        u'2018-01-22', 1)))
+        assert_that(res, has_entry('Dates',
+                                   has_entries(str(event2_time.date()), 2,
+                                               str(event1_time.date()), 1)))
         self.testapp.get(active_times_href)
 
         res = self.testapp.get(active_users_href)
