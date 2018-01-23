@@ -48,6 +48,8 @@ from nti.app.authentication import get_remote_user
 from nti.appserver.workspaces.interfaces import IWorkspace
 from nti.appserver.workspaces.interfaces import IUserService
 
+from nti.coremetadata.interfaces import AUTHENTICATED_GROUP_NAME
+
 from nti.dataserver.authorization import ACT_READ
 from nti.dataserver.authorization import ACT_CREATE
 from nti.dataserver.authorization import is_admin_or_site_admin
@@ -63,7 +65,6 @@ from nti.dataserver.interfaces import EVERYONE_USER_NAME
 from nti.links.links import Link
 
 from nti.traversal.traversal import find_interface
-from nti.coremetadata.interfaces import AUTHENTICATED_GROUP_NAME
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -176,7 +177,7 @@ class AnalyticsCollectionACLMixin(object):
     def __acl__(self):
         user_context = find_interface(self, IUser, strict=False)
 
-        # If we are in root (no user context) everyone can create,
+        # If we are in root (no user context) authenticated users can create,
         # otherwise the user can create
         if user_context is None:
             user_context = AUTHENTICATED_GROUP_NAME
