@@ -12,13 +12,8 @@ from hamcrest import is_
 from hamcrest import none
 from hamcrest import not_none
 from hamcrest import assert_that
-from hamcrest import has_length
-from hamcrest import contains_inanyorder
-
-from nti.testing.time import time_monotonically_increases
 
 import time
-from datetime import datetime
 
 import fudge
 
@@ -33,17 +28,7 @@ from nti.app.analytics.tests import NTIAnalyticsTestCase
 from nti.analytics.database import get_analytics_db
 from nti.analytics.database import boards as db_boards_view
 from nti.analytics.database import resource_tags as db_tags_view
-
-from nti.analytics.database.assessments import AssignmentsTaken
-from nti.analytics.database.assessments import SelfAssessmentsTaken
-
-from nti.analytics.database.root_context import _create_course
-
-from nti.analytics.database.users import create_user
-
-from nti.analytics.interfaces import IProgress
-
-from nti.analytics.progress import get_assessment_progresses_for_course
+from nti.analytics.database import resource_views as db_resource_views
 
 from nti.analytics.tests import TestIdentifier
 
@@ -51,9 +36,9 @@ from nti.analytics_database.interfaces import IAnalyticsIntidIdentifier
 from nti.analytics_database.interfaces import IAnalyticsNTIIDIdentifier
 from nti.analytics_database.interfaces import IAnalyticsRootContextIdentifier
 
-from nti.assessment.assignment import QAssignment
+from nti.app.analytics.completion import content_progress
 
-from nti.assessment.question import QQuestionSet
+from nti.contentlibrary.contentunit import ContentUnit
 
 from nti.contenttypes.courses.courses import CourseInstance
 
@@ -68,6 +53,8 @@ from nti.dataserver.contenttypes.note import Note
 from nti.dataserver.tests.mock_dataserver import WithMockDSTrans
 
 from nti.dataserver.users.users import User
+
+from nti.testing.time import time_monotonically_increases
 
 
 def _create_topic_view(user_id, topic):
@@ -110,127 +97,15 @@ class _AbstractMockAnalyticTestClass(NTIAnalyticsTestCase):
                                                          IAnalyticsRootContextIdentifier)
 
 
-class TestAnalyticAdapters(_AbstractMockAnalyticTestClass):
-
-    def _get_assignment(self):
-        new_assignment = QAssignment()
-        new_assignment.ntiid = self.assignment_id = u'tag:nextthought.com,2015:ntiid1'
-        return new_assignment
-
-    def _get_self_assessment(self):
-        assessment = QQuestionSet()
-        assessment.ntiid = self.question_set_id = u'tag:nextthought.com,2015:question_set1'
-        return assessment
-
-    def _install_user(self):
-        self.user = User.create_user(username='derpity', dataserver=self.ds)
-        self.user_id = create_user(self.user).user_id
-        return self.user
-
-    def _install_course(self):
-        course_id = 1
-        new_course = CourseInstance()
-        setattr(new_course, '_ds_intid', course_id)
-        _create_course(self.analytics_db, new_course, course_id)
-        return new_course
-
-    def _install_assignment(self, db):
-        new_object = AssignmentsTaken(user_id=self.user_id,
-                                      session_id=2,
-                                      timestamp=datetime.utcnow(),
-                                      course_id=1,
-                                      assignment_id=self.assignment_id,
-                                      submission_id=2,
-                                      time_length=10)
-        db.session.add(new_object)
-        db.session.flush()
-
-    def _install_self_assessment(self, db, submit_id=1):
-        new_object = SelfAssessmentsTaken(user_id=self.user_id,
-                                          session_id=2,
-                                          timestamp=datetime.utcnow(),
-                                          course_id=1,
-                                          assignment_id=self.question_set_id,
-                                          submission_id=submit_id,
-                                          time_length=10)
-        db.session.add(new_object)
-        db.session.flush()
-
-    @WithMockDSTrans
-    @fudge.patch('dm.zope.schema.schema.Object._validate')
-    def test_progress_adapter(self, mock_validate):
-        "Test progress for assessment adapters and courses."
-        mock_validate.is_callable().returns(True)
-
-        user = self._install_user()
-        course = self._install_course()
-        assignment = self._get_assignment()
-        question_set = self._get_self_assessment()
-
-        # No initial progress for assessments
-        result = component.queryMultiAdapter((user, assignment), IProgress)
-        assert_that(result, none())
-
-        result = component.queryMultiAdapter((user, question_set), IProgress)
-        assert_that(result, none())
-
-        # Install assignment
-        self._install_assignment(self.analytics_db)
-        assignment_progress = component.queryMultiAdapter(
-            (user, assignment), IProgress)
-        assert_that(assignment_progress, not_none())
-        assert_that(assignment_progress.HasProgress, is_(True))
-
-        result = component.queryMultiAdapter((user, question_set), IProgress)
-        assert_that(result, none())
-
-        # Verify progress for course
-        progressess = get_assessment_progresses_for_course(user, course)
-        assert_that(progressess, has_length(1))
-        assert_that(progressess[0], is_(assignment_progress))
-
-        # Self-assessment
-        self._install_self_assessment(self.analytics_db)
-        result = component.queryMultiAdapter((user, assignment), IProgress)
-        assert_that(result, not_none())
-        assert_that(result.HasProgress, is_(True))
-
-        assessment_progress = component.queryMultiAdapter(
-            (user, question_set), IProgress)
-        assert_that(assessment_progress, not_none())
-        assert_that(assessment_progress.HasProgress, is_(True))
-
-        # Verify progress course w/one of each
-        # Assignment progress is unchanged.
-        progressess = get_assessment_progresses_for_course(user, course)
-        assert_that(progressess, has_length(2))
-        assert_that(progressess,
-                    contains_inanyorder(assessment_progress, assignment_progress))
-
-        # Self-assessment; duped is ok
-        self._install_self_assessment(self.analytics_db, submit_id=100)
-        assessment_progress = component.queryMultiAdapter(
-            (user, question_set), IProgress)
-        assert_that(assessment_progress, not_none())
-        assert_that(assessment_progress.HasProgress, is_(True))
-
-        # Verify progress course w/one of each plus multi-assessments
-        # The new self-assessment timestamp is in our progress.
-        progressess = get_assessment_progresses_for_course(user, course)
-        assert_that(progressess, has_length(2))
-        assert_that(progressess,
-                    contains_inanyorder(assessment_progress, assignment_progress))
-
-
 class TestViewStatAdapters(_AbstractMockAnalyticTestClass):
 
     def _get_user(self):
-        user = User.create_user(username=u'david_copperfield', 
+        user = User.create_user(username=u'david_copperfield',
 							 	dataserver=self.ds)
         return user
 
     def _get_other_user(self):
-        user = User.create_user(username=u'rod_stewart', 
+        user = User.create_user(username=u'rod_stewart',
 							 	dataserver=self.ds)
         return user
 
@@ -388,3 +263,82 @@ class TestViewStatAdapters(_AbstractMockAnalyticTestClass):
         result = component.queryMultiAdapter((note, user), IViewStats)
         assert_that(result.view_count, is_(note_view_count + 1))
         assert_that(result.new_reply_count_for_user, is_(0))
+
+
+class TestPagedProgress( NTIAnalyticsTestCase ):
+
+    def _create_resource_view(self, user, resource_val, course):
+        time_length = 30
+        event_time = time.time()
+        db_resource_views.create_course_resource_view( user,
+                                                       None, event_time,
+                                                       course, None,
+                                                       resource_val, time_length )
+
+    @WithMockDSTrans
+    @fudge.patch( 'nti.ntiids.ntiids.find_object_with_ntiid' )
+    def test_paged_progress(self, mock_find_object):
+        user = User.create_user( username='new_user1', dataserver=self.ds )
+        course = CourseInstance()
+
+        container = ContentUnit()
+        container.NTIID = container.ntiid = u'tag:nextthought.com,2011:bleh'
+        mock_find_object.is_callable().returns( container )
+
+        # No children
+        result = content_progress(user, container, course)
+        assert_that( result, none() )
+
+        # One child with no views
+        child1 = ContentUnit()
+        child1.ntiid = child_ntiid = u'tag:nextthought.com,2011:bleh.page_1'
+        container.children = children = (child1,)
+        # Max progress is different, currently.  Since the container
+        # counts towards progress.  This may change.
+        max_progress = len( children ) + 1
+
+        mock_find_object.is_callable().returns( container )
+        result = content_progress(user, container, course)
+        assert_that( result, none() )
+
+        # Child with view
+        self._create_resource_view( user, child_ntiid, course )
+
+        mock_find_object.is_callable().returns( container )
+        result = content_progress(user, container, course)
+        assert_that( result, not_none() )
+        assert_that( result.AbsoluteProgress, is_( 1 ))
+        assert_that( result.MaxPossibleProgress, is_( max_progress ))
+
+        # Multiple children
+        child2 = ContentUnit()
+        child3 = ContentUnit()
+        child2.ntiid = child_ntiid2 = u'tag:nextthought.com,2011:bleh.page_2'
+        child3.ntiid = u'tag:nextthought.com,2011:bleh.page_3'
+        container.children = children = ( child1, child2, child3 )
+        max_progress = len( children ) + 1
+
+        mock_find_object.is_callable().returns( container )
+        result = content_progress(user, container, course)
+        assert_that( result, not_none() )
+        assert_that( result.AbsoluteProgress, is_( 1 ))
+        assert_that( result.MaxPossibleProgress, is_( max_progress ))
+
+        # Original child again
+        self._create_resource_view( user, child_ntiid, course )
+
+        mock_find_object.is_callable().returns( container )
+        result = content_progress(user, container, course)
+        assert_that( result, not_none() )
+        assert_that( result.AbsoluteProgress, is_( 1 ))
+        assert_that( result.MaxPossibleProgress, is_( max_progress ))
+
+        # Different child
+        self._create_resource_view( user, child_ntiid2, course )
+
+        mock_find_object.is_callable().returns( container )
+        result = content_progress(user, container, course)
+        assert_that( result, not_none() )
+        assert_that( result.AbsoluteProgress, is_( 2 ))
+        assert_that( result.MaxPossibleProgress, is_( max_progress ))
+        assert_that( result.HasProgress, is_( True ))
