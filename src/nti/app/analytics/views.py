@@ -39,7 +39,6 @@ from nti.analytics.locations import get_location_list
 from nti.analytics.model import AnalyticsClientParams
 
 from nti.analytics.resource_views import handle_events
-from nti.analytics.resource_views import get_progress_for_ntiid
 from nti.analytics.resource_views import get_video_progress_for_course
 
 from nti.analytics.sessions import update_session
@@ -48,14 +47,11 @@ from nti.analytics.sessions import get_recent_user_sessions
 from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import handle_new_session
 
-from nti.analytics.progress import get_assessment_progresses_for_course
-
 from nti.analytics.stats.interfaces import IActivitySource
 from nti.analytics.stats.interfaces import IActiveTimesStatsSource
 from nti.analytics.stats.interfaces import IActiveSessionStatsSource
 from nti.analytics.stats.interfaces import IActiveUsersSource
 from nti.analytics.stats.interfaces import IDailyActivityStatsSource
-
 
 from nti.app.analytics import SYNC_PARAMS
 from nti.app.analytics import ANALYTICS_SESSION
@@ -87,6 +83,8 @@ from nti.app.renderers.interfaces import IResponseCacheController
 from nti.app.renderers.caching import default_cache_controller
 
 from nti.common.string import is_true
+
+from nti.contenttypes.completion.interfaces import IProgress
 
 from nti.contentlibrary.indexed_data import get_catalog
 
@@ -127,6 +125,7 @@ SET_RESEARCH_VIEW = 'SetUserResearch'
 
 logger = __import__('logging').getLogger(__name__)
 
+
 class _ICacheControlHint(interface.Interface):
     """
     A marker interface providing a hint as to how cacheable
@@ -134,12 +133,14 @@ class _ICacheControlHint(interface.Interface):
     """
 _ICacheControlHint.setTaggedValue('_ext_is_marker_interface', True)
 
+
 class _IDailyResults(_ICacheControlHint):
     """
     A _ICacheControlHint indicating results update daily
     and as such can be cached for the current day
     """
 _IDailyResults.setTaggedValue('_ext_is_marker_interface', True)
+
 
 class _IHistoricalResults(_ICacheControlHint):
     """
@@ -408,62 +409,54 @@ class UpdateAnalyticsSessions(AbstractAuthenticatedView,
         return self.store_analytics(self.request)
 
 
-def _get_ntiids(obj, accum):
+def _get_progress_objects(obj, accum):
     obj = IConcreteAsset(obj, obj)
+    accum.add(obj)
     attrs_to_check = ('ntiid',)
     if INTIRelatedWorkRef.providedBy(obj):
         attrs_to_check = ('ntiid', 'href')
 
     for attr in attrs_to_check:
-        ntiid_val = getattr(obj, attr, None)
-        if ntiid_val is not None:
-            accum.add(ntiid_val)
-
+        target_ntiid = getattr(obj, attr, None)
+        if target_ntiid is not None:
+            target = find_object_with_ntiid(target_ntiid)
+            if target is not None:
+                accum.add(target)
     try:
         for item in obj.items or ():
-            _get_ntiids(item, accum)
+            _get_progress_objects(item, accum)
     except AttributeError:
         pass
 
 
-def _get_legacy_progress_ntiids(unit, accum):
+def _get_legacy_progress_objects(unit, accum):
     if unit is None:
         return
     else:
-        _get_ntiids(unit, accum)
+        _get_progress_objects(unit, accum)
         for ntiid in unit.embeddedContainerNTIIDs:
-            accum.add(ntiid)
             obj = find_object_with_ntiid(ntiid)
-            # If a related work ref, get the target.
+            accum.add(obj)
             if hasattr(obj, 'target'):
-                accum.add(obj.target)
+                target = find_object_with_ntiid(obj.target)
+                if target is not None:
+                    accum.add(target)
         for child in unit.children:
-            _get_legacy_progress_ntiids(child, accum)
+            _get_legacy_progress_objects(child, accum)
 
 
-def _get_lesson_items(lesson):
-    """
-    For lessons, iterate and retrieve ntiids.
-    """
-    result = set()
-    for group in lesson or ():
-        result.update(group.items or ())
-    return result
-
-
-def _get_lesson_progress_ntiids(lesson, lesson_ntiid):
+def _get_lesson_progress_objects(lesson, lesson_ntiid):
     results = set()
     catalog = get_catalog()
     rs = catalog.search_objects(container_ntiids=lesson_ntiid,
                                 sites=get_component_hierarchy_names(),
                                 provided=ALL_PRESENTATION_ASSETS_INTERFACES)
-    contained_objects = tuple(rs)
-    if not contained_objects and lesson is not None:
-        # If we have a lesson, iterate through
-        contained_objects = _get_lesson_items(lesson)
-
-    for contained_object in contained_objects or ():
-        _get_ntiids(contained_object, results)
+    assets = tuple(rs)
+    if not assets and lesson is not None:
+        # If we have a lesson, iterate through lesson
+        assets = tuple(lesson)
+    for item in assets:
+        _get_progress_objects(item, results)
     return results
 
 
@@ -489,36 +482,8 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
         # once the user starts accumulating events.
         user = self.getRemoteUser()
         ntiid = self.context.LessonOverviewNTIID
-
-        if ntiid:
-            lesson = find_object_with_ntiid(ntiid)
-            node_ntiids = _get_lesson_progress_ntiids(lesson, ntiid)
-        else:
-            # Legacy
-            node_ntiids = set()
-            ntiid = self.context.ContentNTIID
-            lesson = find_object_with_ntiid(ntiid)
-            _get_legacy_progress_ntiids(lesson, node_ntiids)
-
-        result = LocatedExternalDict()
-        result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
-        result[StandardExternalFields.MIMETYPE] = 'application/vnd.nextthought.progresscontainer'
-        result[StandardExternalFields.ITEMS] = item_dict = {}
-
-        node_last_modified = None
-
-        # Get progress for resource/videos
-        for node_ntiid in node_ntiids or ():
-            # Can improve this if we can distinguish between video and other.
-            node_progress = get_progress_for_ntiid(user, node_ntiid)
-            if node_progress:
-                item_dict[node_ntiid] = to_external_object(node_progress)
-                node_last_modified = _get_last_mod(node_progress,
-                                                   node_last_modified)
-
-        # Get progress for self-assessments and assignments
+        course = ICourseInstance(self.context, None)
         try:
-            course = find_interface(lesson, ICourseInstance, strict=False)
             if course is None:
                 ntiid = self.context.ContentNTIID
                 content_unit = find_object_with_ntiid(ntiid)
@@ -528,18 +493,32 @@ class CourseOutlineNodeProgress(AbstractAuthenticatedView,
                         ntiid)
             course = None
 
-        if course is not None:
-            # Gathering all assignments/self-assessments for course.
-            # May be cheaper than finding just for our unit.
-            progresses = get_assessment_progresses_for_course(user, course)
-            for progress in progresses:
-                item_dict[progress.progress_id] = to_external_object(progress)
+        if ntiid:
+            lesson = find_object_with_ntiid(ntiid)
+            items = _get_lesson_progress_objects(lesson, ntiid)
+        else:
+            # Legacy
+            items = set()
+            ntiid = self.context.ContentNTIID
+            lesson = find_object_with_ntiid(ntiid)
+            _get_legacy_progress_objects(lesson, items)
+        items.discard(None)
+
+        result = LocatedExternalDict()
+        result[StandardExternalFields.CLASS] = 'CourseOutlineNodeProgress'
+        result[StandardExternalFields.MIMETYPE] = 'application/vnd.nextthought.progresscontainer'
+        result[StandardExternalFields.ITEMS] = item_dict = {}
+
+        node_last_modified = None
+
+        # Get progress for possible items
+        for item in items or ():
+            progress = component.queryMultiAdapter((user, item, course),
+                                                   IProgress)
+            if progress is not None:
+                item_dict[item.ntiid] = to_external_object(progress)
                 node_last_modified = _get_last_mod(progress,
                                                    node_last_modified)
-
-        # We could summarize progress for node. This might be difficult unless we assume
-        # that every child ntiid contributes towards progress.  If we need to filter
-        # out certain types of ntiids, that might be tough.
 
         # Setting this will enable the renderer to return a 304, if needed.
         self.request.response.last_modified = node_last_modified
@@ -559,8 +538,8 @@ class UserCourseVideoProgress(AbstractAuthenticatedView,
     on each video in the course.
 
     On return, the 'LastModified' header will be set, allowing
-    the client to specify the 'If-Modified-Since' header for future requests.  A 304 will be
-    returned if there is the results have not changed.
+    the client to specify the 'If-Modified-Since' header for future requests.
+    A HTTP-304 will be returned if the results have not changed.
     """
 
     def __call__(self):
@@ -575,7 +554,7 @@ class UserCourseVideoProgress(AbstractAuthenticatedView,
         video_progress_col = get_video_progress_for_course(user, course)
 
         for video_progress in video_progress_col:
-            rid = video_progress.ResourceID
+            rid = video_progress.NTIID
             item_dict[rid] = to_external_object(video_progress)
             node_last_modified = _get_last_mod(video_progress,
                                                node_last_modified)
