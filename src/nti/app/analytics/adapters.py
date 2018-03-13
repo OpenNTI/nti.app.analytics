@@ -22,17 +22,11 @@ from zope.security.interfaces import IPrincipal
 
 from nti.analytics import has_analytics
 
-from nti.analytics.assessments import get_assignment_for_user
-from nti.analytics.assessments import get_self_assessments_for_user_and_id
-
 from nti.analytics.boards import get_topic_views
 from nti.analytics.boards import get_topic_last_view
 
-from nti.analytics.interfaces import IProgress
 from nti.analytics.interfaces import IAnalyticsEvent
 from nti.analytics.interfaces import IAnalyticsSessionIdProvider
-
-from nti.analytics.progress import DefaultProgress
 
 from nti.analytics.resource_tags import get_note_views
 from nti.analytics.resource_tags import get_note_last_view
@@ -53,9 +47,6 @@ from nti.app.products.courseware.interfaces import IViewStats
 from nti.app.products.courseware.interfaces import IVideoUsageStats
 from nti.app.products.courseware.interfaces import IResourceUsageStats
 
-from nti.assessment.interfaces import IQAssignment
-from nti.assessment.interfaces import IQuestionSet
-
 from nti.contenttypes.courses.interfaces import ICourseInstance
 
 from nti.contenttypes.courses.utils import get_course_instructors
@@ -73,54 +64,6 @@ from nti.dataserver.users import User
 from nti.app.analytics.utils import get_session_id_from_request
 
 logger = __import__('logging').getLogger(__name__)
-
-
-@interface.implementer(IProgress)
-@component.adapter(IUser, IQAssignment)
-def _assignment_progress_for_user(user, assignment):
-    """
-    Given an assignment and a user, we
-    attempt to determine the amount of progress the user
-    has made on the assignment.  If we have nothing in which to
-    gauge progress, we return None.
-    """
-    result = None
-    # In local tests, about 100 objects are decorated in about 1s;
-    # this is in UCOL with a lot of assignments but few assessments.
-    assignment_id = getattr(assignment, 'ntiid', None)
-    assignment_records = get_assignment_for_user(user, assignment_id)
-    if assignment_records:
-        # Simplistic implementation
-        last_mod = max((x.timestamp for x in assignment_records))
-        result = DefaultProgress(assignment_id, 1, 1, True,
-                                 last_modified=last_mod)
-    return result
-
-
-@interface.implementer(IProgress)
-@component.adapter(IUser, IQuestionSet)
-def _assessment_progress_for_user(user, assessment):
-    """
-    Given a generic assessment and a user, we
-    attempt to determine the amount of progress the user
-    has made on the assignment.  If we have nothing in which to
-    gauge progress, we return None.
-    """
-    # To properly check for assignment, we need the course to see
-    # what the assignment ntiids are versus the possible self-assessment ids.
-    # Maybe we're better off checking for assignment or self-assessment.
-    # If we have a cache, the cost is trivial.
-    # Or we only care about possible self-assessments here; if we have a record
-    # great, else we do not return anything.
-    assessment_id = getattr(assessment, 'ntiid', None)
-    assessment_records = get_self_assessments_for_user_and_id(user, assessment_id)
-    result = None
-    if assessment_records:
-        # Simplistic implementation
-        last_mod = max((x.timestamp for x in assessment_records))
-        result = DefaultProgress(assessment_id, 1, 1,
-                                 True, last_modified=last_mod)
-    return result
 
 
 class _ViewStats(object):
