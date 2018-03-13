@@ -48,10 +48,8 @@ from nti.analytics.common import timestamp_type
 from nti.analytics.interfaces import DEFAULT_ANALYTICS_BATCH_SIZE
 from nti.analytics.interfaces import DEFAULT_ANALYTICS_FREQUENCY
 
-from nti.analytics.database.assessments import AssignmentsTaken
-
-from nti.analytics.database.assessments import SelfAssessmentViews
 from nti.analytics.database.assessments import AssignmentViews
+from nti.analytics.database.assessments import SelfAssessmentViews
 
 from nti.analytics.database.blogs import BlogsViewed
 
@@ -114,6 +112,10 @@ from nti.app.analytics.utils import get_session_id_from_request
 from nti.app.analytics.views import GEO_LOCATION_VIEW
 from nti.app.analytics.views import UserLocationJsonView
 
+from nti.app.assessment.history import UsersCourseAssignmentHistoryItem
+
+from nti.app.assessment.interfaces import IUsersCourseAssignmentHistory
+
 from nti.app.products.courseware.workspaces import enrollment_from_record
 
 from nti.app.testing.application_webtest import ApplicationLayerTest
@@ -122,9 +124,12 @@ from nti.app.testing.decorators import WithSharedApplicationMockDS
 
 from nti.app.testing.webtest import TestApp
 
-from nti.assessment.assignment import QAssignment
-
 from nti.app.contentlibrary.tests import PersistentApplicationTestLayer
+
+from nti.assessment.assignment import QAssignment
+from nti.assessment.assignment import QAssignmentSubmissionPendingAssessment
+
+from nti.assessment.submission import AssignmentSubmission
 
 from nti.contenttypes.courses.courses import CourseInstance
 from nti.contenttypes.courses.courses import ContentCourseSubInstance
@@ -283,7 +288,7 @@ class _AbstractTestViews(ApplicationLayerTest):
 class TestBatchEvents(_AbstractTestViews):
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
-    @fudge.patch('nti.analytics.resource_views._get_object')
+    @fudge.patch('nti.analytics.resource_views.find_object_with_ntiid')
     @fudge.patch('nti.analytics.resource_views._get_root_context')
     @fudge.patch('nti.analytics.resource_views._get_course')
     @fudge.patch('nti.analytics.database.blogs._get_blog_id')
@@ -422,7 +427,7 @@ class TestBatchEvents(_AbstractTestViews):
         assert_that(result, has_entry('Items', has_length(1)))
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
-    @fudge.patch('nti.analytics.resource_views._get_object')
+    @fudge.patch('nti.analytics.resource_views.find_object_with_ntiid')
     @fudge.patch('nti.analytics.resource_views._get_root_context')
     @fudge.patch('nti.analytics.resource_views._get_course')
     def test_malformed_event(self, mock_get_object, mock_find_object, mock_get_course):
@@ -690,19 +695,6 @@ class TestProgressView(_AbstractTestViews):
             self.user_id = create_user(self.user).user_id
             return self.user
 
-    def _install_assignment(self, assignment_id):
-        db = self.db
-        new_object = AssignmentsTaken(
-            user_id=self.user_id,
-            session_id=2,
-            timestamp=timestamp_type(time.time()),
-            course_id=1,
-            assignment_id=assignment_id,
-            submission_id=2,
-            time_length=10)
-        db.session.add(new_object)
-        db.session.flush()
-
     def _do_get_url(self, url, status=200, response=None):
         """
         Gets the url, using the given response (if available)
@@ -775,8 +767,10 @@ class TestProgressView(_AbstractTestViews):
         with mock_dataserver.mock_db_trans(self.ds):
             user = User.get_user(user_id)
             self._create_course()
-            self._create_video_event(user=user, resource_val=video1,
-                                     max_time_length=max_progress, video_end_time=30)
+            self._create_video_event(user=user,
+                                     resource_val=video1,
+                                     max_time_length=max_progress,
+                                     video_end_time=30)
 
         response = self._get_progress(response=response)
         result = response.json_body['Items']
@@ -860,7 +854,17 @@ class TestProgressView(_AbstractTestViews):
 
         # Now an assignment
         with mock_dataserver.mock_db_trans(self.ds):
-            self._install_assignment(assignment1)
+            content = find_object_with_ntiid(course)
+            course_obj = ICourseInstance(content)
+            user = User.get_user(user_id)
+            history = component.queryMultiAdapter((course_obj, user),
+                                                  IUsersCourseAssignmentHistory)
+            submission = AssignmentSubmission(assignmentId=assignment1, parts=())
+            pending = QAssignmentSubmissionPendingAssessment(assignmentId=assignment1,
+                                                             parts=())
+            item = UsersCourseAssignmentHistoryItem(Submission=submission,
+                                                    pendingAssessment=pending)
+            history._setitemf(assignment1, item)
 
         response = self._get_progress(response=response)
 
@@ -870,8 +874,8 @@ class TestProgressView(_AbstractTestViews):
                     contains_inanyorder(video1, video2, resource1, assignment1))
 
         resource_progress = result.get(assignment1)
-        assert_that(resource_progress, has_entry('MaxPossibleProgress', 1))
-        assert_that(resource_progress, has_entry('AbsoluteProgress', 1))
+        assert_that(resource_progress, has_entry('MaxPossibleProgress', none()))
+        assert_that(resource_progress, has_entry('AbsoluteProgress', none()))
         assert_that(resource_progress, has_entry('HasProgress', True))
 
         # Now a 304 again
@@ -951,8 +955,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_1 = IpGeoLocation(user_id=1,
                                      ip_addr='1.1.1.1',
                                      country_code='US',
-                                     latitude=10.0,
-                                     longitude=10.0,
                                      location_id=1)
         self._store_locations(ip_address_1)
 
@@ -970,8 +972,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_2 = IpGeoLocation(user_id=1,
                                      ip_addr='1.1.1.2',
                                      country_code='US',
-                                     latitude=11.0,
-                                     longitude=11.0,
                                      location_id=2)
         self._store_locations(ip_address_2)
 
@@ -989,8 +989,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_3 = IpGeoLocation(user_id=2,
                                      ip_addr='1.1.1.3',
                                      country_code='US',
-                                     latitude=10.0,
-                                     longitude=10.0,
                                      location_id=1)
         self._store_locations(ip_address_3)
         mock_get_enrollment_list.is_callable().returns([1, 2])
@@ -1010,8 +1008,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_4 = IpGeoLocation(user_id=2,
                                      ip_addr='1.1.1.4',
                                      country_code='US',
-                                     latitude=12.0,
-                                     longitude=12.0,
                                      location_id=3)
         self._store_locations(ip_address_4)
 
@@ -1058,8 +1054,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_1 = IpGeoLocation(user_id=1,
                                      ip_addr='1.1.1.1',
                                      country_code='US',
-                                     latitude=10.0,
-                                     longitude=10.0,
                                      location_id=1)
         self._store_locations(ip_address_1)
 
@@ -1082,8 +1076,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_2 = IpGeoLocation(user_id=1,
                                      ip_addr='1.1.1.2',
                                      country_code='US',
-                                     latitude=11.0,
-                                     longitude=11.0,
                                      location_id=2)
         self._store_locations(ip_address_2)
 
@@ -1101,8 +1093,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_3 = IpGeoLocation(user_id=2,
                                      ip_addr='1.1.1.3',
                                      country_code='US',
-                                     latitude=10.0,
-                                     longitude=10.0,
                                      location_id=1)
         self._store_locations(ip_address_3)
         mock_get_enrollment_list.is_callable().returns([1, 2])
@@ -1123,8 +1113,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_4 = IpGeoLocation(user_id=2,
                                      ip_addr='1.1.1.4',
                                      country_code='US',
-                                     latitude=12.0,
-                                     longitude=12.0,
                                      location_id=3)
         self._store_locations(ip_address_4)
 
@@ -1168,8 +1156,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_1 = IpGeoLocation(user_id=1,
                                      ip_addr='1.1.1.1',
                                      country_code='US',
-                                     latitude=10.0,
-                                     longitude=10.0,
                                      location_id=1)
         self._store_locations(ip_address_1)
 
@@ -1200,8 +1186,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_2 = IpGeoLocation(user_id=1,
                                      ip_addr='1.1.1.2',
                                      country_code='US',
-                                     latitude=11.0,
-                                     longitude=11.0,
                                      location_id=2)
         self._store_locations(ip_address_2)
 
@@ -1214,8 +1198,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_3 = IpGeoLocation(user_id=2,
                                      ip_addr='1.1.1.3',
                                      country_code='US',
-                                     latitude=10.0,
-                                     longitude=10.0,
                                      location_id=1)
         self._store_locations(ip_address_3)
         mock_get_enrollment_list.is_callable().returns([1, 2])
@@ -1241,8 +1223,6 @@ class TestUserLocationView(_AbstractTestViews):
         ip_address_1 = IpGeoLocation(user_id=2,
                                      ip_addr='1.1.1.1',
                                      country_code='US',
-                                     latitude=10.0,
-                                     longitude=10.0,
                                      location_id=1)
         self._store_locations(ip_address_1)
         self.set_up_test_locations()
