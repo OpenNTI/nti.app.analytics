@@ -22,6 +22,8 @@ from zope import interface
 
 from zope.cachedescriptors.property import Lazy
 
+from zope.event import notify
+
 from zope.schema.interfaces import ValidationError
 
 from pyramid.view import view_config
@@ -33,6 +35,7 @@ from nti.analytics.common import should_create_analytics
 from nti.analytics.interfaces import IAnalyticsSession
 from nti.analytics.interfaces import IAnalyticsSessions
 from nti.analytics.interfaces import IBatchResourceEvents
+from nti.analytics.interfaces import IAnalyticsProgressEvent
 
 from nti.analytics.locations import get_location_list
 
@@ -84,9 +87,11 @@ from nti.app.renderers.caching import default_cache_controller
 
 from nti.common.string import is_true
 
-from nti.contenttypes.completion.interfaces import IProgress
-
 from nti.contentlibrary.indexed_data import get_catalog
+
+from nti.contenttypes.completion.interfaces import IProgress
+from nti.contenttypes.completion.interfaces import ICompletionContext
+from nti.contenttypes.completion.interfaces import UserProgressUpdatedEvent
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
@@ -183,6 +188,7 @@ def _process_batch_events(events, remote_user):
             continue
 
         new_event = factory()
+        resource_to_root_context = set()
         try:
             internalization.update_from_external_object(new_event, event)
             if new_event.user != remote_username:
@@ -191,6 +197,9 @@ def _process_batch_events(events, remote_user):
                             new_event.user, remote_username)
                 new_event.user = remote_username
             batch_events.append(new_event)
+            if IAnalyticsProgressEvent.providedBy(new_event):
+                resource_to_root_context.add((new_event.ResourceId,
+                                              new_event.RootContextID))
         except (ValidationError, ValueError) as e:
             # The app may resend events if we err; so we should just log.
             # String values in int fields throw ValueErrors instead of validation
@@ -199,6 +208,20 @@ def _process_batch_events(events, remote_user):
             malformed_count += 1
 
     event_count, invalid_exc = handle_events(batch_events)
+
+    # Now broadcast to interested parties that progress may have updated for
+    # certain objects within certain contexts. This is probably not useful
+    # if our state is not updated in-line above.
+    for resource_ntiid, root_context_ntiid in resource_to_root_context:
+        resource_obj = find_object_with_ntiid(resource_ntiid)
+        root_context = find_object_with_ntiid(root_context_ntiid)
+        completion_context = ICompletionContext(root_context, None)
+        if      resource_obj is not None \
+            and completion_context is not None:
+            notify(UserProgressUpdatedEvent(resource_obj,
+                                            remote_user,
+                                            completion_context))
+
     for invalid_exc in invalid_exc:
         logger.warn('Invalid events received (%s)', invalid_exc)
         invalid_count += 1

@@ -10,21 +10,16 @@ from __future__ import absolute_import
 
 from zope import interface
 
-from nti.app.products.courseware.interfaces import ICourseInstanceEnrollment
-
 from nti.appserver.workspaces.interfaces import IContainerCollection
 
 from nti.appserver.workspaces.interfaces import IWorkspace
-
-from nti.contenttypes.courses.interfaces import ICourseInstance
-
-from nti.dataserver.interfaces import IUser
 
 
 class IAnalyticsWorkspace(IWorkspace):
     """
     A workspace containing data for analytics.
     """
+
 
 class IAnalyticsCollection(IContainerCollection):
     """
@@ -43,12 +38,14 @@ class IEventsCollection(IAnalyticsCollection):
     A collection of analytics events
     """
 
+
 class IAnalyticsContext(interface.Interface):
     """
     A marker interface for things that are "analytics aware"
     and can provide analytics information specific to their context
     """
 IAnalyticsContext.setTaggedValue('_ext_is_marker_interface', True)
+
 
 class IAnalyticsContextACLProvider(interface.Interface):
     """
