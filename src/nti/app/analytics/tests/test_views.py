@@ -160,7 +160,7 @@ timestamp = calendar.timegm(datetime.utcnow().timetuple())
 user = u'sjohnson@nextthought.com'
 course = u'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.course_info'
 context_path = [u'DASHBOARD', u'ntiid:tag_blah']
-resource_id = u'tag:nextthought.com,2011-10:OU-HTML-ENGR1510_Intro_lesson1'
+resource_id = u'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.subsec:BOOK_Three_PART_11'
 time_length = 30
 video_start_time = 13
 video_end_time = 39
@@ -286,6 +286,8 @@ class _AbstractTestViews(ApplicationLayerTest):
 
 
 class TestBatchEvents(_AbstractTestViews):
+
+    default_origin = 'http://janux.ou.edu'
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     @fudge.patch('nti.analytics.resource_views.find_object_with_ntiid')
