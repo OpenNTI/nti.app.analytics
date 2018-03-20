@@ -56,7 +56,10 @@ def _is_page_container(node):
 @interface.implementer(IProgress)
 def video_progress(user, video, course):
     resource_views = get_video_views_for_ntiid(video.ntiid, user, course)
-    result = get_progress_for_video_views(video.ntiid, resource_views)
+    result = get_progress_for_video_views(video.ntiid,
+                                          resource_views,
+                                          video,
+                                          user)
     return result
 
 
@@ -84,12 +87,17 @@ def content_progress(user, content_unit, course):
                                                        course)
             child_views_dict[child.ntiid] = child_views
         result = get_progress_for_resource_container(content_ntiid,
-                                                     child_views_dict)
+                                                     child_views_dict,
+                                                     content_unit,
+                                                     user)
     else:
         resource_views = get_resource_views_for_ntiid(content_ntiid,
                                                       user,
                                                       course)
-        result = get_progress_for_resource_views(content_ntiid, resource_views)
+        result = get_progress_for_resource_views(content_ntiid,
+                                                 resource_views,
+                                                 content_unit,
+                                                 user)
     return result
 
 
@@ -104,5 +112,8 @@ def related_work_ref_progress(user, ref, course):
             result = content_progress(user, target, course)
     else:
         resource_views = get_resource_views_for_ntiid(ref.ntiid, user, course)
-        result = get_progress_for_resource_views(ref.ntiid, resource_views)
+        result = get_progress_for_resource_views(ref.ntiid,
+                                                 resource_views,
+                                                 ref,
+                                                 user)
     return result
