@@ -105,12 +105,15 @@ def content_progress(user, content_unit, course):
 @interface.implementer(IProgress)
 def related_work_ref_progress(user, ref, course):
     result = None
+    is_reading = False
     target_ntiid = getattr(ref, 'target', '')
     if target_ntiid:
         target = find_object_with_ntiid(target_ntiid)
         if IContentUnit.providedBy(target):
+            is_reading = True
+            # We want to handle readings particularly
             result = content_progress(user, target, course)
-    else:
+    if not is_reading:
         resource_views = get_resource_views_for_ntiid(ref.ntiid, user, course)
         result = get_progress_for_resource_views(ref.ntiid,
                                                  resource_views,
