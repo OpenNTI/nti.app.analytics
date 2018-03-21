@@ -111,13 +111,6 @@
 			 factory="nti.app.products.courseware.workspaces.DefaultCourseInstanceEnrollment"
 			 provides=".interfaces.IAnalyticsContext" />
 
-	<!-- JZ 1.15.2015 - Disable until needed
-	<subscriber factory=".decorators._TopicProgressDecorator"
-				provides="nti.externalization.interfaces.IExternalObjectDecorator"
-				for="nti.dataserver.contenttypes.forums.interfaces.ITopic
-					 pyramid.interfaces.IRequest"  />
-	-->
-
 	<!-- View count adapters -->
 	<adapter factory=".adapters._note_view_stats" />
 	<adapter factory=".adapters._note_view_stats_for_user" />

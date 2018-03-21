@@ -19,8 +19,6 @@ from nti.analytics import has_analytics
 
 from nti.analytics.interfaces import IAnalyticsSession
 
-from nti.analytics.progress import get_topic_progress
-
 from nti.analytics.sessions import get_recent_user_sessions
 
 from nti.app.analytics import ANALYTICS
@@ -95,20 +93,6 @@ class _CourseVideoProgressLinkDecorator(_AnalyticsEnabledDecorator):
         link.__name__ = ''
         link.__parent__ = context
         links.append(link)
-
-
-@component.adapter(ITopic)
-@interface.implementer(IExternalMappingDecorator)
-class _TopicProgressDecorator(_AnalyticsEnabledDecorator):
-    """
-    Return progress for the outbound Topic.  Generally useful for noting
-    the last time a user viewed a topic to determine if there is new
-    user content.
-    """
-
-    def _do_decorate_external(self, context, result):
-        progress = get_topic_progress(self.remoteUser, context)
-        result['Progress'] = to_external_object(progress)
 
 
 @component.adapter(ICourseInstance)
