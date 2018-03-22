@@ -741,7 +741,7 @@ class TestProgressView(_AbstractTestViews):
     @time_monotonically_increases
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     @fudge.patch('nti.app.products.courseware.adapters._content_unit_to_course',
-                 'nti.app.analytics.views.find_object_with_ntiid',
+                 'nti.app.contenttypes.presentation.views.completion_views.find_object_with_ntiid',
                  'dm.zope.schema.schema.Object._validate')
     def test_progress(self, mock_adapter, mock_find_object, mock_validate):
         video1 = u'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.03'

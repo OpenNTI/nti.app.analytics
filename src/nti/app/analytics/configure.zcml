@@ -52,11 +52,6 @@
     <adapter factory=".adapters._activity_source_for_enrollment" />
 
 	<!-- Progress -->
-	<subscriber factory=".decorators._CourseOutlineNodeProgressLinkDecorator"
-				provides="nti.externalization.interfaces.IExternalObjectDecorator"
-				for="nti.contenttypes.courses.interfaces.ICourseOutlineContentNode
-					 pyramid.interfaces.IRequest"  />
-
 	<subscriber factory=".decorators._CourseVideoProgressLinkDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
 				for="nti.contenttypes.courses.interfaces.ICourseInstance
