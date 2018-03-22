@@ -33,17 +33,12 @@ from nti.app.renderers.decorators import AbstractAuthenticatedRequestAwareDecora
 from nti.appserver.pyramid_authorization import has_permission
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
-from nti.contenttypes.courses.interfaces import ICourseOutlineContentNode
 
 from nti.dataserver import authorization as nauth
 
 from nti.dataserver.authorization import is_admin_or_site_admin
 
-from nti.dataserver.contenttypes.forums.interfaces import ITopic
-
 from nti.dataserver.interfaces import IUser
-
-from nti.externalization.externalization import to_external_object
 
 from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.interfaces import IExternalMappingDecorator
@@ -59,23 +54,6 @@ class _AnalyticsEnabledDecorator(AbstractAuthenticatedRequestAwareDecorator):
 
     def _predicate(self, unused_context, unused_result):
         return self._is_authenticated and has_analytics()
-
-
-@component.adapter(ICourseOutlineContentNode)
-@interface.implementer(IExternalMappingDecorator)
-class _CourseOutlineNodeProgressLinkDecorator(_AnalyticsEnabledDecorator):
-    """
-    Return a link on the content node in which the client can retrieve
-    progress information for a user.
-    """
-
-    def _do_decorate_external(self, context, result):
-        links = result.setdefault(LINKS, [])
-        link = Link(context, rel="Progress", elements=('Progress',))
-        interface.alsoProvides(link, ILocation)
-        link.__name__ = ''
-        link.__parent__ = context
-        links.append(link)
 
 
 @component.adapter(ICourseInstance)
