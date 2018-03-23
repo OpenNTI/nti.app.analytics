@@ -59,7 +59,8 @@ def video_progress(user, video, course):
     result = get_progress_for_video_views(video.ntiid,
                                           resource_views,
                                           video,
-                                          user)
+                                          user,
+                                          course)
     return result
 
 
@@ -89,7 +90,8 @@ def content_progress(user, content_unit, course):
         result = get_progress_for_resource_container(content_ntiid,
                                                      child_views_dict,
                                                      content_unit,
-                                                     user)
+                                                     user,
+                                                     course)
     else:
         resource_views = get_resource_views_for_ntiid(content_ntiid,
                                                       user,
@@ -97,7 +99,8 @@ def content_progress(user, content_unit, course):
         result = get_progress_for_resource_views(content_ntiid,
                                                  resource_views,
                                                  content_unit,
-                                                 user)
+                                                 user,
+                                                 course)
     return result
 
 
@@ -118,5 +121,6 @@ def related_work_ref_progress(user, ref, course):
         result = get_progress_for_resource_views(ref.ntiid,
                                                  resource_views,
                                                  ref,
-                                                 user)
+                                                 user,
+                                                 course)
     return result
