@@ -722,7 +722,7 @@ class TestProgressView(_AbstractTestViews):
         progress_url = '/dataserver2/users/CLC3403.ou.nextthought.com/LegacyCourses/CLC3403/VideoProgress'
         return self._do_get_url(progress_url, status, response)
 
-    def _setup_mocks(self, mock_adapter, mock_find_object, mock_validate, assignment_id):
+    def _setup_mocks(self, mock_adapter, mock_find_object, mock_validate, mock_no_submit, assignment_id):
         mock_validate.is_callable().returns(True)
         mock_adapter.is_callable().returns(object())
 
@@ -737,20 +737,22 @@ class TestProgressView(_AbstractTestViews):
         assignment_object = self._get_assignment()
         assignment_object.ntiid = assignment_id
         mock_find_object.is_callable().calls(_get_assignment)
+        mock_no_submit.is_callable().returns(False)
 
     @time_monotonically_increases
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     @fudge.patch('nti.app.products.courseware.adapters._content_unit_to_course',
                  'nti.app.contenttypes.presentation.views.completion_views.find_object_with_ntiid',
-                 'dm.zope.schema.schema.Object._validate')
-    def test_progress(self, mock_adapter, mock_find_object, mock_validate):
+                 'dm.zope.schema.schema.Object._validate',
+                 'nti.app.products.gradebook.completion._is_assignment_no_submit')
+    def test_progress(self, mock_adapter, mock_find_object, mock_validate, mock_no_submit):
         video1 = u'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.03'
         video2 = u'tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_10.02'
         resource1 = u'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.lec:10_LESSON'
         assignment1 = u'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.sec:QUIZ_10.01'
 
         self._setup_mocks(mock_adapter, mock_find_object,
-                          mock_validate, assignment1)
+                          mock_validate, mock_no_submit, assignment1)
 
         # Empty progress/empty video progress
         response = self._get_progress()
@@ -855,6 +857,9 @@ class TestProgressView(_AbstractTestViews):
         self._get_progress(response=response, status=304)
 
         # Now an assignment
+        # Completion is based on a grade for a no_submit (assignment without
+        # questions, which is what we have here). We want to treat this as a
+        # submission assignment, complete upon submission.
         with mock_dataserver.mock_db_trans(self.ds):
             content = find_object_with_ntiid(course)
             course_obj = ICourseInstance(content)
