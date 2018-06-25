@@ -227,7 +227,7 @@ class _AbstractUsageStats(object):
         if included_users:
             user_count = len(included_users)
         else:
-            user_count = len(self.get_usernames_with_stats())
+            user_count = len(tuple(self.accum.user_stats_map))
         result = self.build_results(self.accum, user_count)
         return result
 
