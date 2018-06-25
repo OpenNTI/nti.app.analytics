@@ -113,8 +113,10 @@
 	<adapter factory=".adapters._topic_view_stats_for_user" />
 	<adapter factory=".adapters._video_usage_stats" />
 	<adapter factory=".adapters._resource_usage_stats" />
+	<adapter factory=".adapters._book_resource_usage_stats" />
 	<adapter factory=".adapters._user_video_usage_stats" />
     <adapter factory=".adapters._user_resource_usage_stats" />
+    <adapter factory=".adapters._user_book_resource_usage_stats" />
 
 	<!-- Workspaces -->
 	<!-- Attach to user-service workspaces -->

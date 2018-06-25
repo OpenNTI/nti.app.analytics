@@ -38,14 +38,22 @@ from nti.analytics.stats.interfaces import IDailyActivityStatsSource
 from nti.app.analytics.interfaces import IAnalyticsContextACLProvider
 
 from nti.app.analytics.usage_stats import CourseVideoUsageStats
+from nti.app.analytics.usage_stats import BookResourceUsageStats
 from nti.app.analytics.usage_stats import CourseResourceUsageStats
 from nti.app.analytics.usage_stats import UserCourseVideoUsageStats
+from nti.app.analytics.usage_stats import UserBookResourceUsageStats
 from nti.app.analytics.usage_stats import UserCourseResourceUsageStats
 
-from nti.app.products.courseware.interfaces import ICourseInstanceEnrollment
+from nti.app.analytics.utils import get_session_id_from_request
+
 from nti.app.products.courseware.interfaces import IViewStats
 from nti.app.products.courseware.interfaces import IVideoUsageStats
-from nti.app.products.courseware.interfaces import IResourceUsageStats
+from nti.app.products.courseware.interfaces import ICourseInstanceEnrollment
+from nti.app.products.courseware.interfaces import IResourceUsageStats as ICourseResourceUsageStats
+
+from nti.app.contentlibrary.interfaces import IResourceUsageStats as IBookResourceUsageStats
+
+from nti.contentlibrary.interfaces import IContentPackageBundle
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
 
@@ -61,7 +69,6 @@ from nti.dataserver.interfaces import INote
 from nti.dataserver.interfaces import IUser
 
 from nti.dataserver.users import User
-from nti.app.analytics.utils import get_session_id_from_request
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -152,7 +159,7 @@ def _user_video_usage_stats(context, user):
     return result
 
 
-@interface.implementer(IResourceUsageStats)
+@interface.implementer(ICourseResourceUsageStats)
 @component.adapter(ICourseInstance, IUser)
 def _user_resource_usage_stats(context, user):
     result = None
@@ -161,12 +168,30 @@ def _user_resource_usage_stats(context, user):
     return result
 
 
-@interface.implementer(IResourceUsageStats)
+@interface.implementer(ICourseResourceUsageStats)
 @component.adapter(ICourseInstance)
 def _resource_usage_stats(context):
     result = None
     if has_analytics():
         result = CourseResourceUsageStats(context)
+    return result
+
+
+@interface.implementer(IBookResourceUsageStats)
+@component.adapter(IContentPackageBundle, IUser)
+def _user_book_resource_usage_stats(context, user):
+    result = None
+    if has_analytics():
+        result = UserBookResourceUsageStats(context, user)
+    return result
+
+
+@interface.implementer(IBookResourceUsageStats)
+@component.adapter(IContentPackageBundle)
+def _book_resource_usage_stats(context):
+    result = None
+    if has_analytics():
+        result = BookResourceUsageStats(context)
     return result
 
 
