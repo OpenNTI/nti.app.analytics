@@ -38,18 +38,19 @@ class MockUser(object):
 
 class MockEvent(object):
 
-    def __init__(self, username, resource_id, duration, session_id):
+    def __init__(self, username, resource_id, duration, session_id, timestamp):
         self.user = MockUser(username)
         self.ResourceId = resource_id
         self.Duration = duration
         self.SessionID = session_id
+        self.timestamp = timestamp
 
 
 class MockVideoEvent(MockEvent):
 
-    def __init__(self, username, resource_id, duration, session_id, max_duration, end_time):
+    def __init__(self, username, resource_id, duration, session_id, max_duration, end_time, timestamp):
         super(MockVideoEvent, self).__init__(
-            username, resource_id, duration, session_id)
+            username, resource_id, duration, session_id, timestamp)
         self.MaxDuration = max_duration
         self.VideoEndTime = end_time
 
@@ -123,13 +124,14 @@ class TestUsageStats(NTIAnalyticsTestCase):
 
         # Single event
         single_resource_id = u'ntiid1'
-        event = MockEvent('Public1', single_resource_id, 20, 1)
+        event = MockEvent('Public1', single_resource_id, 20, 1, 3)
         mock_events.is_callable().returns((event,))
         resource_stats = self.get_resource_stats()
         assert_that(resource_stats.get_usernames_with_stats(), contains('Public1'))
         user_stats = resource_stats.get_stats_for_user('Public1')
         assert_that(user_stats.total_view_time, is_(20))
         assert_that(user_stats.session_count, is_(1))
+        assert_that(user_stats.last_view_time, is_(3))
 
         results = resource_stats.get_stats()
         assert_that(results, has_length(1))
@@ -169,14 +171,14 @@ class TestUsageStats(NTIAnalyticsTestCase):
         events = []
         avg_session_time = u':24'  # 120s divided by 5
         avg_watch_time = u':12'  # 120s divided by 10 students
-        events.append(MockEvent('Public1', single_resource_id, 10, 1))
-        events.append(MockEvent('Public1', single_resource_id, 10, 1))
-        events.append(MockEvent('Public1', single_resource_id, 10, 2))
-        events.append(MockEvent('ForCredit1', single_resource_id, 20, 3))
-        events.append(MockEvent('ForCredit2', single_resource_id, 30, 4))
-        events.append(MockEvent('ForCredit3', single_resource_id, 40, 5))
+        events.append(MockEvent('Public1', single_resource_id, 10, 1, 3))
+        events.append(MockEvent('Public1', single_resource_id, 10, 1, 3))
+        events.append(MockEvent('Public1', single_resource_id, 10, 2, 3))
+        events.append(MockEvent('ForCredit1', single_resource_id, 20, 3, 3))
+        events.append(MockEvent('ForCredit2', single_resource_id, 30, 4, 3))
+        events.append(MockEvent('ForCredit3', single_resource_id, 40, 5, 3))
         # Instructor event ignored (not in our enrollment dict)
-        events.append(MockEvent('instructor', single_resource_id, 40, 7))
+        events.append(MockEvent('instructor', single_resource_id, 40, 7, 3))
 
         mock_events.is_callable().returns(events)
         resource_stats = self.get_resource_stats()
@@ -235,7 +237,7 @@ class TestUsageStats(NTIAnalyticsTestCase):
         single_resource_id = u'ntiid1'
         video_duration = 40
         event = MockVideoEvent('Public1', single_resource_id, 20, 1,
-                               video_duration, 40)
+                               video_duration, 40, 3)
         mock_events.is_callable().returns((event,))
         video_stats = self.get_video_stats()
         results = video_stats.get_stats()
@@ -277,51 +279,51 @@ class TestUsageStats(NTIAnalyticsTestCase):
         events = []
         events.append(
             MockVideoEvent('Public1', single_resource_id,
-                           10, 1, video_duration, 10)
+                           10, 1, video_duration, 10, 3)
         )
         events.append(
             MockVideoEvent('Public1', single_resource_id,
-                           10, 1, video_duration, 20)
+                           10, 1, video_duration, 20, 3)
         )
         events.append(
             MockVideoEvent('Public1', single_resource_id,
-                           10, 2, video_duration, 30)
+                           10, 2, video_duration, 30, 3)
         )
         events.append(
             MockVideoEvent('Public1', single_resource_id,
-                           10, 2, video_duration, 40)
+                           10, 2, video_duration, 40, 3)
         )
         events.append(
             MockVideoEvent('Public2', single_resource_id,
-                           10, 3, video_duration, 10)
+                           10, 3, video_duration, 10, 3)
         )
         events.append(
             MockVideoEvent('Public2', single_resource_id,
-                           10, 3, video_duration, 20)
+                           10, 3, video_duration, 20, 3)
         )
         events.append(
             MockVideoEvent('Public2', single_resource_id,
-                           10, 4, video_duration, 30)
+                           10, 4, video_duration, 30, 3)
         )
         events.append(
             MockVideoEvent('Public2', single_resource_id,
-                           10, 4, video_duration, 30)
+                           10, 4, video_duration, 30, 3)
         )
         events.append(
             MockVideoEvent('ForCredit1', single_resource_id,
-                           20, 5, video_duration, 40)
+                           20, 5, video_duration, 40, 3)
         )
         events.append(
             MockVideoEvent('ForCredit2', single_resource_id,
-                           30, 6, video_duration, 40)
+                           30, 6, video_duration, 40, 3)
         )
         events.append(
             MockVideoEvent('ForCredit3', single_resource_id,
-                           40, 7, video_duration, 40)
+                           40, 7, video_duration, 40, 3)
         )
         events.append(
             MockVideoEvent('ForCredit4', single_resource_id,
-                           40, 8, video_duration, 20)
+                           40, 8, video_duration, 20, 3)
         )
         total_watch_time = sum([x.Duration for x in events])
         session_count = len({x.SessionID for x in events})
