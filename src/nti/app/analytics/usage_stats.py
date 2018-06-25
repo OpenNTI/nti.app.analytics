@@ -17,17 +17,25 @@ from collections import defaultdict
 
 from zope import interface
 
+from zope.cachedescriptors.property import Lazy
+
 from nti.analytics.resource_views import get_video_views
 from nti.analytics.resource_views import get_resource_views
+
+from nti.app.contentlibrary.interfaces import IResourceUsageStats as IBookResourceUsageStats
 
 from nti.app.products.courseware.interfaces import IVideoUsageStats
 from nti.app.products.courseware.interfaces import IResourceUsageStats
 from nti.app.products.courseware.interfaces import IUserVideoUsageStats
 from nti.app.products.courseware.interfaces import IUserResourceUsageStats
 
+from nti.dataserver.authorization import is_admin_or_content_admin_or_site_admin
+
 from nti.dataserver.interfaces import IEnumerableEntityContainer
 
 from nti.ntiids.ntiids import find_object_with_ntiid
+
+from nti.property.property import alias
 
 _VideoInfo = namedtuple('_VideoInfoData',
                         ('title',
@@ -45,6 +53,7 @@ _ResourceInfo = namedtuple('_ResourceInfo',
                             'ntiid',
                             'session_count',
                             'view_event_count',
+                            'total_view_time',
                             'watch_times'))
 
 _VideoDropOffRate = namedtuple('_VideoDropOffRate',
@@ -106,58 +115,44 @@ def _get_enrollment_scope_dict(course, instructors=set()):
 
 
 class _AbstractUsageStats(object):
-
-    #: A cache of scopes to result set stats.
-    scope_result_set_map = None
+    """
+    When fetching stats, we'll build or fetch the stats (run once). If
+    building, we'll grab the relevant events and then run them through
+    an accumulator, filtering out certain users and including others
+    (optionally).
+    """
 
     #: The number of top resources to return in get_top_stats, by default.
     DEFAULT_TOP_COUNT = 6
 
-    def __init__(self, course):
-        self.course = course
-        self.scope_result_set_map = {}
+    def __init__(self, context):
+        self.context = context
+        self.accum = ResourceEventAccumulator()
+        self._stats = None
 
-    @property
-    def instructor_usernames(self):
-        return {x.id.lower() for x in self.course.instructors}
+    def _get_included_users(self, *args, **kwargs):
+        return None
 
-    @property
-    def enrollment_scope_dict(self):
-        return _get_enrollment_scope_dict(self.course, self.instructor_usernames)
+    def _exclude_user(self, user):
+        return is_admin_or_content_admin_or_site_admin(user)
 
-    def _get_scope(self, scope_name):
-        result = ALL_USERS
-        if scope_name and scope_name.lower() in ('public', 'open'):
-            result = u'Public'
-        elif scope_name:
-            result = u'ForCredit'
-        return result
+    def _build_or_get_stats(self, *args, **kwargs):
+        if self._stats == None:
+            included_users = self._get_included_users(*args, **kwargs)
+            self._stats = self._build_data_for_users(included_users)
+        return self._stats
 
-    def _get_user_base(self, scope_name):
-        user_base = self.enrollment_scope_dict[scope_name]
-        return user_base
-
-    def _build_or_get_stats(self, scope):
-        scope_name = self._get_scope(scope)
-        if scope_name not in self.scope_result_set_map:
-            user_base = self._get_user_base(scope_name)
-            result = self._build_data_for_users(user_base)
-            self.scope_result_set_map[scope_name] = result
-        else:
-            result = self.scope_result_set_map.get(scope_name)
-        return result
-
-    def get_stats(self, scope=None):
+    def get_stats(self, *args, **kwargs):
         """
-        Return stats for course users, optionally by scope.
+        Return stats.
         """
-        return self._build_or_get_stats(scope)
+        return self._build_or_get_stats(*args, **kwargs)
 
-    def get_top_stats(self, scope=None, top_count=None):
+    def get_top_stats(self, top_count=None, *args, **kwargs):
         """
         Return top usage stats for course users, optionally by scope.
         """
-        stats = self._build_or_get_stats(scope)
+        stats = self._build_or_get_stats(*args, **kwargs)
         top_count = top_count or self.DEFAULT_TOP_COUNT
         # Safe as long as we're non-None.
         result = nlargest(top_count, stats, key=lambda vid: vid.session_count)
@@ -181,48 +176,109 @@ class _AbstractUsageStats(object):
                     pass
         return result
 
-    def _get_watch_data(self, stats, student_count):
+    def _get_watch_data(self, stats, user_count):
         """
         For the given stats and student count, return watch stats ready
         for display purposes.
         """
-        average_watch_time = stats.total_view_time / student_count
+        average_watch_time = stats.total_view_time / user_count
         average_session_time = stats.total_view_time / stats.session_count
 
         watch_data = _AverageWatchTimes('%s:%02d' % divmod(int(average_watch_time), 60),
                                         '%s:%02d' % divmod(int(average_session_time), 60))
         return watch_data
 
-    def build_results(self, accum, scope_users):
+    def build_results(self, accum, user_count):
         """
         Post-accumulation, build our result object set.
         """
-        student_count = len(scope_users)
         results = []
 
         for ntiid, stats in accum.ntiid_stats_map.items():
-            data = self._build_resource_stats(ntiid, stats, student_count)
+            data = self._build_resource_stats(ntiid, stats, user_count)
             if data is not None:
                 results.append(data)
 
         results.sort(key=lambda x: x.title)
         return results
 
-    def _build_data_for_users(self, users):
+    def get_usernames_with_stats(self):
+        self.get_stats()
+        return tuple(self.accum.user_stats_map)
+
+    def get_stats_for_user(self, user):
+        self.get_stats()
+        username = getattr(user, 'username', user)
+        return self.accum.user_stats_map.get(username)
+
+    def _build_data_for_users(self, included_users):
         """
         For the given set of usernames, build stats based on events and return.
         """
-        accum = ResourceEventAccumulator()
         for event in self.events:
-
             if     event is None \
                 or event.user is None \
-                or event.user.username.lower() not in users:
+                or self._exclude_user(event.user) \
+                or (    included_users is not None \
+                    and event.user.username.lower() not in included_users):
                 continue
+            self.accum.accum(event)
 
-            accum.accum(event)
+        if included_users:
+            user_count = len(included_users)
+        else:
+            user_count = len(self.get_usernames_with_stats())
+        result = self.build_results(self.accum, user_count)
+        return result
 
-        result = self.build_results(accum, users)
+
+class _AbstractCourseUsageStats(_AbstractUsageStats):
+
+    #: A cache of scopes to result set stats.
+    scope_result_set_map = None
+
+    course = alias('context')
+
+    def __init__(self, course):
+        super(_AbstractCourseUsageStats, self).__init__(course)
+        self.scope_result_set_map = {}
+
+    def _get_included_users(self, scope_name):
+        return self._get_user_base(scope_name)
+
+    @Lazy
+    def instructor_usernames(self):
+        return {x.id.lower() for x in self.course.instructors}
+
+    def _exclude_user(self, user):
+        return user.username.lower() in self.instructor_usernames \
+            or super(_AbstractCourseUsageStats, self)._exclude_user(user)
+
+    @Lazy
+    def enrollment_scope_dict(self):
+        return _get_enrollment_scope_dict(self.course,
+                                          self.instructor_usernames)
+
+    def _get_scope(self, scope_name):
+        result = ALL_USERS
+        if scope_name and scope_name.lower() in ('public', 'open'):
+            result = u'Public'
+        elif scope_name:
+            result = u'ForCredit'
+        return result
+
+    def _get_user_base(self, scope_name):
+        user_base = self.enrollment_scope_dict[scope_name]
+        return user_base
+
+    def _build_or_get_stats(self, scope=None):
+        scope_name = self._get_scope(scope)
+        if scope_name not in self.scope_result_set_map:
+            user_base = self._get_user_base(scope_name)
+            result = self._build_data_for_users(user_base)
+            self.scope_result_set_map[scope_name] = result
+        else:
+            result = self.scope_result_set_map.get(scope_name)
         return result
 
 
@@ -276,20 +332,23 @@ class ResourceEventAccumulator(object):
 
     def __init__(self):
         self.ntiid_stats_map = defaultdict(ResourceStats)
+        self.user_stats_map = defaultdict(ResourceStats)
 
     def accum(self, event):
         resource_stats = self.ntiid_stats_map[event.ResourceId]
         resource_stats.incr(event)
+        user_stats = self.user_stats_map[event.user.username]
+        user_stats.incr(event)
 
 
 @interface.implementer(IResourceUsageStats)
-class CourseResourceUsageStats(_AbstractUsageStats):
+class CourseResourceUsageStats(_AbstractCourseUsageStats):
     """
     Usage stats that know how to build results for basic resource
     view stats.
     """
 
-    @property
+    @Lazy
     def events(self):
         return get_resource_views(root_context=self.course) or ()
 
@@ -303,8 +362,54 @@ class CourseResourceUsageStats(_AbstractUsageStats):
                              ntiid,
                              stats.session_count,
                              stats.event_count,
+                             stats.total_view_time,
                              watch_data)
         return data
+
+
+@interface.implementer(IBookResourceUsageStats)
+class BookResourceUsageStats(_AbstractUsageStats):
+    """
+    Usage stats that know how to build results for basic resource view stats.
+    """
+
+    @Lazy
+    def events(self):
+        return get_resource_views(root_context=self.context) or ()
+
+    def _build_resource_stats(self, ntiid, stats, student_count):
+        title = self._get_title(ntiid)
+        if title is None:
+            return
+
+        watch_data = self._get_watch_data(stats, student_count)
+        data = _ResourceInfo(title,
+                             ntiid,
+                             stats.session_count,
+                             stats.event_count,
+                             stats.total_view_time,
+                             watch_data)
+        return data
+
+
+@interface.implementer(IUserResourceUsageStats)
+class UserBookResourceUsageStats(BookResourceUsageStats):
+    """
+    Usage stats that know how to build results for basic resource
+    view stats for a course and user.
+    """
+
+    def __init__(self, book, user):
+        super(UserBookResourceUsageStats, self).__init__(book)
+        self.user = user
+
+    @Lazy
+    def events(self):
+        results = get_resource_views(root_context=self.context, user=self.user)
+        return results or ()
+
+    def get_stats(self):
+        return self._build_data_for_users((self.user.username.lower(),))
 
 
 @interface.implementer(IUserResourceUsageStats)
@@ -315,10 +420,10 @@ class UserCourseResourceUsageStats(CourseResourceUsageStats):
     """
 
     def __init__(self, course, user):
-        self.course = course
+        super(UserCourseResourceUsageStats, self).__init__(course)
         self.user = user
 
-    @property
+    @Lazy
     def events(self):
         results = get_resource_views(root_context=self.course, user=self.user)
         return results or ()
@@ -328,7 +433,7 @@ class UserCourseResourceUsageStats(CourseResourceUsageStats):
 
 
 @interface.implementer(IVideoUsageStats)
-class CourseVideoUsageStats(_AbstractUsageStats):
+class CourseVideoUsageStats(_AbstractCourseUsageStats):
     """
     Usage stats that know how to build results for video resource
     view stats.
@@ -337,7 +442,7 @@ class CourseVideoUsageStats(_AbstractUsageStats):
     #: The threshold at which videos are said to be completely watched.
     VIDEO_COMPLETED_THRESHOLD = 0.9
 
-    @property
+    @Lazy
     def events(self):
         return get_video_views(course=self.course) or ()
 
@@ -424,10 +529,10 @@ class UserCourseVideoUsageStats(CourseVideoUsageStats):
     """
 
     def __init__(self, course, user):
-        self.course = course
+        super(UserCourseVideoUsageStats, self).__init__(course)
         self.user = user
 
-    @property
+    @Lazy
     def events(self):
         results = get_video_views(course=self.course, user=self.user)
         return results or ()

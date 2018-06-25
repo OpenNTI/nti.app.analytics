@@ -9,9 +9,12 @@ from __future__ import absolute_import
 # pylint: disable=W0212,R0904
 
 from hamcrest import is_
+from hamcrest import none
+from hamcrest import contains
 from hamcrest import has_length
 from hamcrest import assert_that
 from hamcrest import contains_string
+from hamcrest import contains_inanyorder
 
 import fudge
 
@@ -23,8 +26,9 @@ from nti.app.analytics.usage_stats import UserCourseResourceUsageStats
 
 from nti.app.analytics.tests import NTIAnalyticsTestCase
 
-from nti.dataserver.tests.mock_dataserver import WithMockDSTrans
+from nti.contenttypes.courses.courses import ContentCourseInstance
 
+from nti.dataserver.tests.mock_dataserver import WithMockDSTrans
 
 class MockUser(object):
 
@@ -78,27 +82,23 @@ class TestUsageStats(NTIAnalyticsTestCase):
         self.enrollment_dict = self._get_enrollment()
 
     def get_resource_stats(self):
-        # We mock out our course attrs; so this is ignored
-        course = object()
+        course = ContentCourseInstance()
         stats = CourseResourceUsageStats(course)
         return stats
 
     def get_video_stats(self):
-        # We mock out our course attrs; so this is ignored
-        course = object()
+        course = ContentCourseInstance()
         stats = CourseVideoUsageStats(course)
         return stats
 
     def get_user_resource_stats(self, username):
-        # We mock out our course attrs; so this is ignored
-        course = object()
+        course = ContentCourseInstance()
         user = MockUser(username)
         stats = UserCourseResourceUsageStats(course, user)
         return stats
 
     def get_user_video_stats(self, username):
-        # We mock out our course attrs; so this is ignored
-        course = object()
+        course = ContentCourseInstance()
         user = MockUser(username)
         stats = UserCourseVideoUsageStats(course, user)
         return stats
@@ -106,12 +106,10 @@ class TestUsageStats(NTIAnalyticsTestCase):
     @WithMockDSTrans
     @fudge.patch('nti.app.analytics.usage_stats.get_resource_views',
                  'nti.app.analytics.usage_stats._AbstractUsageStats._get_title',
-                 'nti.app.analytics.usage_stats._AbstractUsageStats.instructor_usernames',
                  'nti.app.analytics.usage_stats._get_enrollment_scope_dict')
     def test_resource_usage_stats(self, mock_events, mock_get_title,
-                                  mock_instructors, mock_enrollment):
+                                  mock_enrollment):
         mock_get_title.is_callable().returns('test title')
-        mock_instructors.is_callable().returns(set())
         mock_enrollment.is_callable().returns(self.enrollment_dict)
         mock_events.is_callable().returns(None)
 
@@ -128,6 +126,11 @@ class TestUsageStats(NTIAnalyticsTestCase):
         event = MockEvent('Public1', single_resource_id, 20, 1)
         mock_events.is_callable().returns((event,))
         resource_stats = self.get_resource_stats()
+        assert_that(resource_stats.get_usernames_with_stats(), contains('Public1'))
+        user_stats = resource_stats.get_stats_for_user('Public1')
+        assert_that(user_stats.total_view_time, is_(20))
+        assert_that(user_stats.session_count, is_(1))
+
         results = resource_stats.get_stats()
         assert_that(results, has_length(1))
 
@@ -138,6 +141,7 @@ class TestUsageStats(NTIAnalyticsTestCase):
         # 20s divided by 10 students ~ 2s
         assert_that(resource_stat.watch_times.average_total_watch_time,
                     contains_string(':02'))
+        assert_that(resource_stat.total_view_time, is_(20))
         assert_that(resource_stat.watch_times.average_session_watch_time,
                     contains_string(str(event.Duration)))
 
@@ -151,12 +155,14 @@ class TestUsageStats(NTIAnalyticsTestCase):
         assert_that(resource_stat.view_event_count, is_(1))
         assert_that(resource_stat.watch_times.average_total_watch_time,
                     contains_string(':20'))
+        assert_that(resource_stat.total_view_time, is_(20))
         assert_that(resource_stat.watch_times.average_session_watch_time,
                     contains_string(str(event.Duration)))
 
         resource_stats = self.get_user_resource_stats('Public2')
         results = resource_stats.get_stats()
         assert_that(results, has_length(0))
+        assert_that(resource_stats.get_stats_for_user('Public2'), none())
 
         # Multiple events, single resource
         # 7 events. 6 non-instructor events, 5 non-instructor sessions
@@ -174,6 +180,8 @@ class TestUsageStats(NTIAnalyticsTestCase):
 
         mock_events.is_callable().returns(events)
         resource_stats = self.get_resource_stats()
+        assert_that(resource_stats.get_usernames_with_stats(),
+                    contains_inanyorder('Public1', 'ForCredit1', 'ForCredit2', 'ForCredit3'))
         results = resource_stats.get_stats()
         # Still only one resource
         assert_that(results, has_length(1))
@@ -207,12 +215,10 @@ class TestUsageStats(NTIAnalyticsTestCase):
     @WithMockDSTrans
     @fudge.patch('nti.app.analytics.usage_stats.get_video_views',
                  'nti.app.analytics.usage_stats._AbstractUsageStats._get_title',
-                 'nti.app.analytics.usage_stats._AbstractUsageStats.instructor_usernames',
                  'nti.app.analytics.usage_stats._get_enrollment_scope_dict')
     def test_video_usage_stats(self, mock_events, mock_get_title,
-                               mock_instructors, mock_enrollment):
+                               mock_enrollment):
         mock_get_title.is_callable().returns('test title')
-        mock_instructors.is_callable().returns(set())
         mock_enrollment.is_callable().returns(self.enrollment_dict)
         mock_events.is_callable().returns(None)
 
