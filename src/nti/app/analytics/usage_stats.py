@@ -307,6 +307,7 @@ class ResourceStats(object):
         self.session_stats = defaultdict(BaseStats)
         self.event_count = 0
         self.max_duration = None
+        self.last_view_time = None
 
     @property
     def session_count(self):
@@ -323,6 +324,10 @@ class ResourceStats(object):
         session_stats.incr(event)
         if self.max_duration is None:
             self.max_duration = getattr(event, 'MaxDuration', None)
+        if self.last_view_time is None:
+            self.last_view_time = event.timestamp
+        elif event.timestamp and event.timestamp > self.last_view_time:
+            self.last_view_time = event.timestamp
 
 
 class ResourceEventAccumulator(object):
