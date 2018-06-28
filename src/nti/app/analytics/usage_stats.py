@@ -54,6 +54,7 @@ _ResourceInfo = namedtuple('_ResourceInfo',
                             'session_count',
                             'view_event_count',
                             'total_view_time',
+                            'last_view_time',
                             'watch_times'))
 
 _VideoDropOffRate = namedtuple('_VideoDropOffRate',
@@ -122,6 +123,8 @@ class _AbstractUsageStats(object):
     (optionally).
     """
 
+    EXCLUDE_ADMINS = True
+
     #: The number of top resources to return in get_top_stats, by default.
     DEFAULT_TOP_COUNT = 6
 
@@ -134,7 +137,8 @@ class _AbstractUsageStats(object):
         return None
 
     def _exclude_user(self, user):
-        return is_admin_or_content_admin_or_site_admin(user)
+        return  self.EXCLUDE_ADMINS \
+            and is_admin_or_content_admin_or_site_admin(user)
 
     def _build_or_get_stats(self, *args, **kwargs):
         if self._stats == None:
@@ -368,6 +372,7 @@ class CourseResourceUsageStats(_AbstractCourseUsageStats):
                              stats.session_count,
                              stats.event_count,
                              stats.total_view_time,
+                             stats.last_view_time,
                              watch_data)
         return data
 
@@ -393,6 +398,7 @@ class BookResourceUsageStats(_AbstractUsageStats):
                              stats.session_count,
                              stats.event_count,
                              stats.total_view_time,
+                             stats.last_view_time,
                              watch_data)
         return data
 
@@ -403,6 +409,8 @@ class UserBookResourceUsageStats(BookResourceUsageStats):
     Usage stats that know how to build results for basic resource
     view stats for a course and user.
     """
+
+    EXCLUDE_ADMINS = False
 
     def __init__(self, book, user):
         super(UserBookResourceUsageStats, self).__init__(book)
@@ -423,6 +431,8 @@ class UserCourseResourceUsageStats(CourseResourceUsageStats):
     Usage stats that know how to build results for basic resource
     view stats for a course and user.
     """
+
+    EXCLUDE_ADMINS = False
 
     def __init__(self, course, user):
         super(UserCourseResourceUsageStats, self).__init__(course)
