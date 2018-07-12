@@ -14,12 +14,16 @@ import urlparse
 from zope import interface
 from zope import component
 
+from nti.analytics.database.lti import get_launch_records_for_ntiid
+
 from nti.analytics.progress import get_progress_for_video_views
 from nti.analytics.progress import get_progress_for_resource_views
 from nti.analytics.progress import get_progress_for_resource_container
 
 from nti.analytics.resource_views import get_video_views_for_ntiid
 from nti.analytics.resource_views import get_resource_views_for_ntiid
+
+from nti.app.products.courseware_ims.interfaces import IExternalToolAsset
 
 from nti.contentlibrary.interfaces import IContentUnit
 
@@ -123,4 +127,21 @@ def related_work_ref_progress(user, ref, course):
                                                  ref,
                                                  user,
                                                  course)
+    return result
+
+
+@component.adapter(IUser, IExternalToolAsset, ICourseInstance)
+@interface.implementer(IProgress)
+def lti_external_tool_asset_progress(user, asset, course):
+    result = None
+    ntiid = getattr(asset, 'ntiid', None)
+    if ntiid is not None:
+        launch_records = get_launch_records_for_ntiid(ntiid,
+                                                      user=user,
+                                                      root_context=course)
+        # If the asset has ever been launched by the user the item is completed
+        if len(launch_records) > 0:
+            result = 1
+        else:
+            result = 0
     return result
