@@ -16,6 +16,7 @@ from zope import component
 
 from nti.analytics.database.lti import get_launch_records_for_ntiid
 
+from nti.analytics.progress import get_progress_for_lti_launches
 from nti.analytics.progress import get_progress_for_video_views
 from nti.analytics.progress import get_progress_for_resource_views
 from nti.analytics.progress import get_progress_for_resource_container
@@ -42,10 +43,11 @@ logger = __import__('logging').getLogger(__name__)
 
 
 def _has_href_fragment(node, children):
-    def _has_frag( node ):
-        return urlparse.urldefrag( node.href )[1]
+    def _has_frag(node):
+        return urlparse.urldefrag(node.href)[1]
+
     # A fragment if we have a frag or if any of our children do
-    return bool(   _has_frag(node)
+    return bool(_has_frag(node)
                 or _has_frag(next(iter(children))))
 
 
@@ -139,9 +141,9 @@ def lti_external_tool_asset_progress(user, asset, course):
         launch_records = get_launch_records_for_ntiid(ntiid,
                                                       user=user,
                                                       root_context=course)
-        # If the asset has ever been launched by the user the item is completed
-        if len(launch_records) > 0:
-            result = 1
-        else:
-            result = 0
+        result = get_progress_for_lti_launches(ntiid,
+                                               launch_records,
+                                               asset,
+                                               user,
+                                               course)
     return result

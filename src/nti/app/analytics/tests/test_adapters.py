@@ -363,12 +363,17 @@ class TestLTIProgress(NTIAnalyticsTestCase):
         connection = mock_dataserver.current_transaction
         connection.add(course)
         asset = LTIExternalToolAsset()
-        asset.ntiid = 'fake_ntiid'
+        asset.ntiid = u'tag:nextthought.com,2011:test'
         mock_find_object.is_callable().returns(asset)
 
         result = lti_external_tool_asset_progress(user, asset, course)
-        assert_that(result, is_(0))
+        assert_that(result.AbsoluteProgress, is_(0))
 
         db_lti_views.create_launch_record(user, course, asset, get_nti_session_id(), [course.ntiid], time.time())
         result = lti_external_tool_asset_progress(user, asset, course)
-        assert_that(result, is_(1))
+        assert_that(result.AbsoluteProgress, is_(1))
+
+        # Check that the progress doesn't increment
+        db_lti_views.create_launch_record(user, course, asset, get_nti_session_id(), [course.ntiid], time.time())
+        result = lti_external_tool_asset_progress(user, asset, course)
+        assert_that(result.AbsoluteProgress, is_(1))

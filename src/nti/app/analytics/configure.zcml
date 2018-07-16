@@ -80,6 +80,12 @@
                   nti.contenttypes.courses.interfaces.ICourseInstance"
              provides="nti.contenttypes.completion.interfaces.IProgress" />
 
+	<adapter factory=".completion.lti_external_tool_asset_progress"
+			 for="nti.dataserver.interfaces.IUser
+				  nti.app.products.courseware_ims.interfaces.IExternalToolAsset
+				  nti.contenttypes.courses.interfaces.ICourseInstance"
+			 provides="nti.contenttypes.completion.interfaces.IProgress" />
+
 	<!-- User Session Decorators -->
 	<subscriber factory=".decorators._UserSessionDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
