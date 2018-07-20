@@ -1,9 +1,0 @@
-{
-	"nti.roles.course_instructor": {
-		"allow": ["harp4162"],
-		"deny": ["steve.johnson@nextthought.com"]
-	},
-	"nti.roles.course_ta": {
-		"allow": ["jmadden"]
-	}
-}

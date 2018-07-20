@@ -105,7 +105,7 @@ from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 from nti.app.analytics import ANALYTICS_SESSION_HEADER
 
-from nti.app.analytics.tests import LegacyInstructedCourseApplicationTestLayer
+from nti.app.products.courseware.tests import LegacyInstructedCourseApplicationTestLayer
 
 from nti.app.analytics.utils import get_session_id_from_request
 
