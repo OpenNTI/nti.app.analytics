@@ -1275,12 +1275,12 @@ class TestUserLocationView(_AbstractTestViews):
             _add_session(user2.username, '', '1.1.1.1',
                          start_time=start, end_time=start)
             # 30 seconds later, a longer session
-            sesh2 = _add_session(user2.username, '', '1.1.1.1',
-                                 start_time=start2, end_time=end)
+            _add_session(user2.username, '', '1.1.1.1',
+                          start_time=start2, end_time=end)
             # and a session a long time ago
             longago = start - timedelta(days=60)
-            _add_session(user2.username, '', '',
-                         start_time=longago, end_time=longago + timedelta(hours=1))
+            sesh3 = _add_session(user2.username, '', '1.1.1.1',
+                                 start_time=longago, end_time=longago + timedelta(hours=1))
 
         res = self.testapp.get(href, status=200,
                                extra_environ=self._make_extra_environ(username='new_user2'))
@@ -1288,8 +1288,10 @@ class TestUserLocationView(_AbstractTestViews):
 
         user = res['Items'][0]
         assert_that(user, not_none())
+        # We now proxy the most recent session (by session id) as the most
+        # recent session
         assert_that(user, has_entry('MostRecentSession',
-                                    has_entries('SessionID', sesh2.SessionID,
+                                    has_entries('SessionID', sesh3.SessionID,
                                                 'Username', 'new_user2',
                                                 'UserAgent', not_none(),
                                                 'GeographicalLocation', not_none())))
