@@ -979,4 +979,3 @@ class ActiveUsers(AbstractUserLocationView,
             cache_hint = _IHistoricalResults
         interface.alsoProvides(result, cache_hint)
         return result
-
