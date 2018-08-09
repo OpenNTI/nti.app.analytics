@@ -8,14 +8,21 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
+# pylint: disable=inherit-non-class,no-self-argument,no-value-for-parameter
+
 import csv
-import six
+import time
 import calendar
 import datetime
-
 from io import BytesIO
 
+from pyramid.view import view_config
+
+from pyramid import httpexceptions as hexc
+
 from requests.structures import CaseInsensitiveDict
+
+import six
 
 from zope import component
 from zope import interface
@@ -25,10 +32,6 @@ from zope.cachedescriptors.property import Lazy
 from zope.event import notify
 
 from zope.schema.interfaces import ValidationError
-
-from pyramid.view import view_config
-
-from pyramid import httpexceptions as hexc
 
 from nti.analytics.common import should_create_analytics
 
@@ -98,6 +101,8 @@ from nti.dataserver import authorization as nauth
 from nti.dataserver.authorization import is_admin_or_site_admin
 
 from nti.dataserver.interfaces import IUser
+
+from nti.dataserver.users.interfaces import UserLastSeenEvent
 
 from nti.externalization import internalization
 
@@ -171,8 +176,10 @@ def _process_batch_events(events, remote_user):
     for event in events:
         factory = internalization.find_factory_for(event)
         if factory is None:
-            logger.warn('Malformed events received (mime_type=%s) (event=%s)',
-                        event.get('MimeType'), event)
+            logger.warning(
+                'Malformed events received (mime_type=%s) (event=%s)',
+                event.get('MimeType'), event
+            )
             malformed_count += 1
             continue
 
@@ -182,8 +189,10 @@ def _process_batch_events(events, remote_user):
             internalization.update_from_external_object(new_event, event)
             if new_event.user != remote_username:
                 # This shouldn't happen.
-                logger.warn('Analytics event username does not match remote user (event=%s) (%s)',
-                            new_event.user, remote_username)
+                logger.warning(
+                    'Analytics event username does not match remote user (event=%s) (%s)',
+                    new_event.user, remote_username
+                )
                 new_event.user = remote_username
             batch_events.append(new_event)
             if IAnalyticsProgressEvent.providedBy(new_event):
@@ -290,12 +299,13 @@ class AnalyticsSession(AbstractAuthenticatedView,
 
     def _set_cookie(self, request, new_session):
         # If we have current session, fire an event to kill it.
-        # TODO: Is this what we want?  What about multiple tabs?
+        # Is this what we want?  What about multiple tabs?
         # Will we inadvertantly kill open sessions?
         old_id = get_session_id_from_request(request)
         if old_id is not None:
             user = self.remoteUser
             if user is not None:
+                # pylint: disable=no-member
                 handle_end_session(user.username, old_id)
 
         request.response.set_cookie(ANALYTICS_SESSION_COOKIE_NAME,
@@ -311,6 +321,7 @@ class AnalyticsSession(AbstractAuthenticatedView,
         if user is not None:
             new_session = handle_new_session(user, request)
             self._set_cookie(request, new_session)
+            notify(UserLastSeenEvent(user, time.time(), request))
         return request.response
 
     def __call__(self):
@@ -364,10 +375,11 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
                             event_count, total_count, malformed_count,
                             invalid_count)
 
-        session_id = get_session_id_from_request(self.request)
+        session_id = get_session_id_from_request(request)
         handle_end_session(user, session_id, timestamp=timestamp)
         request.response.delete_cookie(ANALYTICS_SESSION_COOKIE_NAME)
-        #self.request.response.status_code = 204
+        notify(UserLastSeenEvent(user, time.time(), request))
+        # request.response.status_code = 204
         return self.request.response
 
     def __call__(self):
@@ -503,6 +515,7 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
         return ICourseInstance(self.context)
 
     def generate_semester(self):
+        # pylint: disable=no-member
         start_date = self.course_start_date
         start_month = start_date.month if start_date else None
         if start_month < 5:
