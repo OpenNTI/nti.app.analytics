@@ -97,13 +97,13 @@ from nti.contenttypes.completion.interfaces import UserProgressUpdatedEvent
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseCatalogEntry
 
+from nti.coremetadata.interfaces import UserLastSeenEvent
+
 from nti.dataserver import authorization as nauth
 
 from nti.dataserver.authorization import is_admin_or_site_admin
 
 from nti.dataserver.interfaces import IUser
-
-from nti.dataserver.users.interfaces import UserLastSeenEvent
 
 from nti.externalization import internalization
 
@@ -522,7 +522,7 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
         return ICourseInstance(self.context)
 
     def generate_semester(self):
-        # pylint: disable=no-member
+        # pylint: disable=no-member, using-constant-test 
         start_date = self.course_start_date
         start_month = start_date.month if start_date else None
         if start_month < 5:
