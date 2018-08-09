@@ -16,9 +16,9 @@ import calendar
 import datetime
 from io import BytesIO
 
-from pyramid.view import view_config
-
 from pyramid import httpexceptions as hexc
+
+from pyramid.view import view_config
 
 from requests.structures import CaseInsensitiveDict
 
@@ -85,8 +85,9 @@ from nti.app.externalization.error import raise_json_error
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 from nti.app.externalization.view_mixins import BatchingUtilsMixin
 
-from nti.app.renderers.interfaces import IResponseCacheController
 from nti.app.renderers.caching import default_cache_controller
+
+from nti.app.renderers.interfaces import IResponseCacheController
 
 from nti.common.string import is_true
 
@@ -162,7 +163,7 @@ def _get_last_mod(progress, max_last_mod):
     return result
 
 
-def _process_batch_events(events, remote_user):
+def _process_batch_events(events, remote_user, request=None):
     """
     Process the events, returning a tuple of events queued and malformed events.
     """
@@ -202,10 +203,14 @@ def _process_batch_events(events, remote_user):
             # The app may resend events if we err; so we should just log.
             # String values in int fields throw ValueErrors instead of validation
             # errors.
-            logger.warn('Malformed events received (event=%s) (%s)', event, e)
+            logger.warning('Malformed events received (event=%s) (%s)', event, e)
             malformed_count += 1
 
     event_count, invalid_exc = handle_events(batch_events)
+    
+    # if there are valid events notify last seen
+    if resource_to_root_context:
+        notify(UserLastSeenEvent(remote_user, time.time(), request))
 
     # Now broadcast to interested parties that progress may have updated for
     # certain objects within certain contexts. This is probably not useful
@@ -221,7 +226,7 @@ def _process_batch_events(events, remote_user):
                                             completion_context))
 
     for invalid_exc in invalid_exc:
-        logger.warn('Invalid events received (%s)', invalid_exc)
+        logger.warning('Invalid events received (%s)', invalid_exc)
         invalid_count += 1
     return event_count, malformed_count, invalid_count
 
@@ -260,7 +265,8 @@ class BatchEvents(AbstractAuthenticatedView,
         events = external_input['events']
         total_count = len(events)
 
-        event_count, malformed_count, invalid_count = _process_batch_events(events, self.remoteUser)
+        event_count, malformed_count, invalid_count = \
+                    _process_batch_events(events, self.remoteUser, self.request)
         logger.info("""Received batched analytic events (count=%s)
                     (total_count=%s) (malformed=%s) (invalid=%s)""",
                     event_count, total_count, malformed_count, invalid_count)
@@ -367,8 +373,8 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
             events = batch_events.get('events')
             if events:
                 total_count = len(events)
-                event_count, malformed_count, invalid_count = _process_batch_events(events,
-                                                                                    self.remoteUser)
+                event_count, malformed_count, invalid_count = \
+                                _process_batch_events(events, self.remoteUser, request)
                 logger.info("""Process batched analytic events on session close
                             (count=%s) (total_count=%s) (malformed=%s)
                             (invalid_count=%s)""",
@@ -378,6 +384,7 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
         session_id = get_session_id_from_request(request)
         handle_end_session(user, session_id, timestamp=timestamp)
         request.response.delete_cookie(ANALYTICS_SESSION_COOKIE_NAME)
+        # notify user last seen
         notify(UserLastSeenEvent(user, time.time(), request))
         # request.response.status_code = 204
         return self.request.response
@@ -658,9 +665,9 @@ class StatsSourceMixin(object):
 class WindowedViewMixin(object):
 
     def _time_param(self, pname):
-        time = self.request.params.get(pname)
-        time = float(time) if time is not None else None
-        return datetime.datetime.utcfromtimestamp(time) if time else None
+        timestamp = self.request.params.get(pname)
+        timestamp = float(timestamp) if timestamp is not None else None
+        return datetime.datetime.utcfromtimestamp(timestamp) if timestamp else None
 
     @property
     def not_before(self):
@@ -700,7 +707,7 @@ class AbstractHistoricalAnalyticsView(AbstractUserLocationView,
     def _analytics_context(self):
         return find_interface(self.context, IAnalyticsContext, strict=False)
 
-    def _get_raw(self, not_before, not_after):
+    def _get_raw(self, unused_not_before, unused_not_after):
         return []
 
     def __call__(self):
@@ -730,7 +737,7 @@ class UserRecentSessions(AbstractHistoricalAnalyticsView):
     params of start and end can be provided to give a date range
     """
 
-    def _make_external(self, session):
+    def _make_external(self, session): # pylint: disable=arguments-differ
         return IAnalyticsSession(session)
 
     def _analytics_context(self):
@@ -759,7 +766,7 @@ class UserRecentSessions(AbstractHistoricalAnalyticsView):
              permission=nauth.ACT_READ)
 class GetActivity(AbstractHistoricalAnalyticsView):
 
-    def _make_external(self, event):
+    def _make_external(self, event): # pylint: disable=arguments-differ
         return to_external_object(event, name='summary')
 
     def _get_raw(self, not_before, not_after):
