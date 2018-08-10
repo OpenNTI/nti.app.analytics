@@ -1237,32 +1237,27 @@ class TestUserLocationView(_AbstractTestViews):
         href = '/dataserver2/ResolveUser/new_user2'
         res = self.testapp.get(href)
         res = res.json_body
-        user = res['Items'][0]
-        assert_that(user, not_none())
+        ext_user = res['Items'][0]
+        assert_that(ext_user, not_none())
 
-        # As an admin fetching we should see the property, but we have no
-        # sessions currently
-        assert_that(user, has_entry('MostRecentSession', none()))
         # We also should have a HistoricalSessions link
-        self.require_link_href_with_rel(user, 'HistoricalSessions')
+        self.require_link_href_with_rel(ext_user, 'HistoricalSessions')
 
-        # As ourselves we can see the property
+        # As ourselves we can see the link
         res = self.testapp.get(href, status=200,
                                extra_environ=self._make_extra_environ(username='new_user2'))
         res = res.json_body
 
-        user = res['Items'][0]
-        assert_that(user, not_none())
-        assert_that(user, has_entry('MostRecentSession', none()))
+        ext_user = res['Items'][0]
+        assert_that(ext_user, not_none())
 
         # But as another user we cannot
         res = self.testapp.get(href, status=200,
                                extra_environ=self._make_extra_environ(username='new_user1'))
         res = res.json_body
 
-        user = res['Items'][0]
-        assert_that(user, not_none())
-        assert_that(user, does_not(have_key('MostRecentSession')))
+        ext_user = res['Items'][0]
+        self.forbid_link_with_rel(ext_user, 'HistoricalSessions')
 
         # Now simulate a couple of sessions from new_user2
         with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
@@ -1279,27 +1274,20 @@ class TestUserLocationView(_AbstractTestViews):
                           start_time=start2, end_time=end)
             # and a session a long time ago
             longago = start - timedelta(days=60)
-            sesh3 = _add_session(user2.username, '', '1.1.1.1',
-                                 start_time=longago, end_time=longago + timedelta(hours=1))
+            _add_session(user2.username, '', '1.1.1.1',
+                         start_time=longago, end_time=longago + timedelta(hours=1))
 
         res = self.testapp.get(href, status=200,
                                extra_environ=self._make_extra_environ(username='new_user2'))
         res = res.json_body
 
-        user = res['Items'][0]
-        assert_that(user, not_none())
-        # We now proxy the most recent session (by session id) as the most
-        # recent session
-        assert_that(user, has_entry('MostRecentSession',
-                                    has_entries('SessionID', sesh3.SessionID,
-                                                'Username', 'new_user2',
-                                                'UserAgent', not_none(),
-                                                'GeographicalLocation', not_none())))
+        ext_user = res['Items'][0]
+        assert_that(ext_user, not_none())
 
         notBefore = time.mktime((start - timedelta(days=30)).timetuple())
         notAfter = time.mktime(start.timetuple())
 
-        href = self.require_link_href_with_rel(user, 'HistoricalSessions')
+        href = self.require_link_href_with_rel(ext_user, 'HistoricalSessions')
         res = self.testapp.get(href,
                                {'notBefore': notBefore,
                                'notAfter': notAfter})
@@ -1315,7 +1303,7 @@ class TestUserLocationView(_AbstractTestViews):
                          extra_environ=self._make_extra_environ(username='new_user1'))
 
         # We can also fetch with notAfter and a limit
-        href = self.require_link_href_with_rel(user, 'HistoricalSessions')
+        href = self.require_link_href_with_rel(ext_user, 'HistoricalSessions')
         res = self.testapp.get(href,
                                {'limit': 2,
                                'notAfter': notAfter})
