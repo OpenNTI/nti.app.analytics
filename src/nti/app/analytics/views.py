@@ -82,8 +82,8 @@ from nti.app.base.abstract_views import AbstractAuthenticatedView
 
 from nti.app.externalization.error import raise_json_error
 
-from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 from nti.app.externalization.view_mixins import BatchingUtilsMixin
+from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
 from nti.app.renderers.caching import default_cache_controller
 
@@ -115,6 +115,7 @@ from nti.externalization.interfaces import StandardExternalFields
 from nti.ntiids.ntiids import find_object_with_ntiid
 
 from nti.traversal.traversal import find_interface
+from nti.securitypolicy.utils import is_impersonating
 
 ITEMS = StandardExternalFields.ITEMS
 TOTAL = StandardExternalFields.TOTAL
@@ -161,6 +162,11 @@ def _get_last_mod(progress, max_last_mod):
             and progress.last_modified > max_last_mod):
         result = progress.last_modified
     return result
+
+
+def _notify_lastseen_event(user, request=None):
+    if request is not None and not is_impersonating(request):
+        notify(UserLastSeenEvent(user, time.time(), request))
 
 
 def _process_batch_events(events, remote_user, request=None):
@@ -211,7 +217,7 @@ def _process_batch_events(events, remote_user, request=None):
 
     # if there are valid events notify last seen
     if event_count:
-        notify(UserLastSeenEvent(remote_user, time.time(), request))
+        _notify_lastseen_event(remote_user, request)
 
     # Now broadcast to interested parties that progress may have updated for
     # certain objects within certain contexts. This is probably not useful
@@ -326,9 +332,11 @@ class AnalyticsSession(AbstractAuthenticatedView,
         request = self.request
         user = request.remote_user
         if user is not None:
+            # handle session and set cookie
             new_session = handle_new_session(user, request)
             self._set_cookie(request, new_session)
-            notify(UserLastSeenEvent(user, time.time(), request))
+            # notify last seen
+            _notify_lastseen_event(user, request)
         return request.response
 
     def __call__(self):
@@ -386,7 +394,7 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
         handle_end_session(user, session_id, timestamp=timestamp)
         request.response.delete_cookie(ANALYTICS_SESSION_COOKIE_NAME)
         # notify user last seen
-        notify(UserLastSeenEvent(user, time.time(), request))
+        _notify_lastseen_event(user, request)
         # request.response.status_code = 204
         return self.request.response
 
