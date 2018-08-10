@@ -19,8 +19,6 @@ from nti.analytics import has_analytics
 
 from nti.analytics.interfaces import IAnalyticsSession
 
-from nti.analytics.sessions import get_recent_user_sessions
-
 from nti.app.analytics import ANALYTICS
 from nti.app.analytics import ANALYTICS_SESSIONS
 from nti.app.analytics import HISTORICAL_SESSIONS_VIEW_NAME
@@ -50,7 +48,7 @@ LINKS = StandardExternalFields.LINKS
 logger = __import__('logging').getLogger(__name__)
 
 
-class _AnalyticsEnabledDecorator(AbstractAuthenticatedRequestAwareDecorator):
+class _AnalyticsEnabledDecorator(AbstractAuthenticatedRequestAwareDecorator): # pylint: disable=abstract-method
 
     def _predicate(self, unused_context, unused_result):
         return self._is_authenticated and has_analytics()
@@ -119,12 +117,6 @@ class _UserSessionDecorator(_AnalyticsEnabledDecorator):
                 or is_admin_or_site_admin(self.remoteUser))
 
     def _do_decorate_external(self, context, result):
-        most_recent_sessions = get_recent_user_sessions(context, limit=1)
-        session = most_recent_sessions[0] if most_recent_sessions else None
-        if session:
-            session = IAnalyticsSession(session)
-        result['MostRecentSession'] = session
-
         # This is also the best place to decorate a link to fetch recent
         # sessions
         links = result.setdefault(LINKS, [])
@@ -142,6 +134,7 @@ class _UserSessionDecorator(_AnalyticsEnabledDecorator):
 class _SessionDetailsDecorator(_AnalyticsEnabledDecorator):
 
     def _predicate(self, context, unused_result):
+        # pylint: disable=no-member
         return super(_SessionDetailsDecorator, self)._predicate(context, unused_result) \
            and (   self.remoteUser.username == context.Username
                 or is_admin_or_site_admin(self.remoteUser))
