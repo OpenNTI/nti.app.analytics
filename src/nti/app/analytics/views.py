@@ -170,6 +170,7 @@ def _process_batch_events(events, remote_user, request=None):
     batch_events = []
     invalid_count = 0
     malformed_count = 0
+    resource_to_root_context = ()
     remote_username = remote_user.username
 
     # Lets hand-internalize these objects one-by-one so that we
@@ -207,9 +208,9 @@ def _process_batch_events(events, remote_user, request=None):
             malformed_count += 1
 
     event_count, invalid_exc = handle_events(batch_events)
-    
+
     # if there are valid events notify last seen
-    if resource_to_root_context:
+    if event_count:
         notify(UserLastSeenEvent(remote_user, time.time(), request))
 
     # Now broadcast to interested parties that progress may have updated for
