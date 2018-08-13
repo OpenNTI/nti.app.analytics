@@ -165,7 +165,7 @@ def _get_last_mod(progress, max_last_mod):
     return result
 
 
-def _notify_lastseen_event(user, request=None):
+def notify_lastseen_event(user, request=None):
     if request is not None and not is_impersonating(request):
         notify(UserLastSeenEvent(user, time.time(), request))
 
@@ -219,7 +219,7 @@ def _process_batch_events(events, remote_user, request=None):
 
     # if there are valid events notify last seen
     if handled:
-        _notify_lastseen_event(remote_user, request)
+        notify_lastseen_event(remote_user, request)
         notify(UserProcessedEventsEvent(remote_user, handled, request))
 
     # Now broadcast to interested parties that progress may have updated for
@@ -339,7 +339,7 @@ class AnalyticsSession(AbstractAuthenticatedView,
             new_session = handle_new_session(user, request)
             self._set_cookie(request, new_session)
             # notify last seen
-            _notify_lastseen_event(user, request)
+            notify_lastseen_event(user, request)
         return request.response
 
     def __call__(self):
@@ -397,7 +397,7 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
         handle_end_session(user, session_id, timestamp=timestamp)
         request.response.delete_cookie(ANALYTICS_SESSION_COOKIE_NAME)
         # notify user last seen
-        _notify_lastseen_event(user, request)
+        notify_lastseen_event(user, request)
         # request.response.status_code = 204
         return self.request.response
 
