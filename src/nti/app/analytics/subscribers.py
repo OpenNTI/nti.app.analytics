@@ -13,7 +13,11 @@ from nti.app.analytics.utils import get_session_id_from_request
 
 from nti.appserver.interfaces import IUserLogoutEvent
 
+from nti.analytics.interfaces import IUserProcessedEventsEvent
+
 from nti.analytics.sessions import handle_end_session
+
+from nti.dataserver.interfaces import IUser
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -32,3 +36,8 @@ def _user_logout_event(event):
         if username is None:
             username = getattr(event.request, 'remote_user', None)
         handle_end_session(username, session_id)
+
+
+@component.adapter(IUser, IUserProcessedEventsEvent)
+def _user_processed_events(unused_user, unused_event):
+    pass
