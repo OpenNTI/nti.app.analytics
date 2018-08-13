@@ -10,7 +10,6 @@
 
 	<include package="nti.analytics" />
 
-
 	<!-- Expose analytics views -->
 	<adapter factory="nti.traversal.traversal.DefaultAdapterTraversable"
 			 for="nti.app.analytics.interfaces.IAnalyticsContext pyramid.interfaces.IRequest" />
@@ -114,13 +113,13 @@
 
 	<!-- View count adapters -->
 	<adapter factory=".adapters._note_view_stats" />
-	<adapter factory=".adapters._note_view_stats_for_user" />
 	<adapter factory=".adapters._topic_view_stats" />
-	<adapter factory=".adapters._topic_view_stats_for_user" />
 	<adapter factory=".adapters._video_usage_stats" />
 	<adapter factory=".adapters._resource_usage_stats" />
-	<adapter factory=".adapters._book_resource_usage_stats" />
 	<adapter factory=".adapters._user_video_usage_stats" />
+	<adapter factory=".adapters._note_view_stats_for_user" />
+	<adapter factory=".adapters._topic_view_stats_for_user" />
+	<adapter factory=".adapters._book_resource_usage_stats" />
     <adapter factory=".adapters._user_resource_usage_stats" />
     <adapter factory=".adapters._user_book_resource_usage_stats" />
 
@@ -142,6 +141,7 @@
 	<adapter factory=".adapters.EnrollmentAceProvider" />
 
 	<subscriber handler=".subscribers._user_logout_event" />
+	<subscriber handler=".subscribers._user_processed_events" />
 
 	<adapter factory=".adapters._AnalyticsSessionIdProvider"
              provides="nti.analytics.interfaces.IAnalyticsSessionIdProvider"
