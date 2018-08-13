@@ -213,10 +213,11 @@ def _process_batch_events(events, remote_user, request=None):
             logger.warning('Malformed events received (event=%s) (%s)', event, e)
             malformed_count += 1
 
-    event_count, invalid_exc = handle_events(batch_events)
+    handled = []
+    event_count, invalid_exc = handle_events(batch_events, True, handled)
 
     # if there are valid events notify last seen
-    if event_count:
+    if handled:
         _notify_lastseen_event(remote_user, request)
 
     # Now broadcast to interested parties that progress may have updated for
