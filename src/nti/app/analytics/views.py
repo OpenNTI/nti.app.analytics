@@ -39,6 +39,7 @@ from nti.analytics.interfaces import IAnalyticsSession
 from nti.analytics.interfaces import IAnalyticsSessions
 from nti.analytics.interfaces import IBatchResourceEvents
 from nti.analytics.interfaces import IAnalyticsProgressEvent
+from nti.analytics.interfaces import UserProcessedEventsEvent
 
 from nti.analytics.locations import get_location_list
 
@@ -60,13 +61,13 @@ from nti.analytics.stats.interfaces import IActiveUsersSource
 from nti.analytics.stats.interfaces import IDailyActivityStatsSource
 
 from nti.app.analytics import SYNC_PARAMS
+from nti.app.analytics import ACTIVE_USERS
 from nti.app.analytics import ANALYTICS_SESSION
 from nti.app.analytics import ACTIVE_SESSION_COUNT
 from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import END_ANALYTICS_SESSION
 from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 from nti.app.analytics import ANALYTICS_SESSION_COOKIE_NAME
-from nti.app.analytics import ACTIVE_USERS
 
 from nti.app.analytics import MessageFactory as _
 
@@ -219,6 +220,7 @@ def _process_batch_events(events, remote_user, request=None):
     # if there are valid events notify last seen
     if handled:
         _notify_lastseen_event(remote_user, request)
+        notify(UserProcessedEventsEvent(remote_user, handled, request))
 
     # Now broadcast to interested parties that progress may have updated for
     # certain objects within certain contexts. This is probably not useful
