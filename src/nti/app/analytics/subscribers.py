@@ -57,4 +57,4 @@ def _user_processed_events(user, event):
         contexts.discard(None)
         if contexts:
             contexts = tuple(contexts)
-            notify(UserProcessedContextsEvent(user, contexts, timestamp, request)))
+            notify(UserProcessedContextsEvent(user, contexts, timestamp, request))
