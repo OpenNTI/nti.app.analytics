@@ -9,15 +9,22 @@ from __future__ import absolute_import
 
 from zope import component
 
+from zope.event import notify
+
 from nti.app.analytics.utils import get_session_id_from_request
 
 from nti.appserver.interfaces import IUserLogoutEvent
 
+from nti.analytics.interfaces import IRootContextEvent
 from nti.analytics.interfaces import IUserProcessedEventsEvent
 
 from nti.analytics.sessions import handle_end_session
 
+from nti.coremetadata.interfaces import UserProcessedContextsEvent
+
 from nti.dataserver.interfaces import IUser
+
+from nti.securitypolicy.utils import is_impersonating
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -39,5 +46,15 @@ def _user_logout_event(event):
 
 
 @component.adapter(IUser, IUserProcessedEventsEvent)
-def _user_processed_events(unused_user, unused_event):
-    pass
+def _user_processed_events(user, event):
+    events = event.events
+    request = event.request
+    timestamp = event.timestamp
+    if request is not None and not is_impersonating(request):
+        contexts = {
+            x.RootContextID for x in events if IRootContextEvent.providedBy(x)
+        }
+        contexts.discard(None)
+        if contexts:
+            contexts = tuple(contexts)
+            notify(UserProcessedContextsEvent(user, contexts, timestamp, request)))
