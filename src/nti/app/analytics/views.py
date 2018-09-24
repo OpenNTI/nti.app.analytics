@@ -228,7 +228,7 @@ def _process_batch_events(events, remote_user, request=None):
     for resource_ntiid, root_context_ntiid in resource_to_root_context:
         resource_obj = find_object_with_ntiid(resource_ntiid)
         root_context = find_object_with_ntiid(root_context_ntiid)
-        completion_context = ICompletionContext(root_context, None)
+        completion_context = component.queryAdapter(root_context, ICompletionContext, name="CompletionContext")
         if      resource_obj is not None \
             and completion_context is not None:
             notify(UserProgressUpdatedEvent(resource_obj,
