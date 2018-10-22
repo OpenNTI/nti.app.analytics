@@ -535,7 +535,7 @@ class AbstractUserLocationView(AbstractAuthenticatedView):
         return ICourseInstance(self.context)
 
     def generate_semester(self):
-        # pylint: disable=no-member, using-constant-test 
+        # pylint: disable=no-member, using-constant-test
         start_date = self.course_start_date
         start_month = start_date.month if start_date else None
         if start_month < 5:

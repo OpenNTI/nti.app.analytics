@@ -21,8 +21,6 @@ from hamcrest import has_entry
 from hamcrest import has_length
 from hamcrest import has_entries
 from hamcrest import contains_string
-from hamcrest import is_not as does_not
-from hamcrest import has_key as have_key
 from hamcrest import greater_than
 
 import fudge
@@ -113,6 +111,7 @@ from nti.app.analytics.views import GEO_LOCATION_VIEW
 from nti.app.analytics.views import UserLocationJsonView
 
 from nti.app.assessment.history import UsersCourseAssignmentHistoryItem
+from nti.app.assessment.history import UsersCourseAssignmentHistoryItemContainer
 
 from nti.app.assessment.interfaces import IUsersCourseAssignmentHistory
 
@@ -871,7 +870,9 @@ class TestProgressView(_AbstractTestViews):
                                                              parts=())
             item = UsersCourseAssignmentHistoryItem(Submission=submission,
                                                     pendingAssessment=pending)
-            history._setitemf(assignment1, item)
+            container = UsersCourseAssignmentHistoryItemContainer()
+            history._setitemf(assignment1, container)
+            container._setitemf('UsersCourseAssignmentHistoryItem', item)
 
         response = self._get_progress(response=response)
 
