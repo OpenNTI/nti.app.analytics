@@ -9,6 +9,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import csv
+import six
 import time
 
 from datetime import datetime
@@ -81,6 +82,8 @@ from nti.dataserver.users.users import User
 
 from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
+
+from nti.namedfile.file import safe_filename
 
 from nti.ntiids.ntiids import find_object_with_ntiid
 
@@ -259,6 +262,12 @@ def _parse_catalog_entry(params, names=('ntiid', 'entry', 'course')):
     return result
 
 
+def _tx_string(s):
+    if s is not None and isinstance(s, six.text_type):
+        s = s.encode('utf-8')
+    return s
+
+
 @view_config(context=IDataserverFolder)
 @view_config(context=IAnalyticsWorkspace)
 @view_config(context=CourseAdminPathAdapter)
@@ -284,11 +293,11 @@ class UserCourseAssessmentsTakenCountsView(AbstractAuthenticatedView):
         response.content_encoding = 'identity'
         response.content_type = 'text/csv; charset=UTF-8'
         filename = context.ProviderUniqueID + '_self_assessment.csv'
-        response.content_disposition = str('attachment; filename="%s"' % filename)
+        response.content_disposition = str('attachment; filename="%s"' % safe_filename(filename))
 
         stream = BytesIO()
         writer = csv.writer(stream)
-        course_header = [context.ProviderUniqueID]
+        course_header = [_tx_string(context.ProviderUniqueID)]
         writer.writerow(course_header)
 
         user_assessment_dict = {}
