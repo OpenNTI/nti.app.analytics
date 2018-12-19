@@ -215,7 +215,7 @@ def _process_batch_events(events, remote_user, request=None):
             malformed_count += 1
 
     handled = []
-    event_count, invalid_exc = handle_events(batch_events, True, handled)
+    event_count, invalid_exc_list = handle_events(batch_events, True, handled)
 
     # if there are valid events notify last seen
     if handled:
@@ -236,7 +236,7 @@ def _process_batch_events(events, remote_user, request=None):
                                             remote_user,
                                             completion_context))
 
-    for invalid_exc in invalid_exc:
+    for invalid_exc in invalid_exc_list:
         logger.warning('Invalid events received (%s)', invalid_exc)
         invalid_count += 1
     return event_count, malformed_count, invalid_count
