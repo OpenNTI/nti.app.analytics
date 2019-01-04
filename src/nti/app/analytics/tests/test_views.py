@@ -153,6 +153,8 @@ from nti.ntiids.oids import to_external_ntiid_oid
 
 from nti.links.externalization import render_link
 from nti.links.links import Link
+from nti.site.site import get_site_for_site_names
+from nti.app.users.utils import set_user_creation_site
 
 timestamp = calendar.timegm(datetime.utcnow().timetuple())
 
@@ -1520,8 +1522,11 @@ class TestBookViews(ApplicationLayerTest):
     @WithSharedApplicationMockDS(users=True, testapp=True)
     def test_book_views(self):
         with mock_dataserver.mock_db_trans(self.ds):
-            self._create_user(username='test_book_view1')
-            self._create_user(username='test_book_view2')
+            user1 = self._create_user(username='test_book_view1')
+            user2 = self._create_user(username='test_book_view2')
+            s1 = get_site_for_site_names(('janux.ou.edu',))
+            set_user_creation_site(user1, s1)
+            set_user_creation_site(user2, s1)
         user1 = self._make_extra_environ(user='test_book_view1')
         user2 = self._make_extra_environ(user='test_book_view2')
 
