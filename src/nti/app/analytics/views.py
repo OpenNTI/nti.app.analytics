@@ -29,6 +29,8 @@ from zope import interface
 
 from zope.cachedescriptors.property import Lazy
 
+from zope.component.hooks import getSite
+
 from zope.event import notify
 
 from zope.schema.interfaces import ValidationError
@@ -90,6 +92,8 @@ from nti.app.renderers.caching import default_cache_controller
 
 from nti.app.renderers.interfaces import IResponseCacheController
 
+from nti.app.users.utils import get_user_creation_sitename
+
 from nti.common.string import is_true
 
 from nti.contenttypes.completion.interfaces import ICompletionContextProvider
@@ -116,6 +120,7 @@ from nti.externalization.interfaces import StandardExternalFields
 from nti.ntiids.ntiids import find_object_with_ntiid
 
 from nti.traversal.traversal import find_interface
+
 from nti.securitypolicy.utils import is_impersonating
 
 ITEMS = StandardExternalFields.ITEMS
@@ -991,8 +996,14 @@ class ActiveUsers(AbstractUserLocationView,
         result = LocatedExternalDict()
         result.__name__ = self.request.view_name
         result.__parent__ = self.request.context
-        self._batch_items_iterable(result, users_source.users(timestamp=not_before,
-                                                              max_timestamp=not_after))
+        users = users_source.users(timestamp=not_before,
+                                   max_timestamp=not_after)
+        # Only include current site users.
+        # XXX: This is nice for this view, but it does not address similar
+        # issues in the views above (activity stats views).
+        current_sitename = getSite().__name__
+        users = (x for x in users if get_user_creation_sitename(x) == current_sitename)
+        self._batch_items_iterable(result, users)
 
         cache_hint = _IDailyResults
         if self.not_after:
