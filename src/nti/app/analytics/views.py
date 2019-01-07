@@ -209,7 +209,7 @@ def _process_batch_events(events, remote_user, request=None):
                 )
                 new_event.user = remote_username
             duration = getattr(new_event, 'Duration', None)
-            if duration is not None and duration <= 0:
+            if duration is not None and duration < 0:
                 logger.warn('Negative duration on event (%s) (%s)',
                             duration, event)
             batch_events.append(new_event)
