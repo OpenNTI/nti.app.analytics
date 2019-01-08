@@ -298,6 +298,13 @@ class BaseStats(object):
         end_time = getattr(event, 'VideoEndTime', None)
         if end_time and end_time > self.max_end_time:
             self.max_end_time = end_time
+        elif    end_time == 0 \
+            and event.Duration \
+            and getattr(event, 'VideoStartTime', None) is not None:
+            # This is a partially complete video event...(bad data?)
+            # Let start_time + duration act as a proxy for end time
+            # XXX: Should we do this on inbound events?
+            self.max_end_time = event.VideoStartTime + event.Duration
 
 
 class ResourceStats(object):
