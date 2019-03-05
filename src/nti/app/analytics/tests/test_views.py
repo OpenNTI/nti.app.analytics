@@ -675,7 +675,7 @@ class TestProgressView(_AbstractTestViews):
                            self.course, context_path,
                            resource_val, time_length, max_time_length,
                            video_event_type, video_start_time,
-                           video_end_time,  with_transcript, None)
+                           video_end_time,  with_transcript, None, None)
 
     def _create_resource_view(self, user, resource_val):
         test_session_id = 1
