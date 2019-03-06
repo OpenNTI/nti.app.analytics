@@ -291,6 +291,7 @@ class BaseStats(object):
     def __init__(self):
         self.total_view_time = 0
         self.max_end_time = 0
+        self.last_view_time = None
 
     def incr(self, event):
         if event.Duration:
@@ -305,6 +306,11 @@ class BaseStats(object):
             # Let start_time + duration act as a proxy for end time
             # XXX: Should we do this on inbound events?
             self.max_end_time = event.VideoStartTime + event.Duration
+
+        if self.last_view_time is None:
+            self.last_view_time = event.timestamp
+        elif event.timestamp and event.timestamp > self.last_view_time:
+            self.last_view_time = event.timestamp
 
 
 class ResourceStats(object):
