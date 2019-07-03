@@ -10,7 +10,8 @@ from __future__ import absolute_import
 
 # pylint: disable=W0221
 
-
+# We definitely want the sqlalchemy patch, but probably all
+# pserve patches too, right?
 # NOTE: We must not import *anything* before the patch
 from nti.monkey import patch_nti_pserve_on_import
 patch_nti_pserve_on_import.patch()
