@@ -17,6 +17,7 @@ TESTS_REQUIRE = [
     'nti.testing',
     'zope.dottedname',
     'zope.testrunner',
+    'nti.fakestatsd'
 ]
 
 
@@ -64,6 +65,7 @@ setup(
         'nti.links',
         'nti.ntiids',
         'nti.site',
+        'perfmetrics',
         'pyramid',
         'requests',
         'six',
