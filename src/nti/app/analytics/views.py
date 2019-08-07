@@ -287,9 +287,10 @@ class BatchEvents(AbstractAuthenticatedView,
 
         event_count, malformed_count, invalid_count = \
                     _process_batch_events(events, self.remoteUser, self.request)
-        logger.info("""Received batched analytic events (count=%s)
-                    (total_count=%s) (malformed=%s) (invalid=%s)""",
-                    event_count, total_count, malformed_count, invalid_count)
+        if event_count > 10 or malformed_count or invalid_count:
+            logger.info("""Received batched analytic events (count=%s)
+                        (total_count=%s) (malformed=%s) (invalid=%s)""",
+                        event_count, total_count, malformed_count, invalid_count)
 
         result = LocatedExternalDict()
         result['EventCount'] = event_count
