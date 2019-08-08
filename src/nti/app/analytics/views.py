@@ -16,6 +16,8 @@ import calendar
 import datetime
 from io import BytesIO
 
+from perfmetrics import statsd_client
+
 from pyramid import httpexceptions as hexc
 
 from pyramid.view import view_config
@@ -291,6 +293,11 @@ class BatchEvents(AbstractAuthenticatedView,
             logger.info("""Received batched analytic events (count=%s)
                         (total_count=%s) (malformed=%s) (invalid=%s)""",
                         event_count, total_count, malformed_count, invalid_count)
+
+        statsd = statsd_client()
+        if statsd is not None:
+            statsd.incr('nti.analytics.events.received.malformed', malformed_count)
+            statsd.incr('nti.analytics.events.received.total', total_count)
 
         result = LocatedExternalDict()
         result['EventCount'] = event_count

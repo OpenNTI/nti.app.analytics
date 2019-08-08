@@ -16,6 +16,7 @@ from hamcrest import is_
 from hamcrest import none
 from hamcrest import has_key
 from hamcrest import has_item
+from hamcrest import has_items
 from hamcrest import not_none
 from hamcrest import has_entry
 from hamcrest import has_length
@@ -25,6 +26,8 @@ from hamcrest import greater_than
 
 import fudge
 
+from nti.fakestatsd.matchers import is_counter
+
 from nti.testing.time import time_monotonically_increases
 
 import six
@@ -33,6 +36,8 @@ import calendar
 
 from datetime import datetime
 from datetime import timedelta
+
+from perfmetrics import statsd_client_stack
 
 from webob.datetime_utils import serialize_date
 
@@ -147,6 +152,8 @@ from nti.dataserver.users.users import User
 from nti.externalization import internalization
 
 from nti.externalization.externalization import toExternalObject
+
+from nti.fakestatsd import FakeStatsDClient
 
 from nti.ntiids.ntiids import find_object_with_ntiid
 from nti.ntiids.oids import to_external_ntiid_oid
@@ -473,6 +480,53 @@ class TestBatchEvents(_AbstractTestViews):
         # We insert all but the single malformed event
         results = self.session.query(ResourceViews).all()
         assert_that(results, has_length(0))
+
+    @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
+    @fudge.patch('nti.analytics.resource_views.find_object_with_ntiid')
+    @fudge.patch('nti.analytics.resource_views._get_root_context')
+    @fudge.patch('nti.analytics.resource_views._get_course')
+    def test_batch_events_pushes_stats(self, mock_get_object, mock_find_object, mock_get_course):
+        mock_parent = mock_get_object.is_callable().returns_fake()
+        mock_parent.has_attr(__parent__=201)
+        mock_parent.has_attr(containerId=333)
+
+        course = CourseInstance()
+        mock_find_object.is_callable().returns(course)
+        mock_get_course.is_callable().returns(course)
+
+        io = BatchResourceEvents(
+            events=[video_event, resource_event, course_catalog_event])
+
+        ext_obj = toExternalObject(io)
+
+        # Make a malformed event; validate resource_id field.
+        events = ext_obj.get('events')
+        new_events = []
+        for event in events:
+            if event.get('MimeType') == ResourceEvent.mime_type:
+                event.pop('ResourceId')
+            elif 'ResourceId' in event:
+                event['resource_id'] = event.pop('ResourceId')
+            new_events.append(event)
+        ext_obj['events'] = new_events
+
+
+        statsd = FakeStatsDClient()
+        statsd_client_stack.push(statsd)
+
+        try:
+            # Upload our events
+            batch_url = '/dataserver2/analytics/batch_events'
+            self.testapp.post_json(batch_url,
+                                   ext_obj,
+                                   status=200)
+        finally:
+            statsd_client_stack.pop()
+
+        assert_that(statsd.metrics, has_items(is_counter('nti.analytics.events.received.malformed', '1'),
+                                              is_counter('nti.analytics.events.received.total', '3')))
+
+       
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     def test_batch_params(self):
