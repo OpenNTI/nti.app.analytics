@@ -342,42 +342,42 @@ class TestBatchEvents(_AbstractTestViews):
         self.testapp.post_json(batch_url,
                                ext_obj,
                                headers=headers)
+        with mock_dataserver.mock_db_trans(self.ds):
+            results = self.session.query(SelfAssessmentViews).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(SelfAssessmentViews).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(AssignmentViews).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(AssignmentViews).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(VideoEvents).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(VideoEvents).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(CourseCatalogViews).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(course_catalog_session_id))
 
-        results = self.session.query(CourseCatalogViews).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(course_catalog_session_id))
+            results = self.session.query(ResourceViews).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(ResourceViews).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(BlogsViewed).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(BlogsViewed).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(NotesViewed).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(NotesViewed).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(TopicsViewed).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(TopicsViewed).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
-
-        results = self.session.query(VideoPlaySpeedEvents).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(VideoPlaySpeedEvents).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
         # We should be able to send the same events without error or duplicates
         # in database.
@@ -386,41 +386,42 @@ class TestBatchEvents(_AbstractTestViews):
                                headers=headers,
                                status=200)
 
-        results = self.session.query(SelfAssessmentViews).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+        with mock_dataserver.mock_db_trans(self.ds):
+            results = self.session.query(SelfAssessmentViews).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(AssignmentViews).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(AssignmentViews).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(VideoEvents).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(VideoEvents).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(CourseCatalogViews).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(course_catalog_session_id))
+            results = self.session.query(CourseCatalogViews).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(course_catalog_session_id))
 
-        results = self.session.query(ResourceViews).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(ResourceViews).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(BlogsViewed).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(BlogsViewed).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(NotesViewed).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(NotesViewed).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        results = self.session.query(TopicsViewed).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, is_(session_id))
+            results = self.session.query(TopicsViewed).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, is_(session_id))
 
-        # Send a video start event successfully
-        io = BatchResourceEvents(events=[watch_video_event])
-        ext_obj = toExternalObject(io)
+            # Send a video start event successfully
+            io = BatchResourceEvents(events=[watch_video_event])
+            ext_obj = toExternalObject(io)
         session_id = 9999
         headers = {ANALYTICS_SESSION_HEADER: str(session_id)}
 
@@ -429,8 +430,9 @@ class TestBatchEvents(_AbstractTestViews):
                                headers=headers,
                                status=200)
 
-        results = self.session.query(VideoEvents).all()
-        assert_that(results, has_length(2))
+        with mock_dataserver.mock_db_trans(self.ds):
+            results = self.session.query(VideoEvents).all()
+            assert_that(results, has_length(2))
 
         future = time.time() + 1000000
         result = self.testapp.get(batch_url+'?notAfter='+str(future), status=200).json_body
@@ -471,15 +473,16 @@ class TestBatchEvents(_AbstractTestViews):
                                ext_obj,
                                status=200)
 
-        results = self.session.query(VideoEvents).all()
-        assert_that(results, has_length(1))
+        with mock_dataserver.mock_db_trans(self.ds):
+            results = self.session.query(VideoEvents).all()
+            assert_that(results, has_length(1))
 
-        results = self.session.query(CourseCatalogViews).all()
-        assert_that(results, has_length(1))
+            results = self.session.query(CourseCatalogViews).all()
+            assert_that(results, has_length(1))
 
-        # We insert all but the single malformed event
-        results = self.session.query(ResourceViews).all()
-        assert_that(results, has_length(0))
+            # We insert all but the single malformed event
+            results = self.session.query(ResourceViews).all()
+            assert_that(results, has_length(0))
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     @fudge.patch('nti.analytics.resource_views.find_object_with_ntiid')
@@ -526,7 +529,7 @@ class TestBatchEvents(_AbstractTestViews):
         assert_that(statsd.metrics, has_items(is_counter('nti.analytics.events.received.malformed', '1'),
                                               is_counter('nti.analytics.events.received.total', '3')))
 
-       
+
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     def test_batch_params(self):
@@ -545,8 +548,9 @@ class TestAnalyticsSession(_AbstractTestViews):
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     def test_session(self):
-        results = self.session.query(Sessions).all()
-        assert_that(results, has_length(0))
+        with mock_dataserver.mock_db_trans(self.ds):
+            results = self.session.query(Sessions).all()
+            assert_that(results, has_length(0))
 
         # New session
         session_url = '/dataserver2/analytics/sessions/@@analytics_session'
@@ -555,10 +559,11 @@ class TestAnalyticsSession(_AbstractTestViews):
         assert_that(res.headers['Set-Cookie'], is_('nti.da_session=1; Path=/'))
 
         first_session_id = 1
-        results = self.session.query(Sessions).all()
-        assert_that(results, has_length(1))
-        assert_that(results[0].session_id, first_session_id)
-        assert_that(results[0].end_time, none())
+        with mock_dataserver.mock_db_trans(self.ds):
+            results = self.session.query(Sessions).all()
+            assert_that(results, has_length(1))
+            assert_that(results[0].session_id, first_session_id)
+            assert_that(results[0].end_time, none())
 
         with mock_dataserver.mock_db_trans(self.ds):
             user = User.get_user(self.extra_environ_default_user)
@@ -573,14 +578,14 @@ class TestAnalyticsSession(_AbstractTestViews):
         cookie_id = get_session_id_from_request(res.request)
         assert_that(cookie_id, is_(first_session_id))
 
-        results = self.session.query(Sessions).all()
-        assert_that(results, has_length(2))
-        # This last call implicitly ends the previous session.
-        first_session = self.session.query(Sessions).filter(
-                                           Sessions.session_id == first_session_id).one()
-        assert_that(first_session.end_time, not_none())
-
         with mock_dataserver.mock_db_trans(self.ds):
+            results = self.session.query(Sessions).all()
+            assert_that(results, has_length(2))
+            # This last call implicitly ends the previous session.
+            first_session = self.session.query(Sessions).filter(
+                                               Sessions.session_id == first_session_id).one()
+            assert_that(first_session.end_time, not_none())
+
             user = User.get_user(self.extra_environ_default_user)
             current_session_id = get_current_session_id(user)
             assert_that(current_session_id, none())
@@ -605,28 +610,29 @@ class TestAnalyticsSession(_AbstractTestViews):
         assert_that(res.headers['Set-Cookie'],
                     contains_string('nti.da_session=; Max-Age=0;'))
 
-        session_record = self.session.query(Sessions).filter(
-                                            Sessions.session_id == 2).first()
-        assert_that(session_record, not_none())
-        assert_that(session_record.end_time, is_(timestamp))
-
         with mock_dataserver.mock_db_trans(self.ds):
+            session_record = self.session.query(Sessions).filter(
+                                                Sessions.session_id == 2).first()
+            assert_that(session_record, not_none())
+            assert_that(session_record.end_time, is_(timestamp))
+
             user = User.get_user(self.extra_environ_default_user)
             current_session_id = get_current_session_id(user)
             assert_that(current_session_id, none())
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     def test_sessions(self):
-        results = self.session.query(Sessions).all()
-        assert_that(results, has_length(0))
+        with mock_dataserver.mock_db_trans(self.ds):
+            results = self.session.query(Sessions).all()
+            assert_that(results, has_length(0))
 
-        # No end time
-        session = AnalyticsSession(SessionStartTime=timestamp)
-        sessions = [session, session, session]
+            # No end time
+            session = AnalyticsSession(SessionStartTime=timestamp)
+            sessions = [session, session, session]
 
-        session_count = len(sessions)
-        io = AnalyticsSessions(sessions=sessions)
-        ext_obj = toExternalObject(io)
+            session_count = len(sessions)
+            io = AnalyticsSessions(sessions=sessions)
+            ext_obj = toExternalObject(io)
 
         # Send our sessions over
         session_url = '/dataserver2/analytics/sessions'
@@ -639,21 +645,22 @@ class TestAnalyticsSession(_AbstractTestViews):
         assert_that(new_sessions, has_length(session_count))
         assert_that(session_ids, contains_inanyorder(1, 2, 3))
 
-        results = self.session.query(Sessions).all()
-        assert_that(results, has_length(3))
+        with mock_dataserver.mock_db_trans(self.ds):
+            results = self.session.query(Sessions).all()
+            assert_that(results, has_length(3))
 
-        # This is header driven.
-        current_session_id = get_current_session_id(user)
-        assert_that(current_session_id, none())
+            # This is header driven.
+            current_session_id = get_current_session_id(user)
+            assert_that(current_session_id, none())
 
-        # Now update with an endtime
-        session = new_sessions[0]
-        session_id = session.SessionID
+            # Now update with an endtime
+            session = new_sessions[0]
+            session_id = session.SessionID
 
-        db_session = self.session.query(Sessions) \
-                                 .filter(Sessions.session_id == session_id).one()
-        assert_that(db_session, not_none())
-        assert_that(db_session.end_time, none())
+            db_session = self.session.query(Sessions) \
+                                     .filter(Sessions.session_id == session_id).one()
+            assert_that(db_session, not_none())
+            assert_that(db_session.end_time, none())
 
         end_time = timestamp + 1
         session.SessionEndTime = end_time
@@ -671,10 +678,11 @@ class TestAnalyticsSession(_AbstractTestViews):
         assert_that(session_ids, has_length(1))
         assert_that(session_ids[0], is_(session_id))
 
-        db_session = self.session.query(Sessions) \
-                                 .filter(Sessions.session_id == session_id).one()
-        assert_that(db_session, not_none())
-        assert_that(db_session.end_time, not_none())
+        with mock_dataserver.mock_db_trans(self.ds):
+            db_session = self.session.query(Sessions) \
+                                     .filter(Sessions.session_id == session_id).one()
+            assert_that(db_session, not_none())
+            assert_that(db_session.end_time, not_none())
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     def test_update_session_with_invalid(self):
@@ -987,8 +995,9 @@ class TestUserLocationView(_AbstractTestViews):
                              country='United States of America')
 
         self._store_locations(location1, location2, location3)
-        location_results = self.db.session.query(Location).all()
-        assert_that(location_results, has_length(3))
+        with mock_dataserver.mock_db_trans(self.ds):
+            location_results = self.db.session.query(Location).all()
+            assert_that(location_results, has_length(3))
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     @fudge.patch('nti.analytics.database.locations._get_enrolled_user_ids')
@@ -1005,15 +1014,17 @@ class TestUserLocationView(_AbstractTestViews):
         location_view.context = course
 
         # Starting out, no results should be returned
-        result = location_view()
-        assert_that(result, has_length(0))
+        with mock_dataserver.mock_db_trans(self.ds):
+            result = location_view()
+            assert_that(result, has_length(0))
 
         self.set_up_test_locations()
 
         # There should still be nothing returned, since no users are currently
         # enrolled
-        result = location_view()
-        assert_that(result, has_length(0))
+        with mock_dataserver.mock_db_trans(self.ds):
+            result = location_view()
+            assert_that(result, has_length(0))
 
         # Add an IP address for a user enrolled in the course
         ip_address_1 = IpGeoLocation(user_id=1,
@@ -1026,11 +1037,12 @@ class TestUserLocationView(_AbstractTestViews):
         mock_get_enrollment_list.is_callable().returns([1])
 
         # We should get one result now
-        result = location_view()
-        assert_that(result, has_length(1))
-        assert_that(result[0], has_entry('number_of_students', 1))
-        assert_that(result[0], has_entry('latitude', 10.0))
-        assert_that(result[0], has_entry('longitude', 10.0))
+        with mock_dataserver.mock_db_trans(self.ds):
+            result = location_view()
+            assert_that(result, has_length(1))
+            assert_that(result[0], has_entry('number_of_students', 1))
+            assert_that(result[0], has_entry('latitude', 10.0))
+            assert_that(result[0], has_entry('longitude', 10.0))
 
         # Add another IP address for the same user
         ip_address_2 = IpGeoLocation(user_id=1,
@@ -1040,14 +1052,15 @@ class TestUserLocationView(_AbstractTestViews):
         self._store_locations(ip_address_2)
 
         # We should get back two locations with 1 user in each
-        result = location_view()
-        assert_that(result, has_length(2))
-        assert_that(result, has_item(has_entries('latitude', 10.0,
-                                                 'longitude', 10.0,
-                                                 'number_of_students', 1)))
-        assert_that(result, has_item(has_entries('latitude', 11.0,
-                                                 'longitude', 11.0,
-                                                 'number_of_students', 1)))
+        with mock_dataserver.mock_db_trans(self.ds):
+            result = location_view()
+            assert_that(result, has_length(2))
+            assert_that(result, has_item(has_entries('latitude', 10.0,
+                                                     'longitude', 10.0,
+                                                     'number_of_students', 1)))
+            assert_that(result, has_item(has_entries('latitude', 11.0,
+                                                     'longitude', 11.0,
+                                                     'number_of_students', 1)))
 
         # Add another user in the first location
         ip_address_3 = IpGeoLocation(user_id=2,
@@ -1058,14 +1071,15 @@ class TestUserLocationView(_AbstractTestViews):
         mock_get_enrollment_list.is_callable().returns([1, 2])
 
         # Now we get back 2 locations, 1 of which has two users
-        result = location_view()
-        assert_that(result, has_length(2))
-        assert_that(result, has_item(has_entries('latitude', 10.0,
-                                                 'longitude', 10.0,
-                                                 'number_of_students', 2)))
-        assert_that(result, has_item(has_entries('latitude', 11.0,
-                                                 'longitude', 11.0,
-                                                 'number_of_students', 1)))
+        with mock_dataserver.mock_db_trans(self.ds):
+            result = location_view()
+            assert_that(result, has_length(2))
+            assert_that(result, has_item(has_entries('latitude', 10.0,
+                                                     'longitude', 10.0,
+                                                     'number_of_students', 2)))
+            assert_that(result, has_item(has_entries('latitude', 11.0,
+                                                     'longitude', 11.0,
+                                                     'number_of_students', 1)))
 
         # The second user has another ip address in a location not shared by
         # the first
@@ -1077,17 +1091,18 @@ class TestUserLocationView(_AbstractTestViews):
 
         # Now we get back 3 locations, one of which has two users.
         # The other two locations should only have one user each.
-        result = location_view()
-        assert_that(result, has_length(3))
-        assert_that(result, has_item(has_entries('latitude', 10.0,
-                                                 'longitude', 10.0,
-                                                 'number_of_students', 2)))
-        assert_that(result, has_item(has_entries('latitude', 11.0,
-                                                 'longitude', 11.0,
-                                                 'number_of_students', 1)))
-        assert_that(result, has_item(has_entries('latitude', 12.0,
-                                                 'longitude', 12.0,
-                                                 'number_of_students', 1)))
+        with mock_dataserver.mock_db_trans(self.ds):
+            result = location_view()
+            assert_that(result, has_length(3))
+            assert_that(result, has_item(has_entries('latitude', 10.0,
+                                                     'longitude', 10.0,
+                                                     'number_of_students', 2)))
+            assert_that(result, has_item(has_entries('latitude', 11.0,
+                                                     'longitude', 11.0,
+                                                     'number_of_students', 1)))
+            assert_that(result, has_item(has_entries('latitude', 12.0,
+                                                     'longitude', 12.0,
+                                                     'number_of_students', 1)))
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     @fudge.patch('nti.analytics.database.locations._get_enrolled_user_ids')
@@ -1128,14 +1143,15 @@ class TestUserLocationView(_AbstractTestViews):
         # Check the result against json from the other view,
         # which is tested above. We have to do some encoding
         # stuff to be able to find the string inside of the HTML response.
-        location_json_result = location_view()[0]
-        json_result = [location_json_result['latitude'],
-                       location_json_result['longitude'],
-                       _tx_string(location_json_result['label'])]
+        with mock_dataserver.mock_db_trans(self.ds):
+            location_json_result = location_view()[0]
+            json_result = [location_json_result['latitude'],
+                           location_json_result['longitude'],
+                           _tx_string(location_json_result['label'])]
 
-        # The html output should contain the same location data as in the json
-        # result.
-        assert_that(str(result.html), contains_string(str(json_result)))
+            # The html output should contain the same location data as in the json
+            # result.
+            assert_that(str(result.html), contains_string(str(json_result)))
 
         ip_address_2 = IpGeoLocation(user_id=1,
                                      ip_addr='1.1.1.2',
@@ -1145,13 +1161,14 @@ class TestUserLocationView(_AbstractTestViews):
 
         # We should get back two locations with 1 user in each
         result = fetch_html()
-        location_json_result = location_view()
-        json_result = [[str('Lat'), str('Long'), str('Label')]]
-        for view in location_json_result:
-            json_result.append([view['latitude'],
-                                view['longitude'],
-                                _tx_string(view['label'])])
-        assert_that(str(result.html), contains_string(str(json_result)))
+        with mock_dataserver.mock_db_trans(self.ds):
+            location_json_result = location_view()
+            json_result = [[str('Lat'), str('Long'), str('Label')]]
+            for view in location_json_result:
+                json_result.append([view['latitude'],
+                                    view['longitude'],
+                                    _tx_string(view['label'])])
+            assert_that(str(result.html), contains_string(str(json_result)))
 
         # Add another user in the first location
         ip_address_3 = IpGeoLocation(user_id=2,
@@ -1164,13 +1181,14 @@ class TestUserLocationView(_AbstractTestViews):
         # Now we get back 2 locations, 1 of which has two users
         result = fetch_html()
 
-        location_json_result = location_view()
-        json_result = [[str('Lat'), str('Long'), str('Label')]]
-        for view in location_json_result:
-            json_result.append([view['latitude'],
-                                view['longitude'],
-                                _tx_string(view['label'])])
-        assert_that(str(result.html), contains_string(str(json_result)))
+        with mock_dataserver.mock_db_trans(self.ds):
+            location_json_result = location_view()
+            json_result = [[str('Lat'), str('Long'), str('Label')]]
+            for view in location_json_result:
+                json_result.append([view['latitude'],
+                                    view['longitude'],
+                                    _tx_string(view['label'])])
+            assert_that(str(result.html), contains_string(str(json_result)))
 
         # The second user has another ip address in a location not shared by
         # the first
@@ -1183,13 +1201,14 @@ class TestUserLocationView(_AbstractTestViews):
         # Now we get back 3 locations, one of which has two users.
         # The other two locations should only have one user each.
         result = fetch_html()
-        location_json_result = location_view()
-        json_result = [[str('Lat'), str('Long'), str('Label')]]
-        for view in location_json_result:
-            json_result.append([view['latitude'],
-                                view['longitude'],
-                                _tx_string(view['label'])])
-        assert_that(str(result.html), contains_string(str(json_result)))
+        with mock_dataserver.mock_db_trans(self.ds):
+            location_json_result = location_view()
+            json_result = [[str('Lat'), str('Long'), str('Label')]]
+            for view in location_json_result:
+                json_result.append([view['latitude'],
+                                    view['longitude'],
+                                    _tx_string(view['label'])])
+            assert_that(str(result.html), contains_string(str(json_result)))
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     @fudge.patch('nti.analytics.database.locations._get_enrolled_user_ids')
@@ -1243,8 +1262,9 @@ class TestUserLocationView(_AbstractTestViews):
             return ''.join(predicted_result)
 
         result = fetch_csv()
-        predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))
-        assert_that(result.body, contains_string(predicted_result))
+        with mock_dataserver.mock_db_trans(self.ds):
+            predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))
+            assert_that(result.body, contains_string(predicted_result))
 
         # add a second user in the same location
         ip_address_2 = IpGeoLocation(user_id=1,
@@ -1255,8 +1275,9 @@ class TestUserLocationView(_AbstractTestViews):
 
         # Same thing, except we have two users in the same location.
         result = fetch_csv()
-        predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))
-        assert_that(result.body, contains_string(predicted_result))
+        with mock_dataserver.mock_db_trans(self.ds):
+            predicted_result = get_csv_string(convert_to_utf8(json_view.get_data(self)[0]))
+            assert_that(result.body, contains_string(predicted_result))
 
         # Add another user in the first location
         ip_address_3 = IpGeoLocation(user_id=2,
@@ -1268,11 +1289,12 @@ class TestUserLocationView(_AbstractTestViews):
 
         # Now we get back 2 locations, 1 of which has two users
         result = fetch_csv()
-        json_data = json_view.get_data(self)
-        first_location = get_csv_string(convert_to_utf8(json_data[0]))
-        assert_that(result.body, contains_string(first_location))
-        second_location = get_csv_string(convert_to_utf8(json_data[1]))
-        assert_that(result.body, contains_string(second_location))
+        with mock_dataserver.mock_db_trans(self.ds):
+            json_data = json_view.get_data(self)
+            first_location = get_csv_string(convert_to_utf8(json_data[0]))
+            assert_that(result.body, contains_string(first_location))
+            second_location = get_csv_string(convert_to_utf8(json_data[1]))
+            assert_that(result.body, contains_string(second_location))
 
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_most_recent_session(self):
