@@ -130,6 +130,8 @@ from nti.app.testing.webtest import TestApp
 
 from nti.app.contentlibrary.tests import PersistentApplicationTestLayer
 
+from nti.app.users.utils import set_user_creation_site
+
 from nti.assessment.assignment import QAssignment
 from nti.assessment.assignment import QAssignmentSubmissionPendingAssessment
 
@@ -147,6 +149,8 @@ from nti.dataserver.interfaces import ILinkExternalHrefOnly
 
 from nti.dataserver.tests import mock_dataserver
 
+from nti.dataserver.users.communities import Community
+
 from nti.dataserver.users.users import User
 
 from nti.externalization import internalization
@@ -159,9 +163,10 @@ from nti.ntiids.ntiids import find_object_with_ntiid
 from nti.ntiids.oids import to_external_ntiid_oid
 
 from nti.links.externalization import render_link
+
 from nti.links.links import Link
+
 from nti.site.site import get_site_for_site_names
-from nti.app.users.utils import set_user_creation_site
 
 timestamp = calendar.timegm(datetime.utcnow().timetuple())
 
@@ -1299,12 +1304,17 @@ class TestUserLocationView(_AbstractTestViews):
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_most_recent_session(self):
         with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
-            self._create_user(u'new_user1',
-                              external_value={'realname': u'Billy Bob',
-                                              'email': u'foo@bar.com'})
+            comm = Community.get_community('ou.nextthought.com')
+            user1 = self._create_user(u'new_user1',
+                                      external_value={'realname': u'Billy Bob',
+                                                      'email': u'foo@bar.com'})
+
             user2 = self._create_user(u'new_user2',
                                       external_value={'realname': u'Billy Rob',
                                                       'email': u'foo@bar.com'})
+            for user in (user1, user2):
+                user.follow(comm)
+                user.record_dynamic_membership(comm)
 
         ip_address_1 = IpGeoLocation(user_id=2,
                                      ip_addr='1.1.1.1',
