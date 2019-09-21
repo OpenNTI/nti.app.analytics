@@ -1304,7 +1304,7 @@ class TestUserLocationView(_AbstractTestViews):
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_most_recent_session(self):
         with mock_dataserver.mock_db_trans(self.ds, site_name='platform.ou.edu'):
-            comm = Community.get_community('ou.nextthought.com')
+            comm = Community.create_community(username='test_most_recent_session')
             user1 = self._create_user(u'new_user1',
                                       external_value={'realname': u'Billy Bob',
                                                       'email': u'foo@bar.com'})

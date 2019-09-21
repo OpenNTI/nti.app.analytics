@@ -35,8 +35,6 @@ from nti.dataserver.tests import mock_dataserver
 
 from nti.dataserver.users import User
 
-__docformat__ = "restructuredtext en"
-
 logger = __import__('logging').getLogger(__name__)
 
 
