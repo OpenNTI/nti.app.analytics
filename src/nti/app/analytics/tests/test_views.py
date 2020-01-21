@@ -306,21 +306,20 @@ class TestBatchEvents(_AbstractTestViews):
     @fudge.patch('nti.analytics.resource_views.find_object_with_ntiid')
     @fudge.patch('nti.analytics.resource_views._get_root_context')
     @fudge.patch('nti.analytics.resource_views._get_course')
-    @fudge.patch('nti.analytics.database.blogs._get_blog_id')
     @fudge.patch('nti.analytics.database.resource_tags._get_note_id')
     @fudge.patch('nti.analytics.database.boards._get_forum_id_from_forum')
     @fudge.patch('nti.analytics.database.boards._get_topic_id_from_topic')
     def test_batch_event(self, mock_get_object, mock_root_context, mock_get_course,
-                         mock_get_blog, mock_get_note, mock_get_forum, mock_get_topic):
+                         mock_get_note, mock_get_forum, mock_get_topic):
         mock_parent = mock_get_object.is_callable().returns_fake()
         mock_parent.has_attr(__parent__=201)
         mock_parent.has_attr(containerId=333)
+        mock_parent.has_attr(description=u'x' * 100)
 
         course = CourseInstance()
         mock_root_context.is_callable().returns(course)
         mock_get_course.is_callable().returns(course)
 
-        mock_get_blog.is_callable().returns(1)
         mock_get_note.is_callable().returns(2)
         mock_get_forum.is_callable().returns(3)
         mock_get_topic.is_callable().returns(4)
@@ -624,101 +623,6 @@ class TestAnalyticsSession(_AbstractTestViews):
             user = User.get_user(self.extra_environ_default_user)
             current_session_id = get_current_session_id(user)
             assert_that(current_session_id, none())
-
-    @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
-    def test_sessions(self):
-        with mock_dataserver.mock_db_trans(self.ds):
-            results = self.session.query(Sessions).all()
-            assert_that(results, has_length(0))
-
-            # No end time
-            session = AnalyticsSession(SessionStartTime=timestamp)
-            sessions = [session, session, session]
-
-            session_count = len(sessions)
-            io = AnalyticsSessions(sessions=sessions)
-            ext_obj = toExternalObject(io)
-
-        # Send our sessions over
-        session_url = '/dataserver2/analytics/sessions'
-        result = self.testapp.post_json(session_url,
-                                        ext_obj,
-                                        status=200)
-
-        new_sessions = [_internalize(x) for x in result.json_body]
-        session_ids = [x.SessionID for x in new_sessions]
-        assert_that(new_sessions, has_length(session_count))
-        assert_that(session_ids, contains_inanyorder(1, 2, 3))
-
-        with mock_dataserver.mock_db_trans(self.ds):
-            results = self.session.query(Sessions).all()
-            assert_that(results, has_length(3))
-
-            # This is header driven.
-            current_session_id = get_current_session_id(user)
-            assert_that(current_session_id, none())
-
-            # Now update with an endtime
-            session = new_sessions[0]
-            session_id = session.SessionID
-
-            db_session = self.session.query(Sessions) \
-                                     .filter(Sessions.session_id == session_id).one()
-            assert_that(db_session, not_none())
-            assert_that(db_session.end_time, none())
-
-        end_time = timestamp + 1
-        session.SessionEndTime = end_time
-        sessions = [session]
-        io = AnalyticsSessions(sessions=sessions)
-        ext_obj = toExternalObject(io)
-
-        session_url = '/dataserver2/analytics/sessions'
-        result = self.testapp.post_json(session_url,
-                                        ext_obj,
-                                        status=200)
-
-        new_sessions = [_internalize(x) for x in result.json_body]
-        session_ids = [x.SessionID for x in new_sessions]
-        assert_that(session_ids, has_length(1))
-        assert_that(session_ids[0], is_(session_id))
-
-        with mock_dataserver.mock_db_trans(self.ds):
-            db_session = self.session.query(Sessions) \
-                                     .filter(Sessions.session_id == session_id).one()
-            assert_that(db_session, not_none())
-            assert_that(db_session.end_time, not_none())
-
-    @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
-    def test_update_session_with_invalid(self):
-        end_time = timestamp + 1
-
-        new_session = AnalyticsSession(SessionStartTime=timestamp)
-        session_with_made_up_id = AnalyticsSession(SessionID=99999, SessionStartTime=timestamp,
-                                                   SessionEndTime=end_time)
-        sessions = [new_session, session_with_made_up_id]
-
-        session_count = len(sessions)
-        io = AnalyticsSessions(sessions=sessions)
-        ext_obj = toExternalObject(io)
-
-        # Send our sessions over
-        session_url = '/dataserver2/analytics/sessions'
-        result = self.testapp.post_json(session_url,
-                                        ext_obj,
-                                        status=200)
-
-        results = result.json_body
-        assert_that(results, has_length(session_count))
-
-        # First session is valid
-        valid_session = _internalize(results[0])
-        assert_that(valid_session, not_none())
-        assert_that(valid_session.SessionID, is_(1))
-
-        # Next is an error
-        key = 'Error'
-        assert_that(results[1], has_key(key))
 
 
 class TestProgressView(_AbstractTestViews):

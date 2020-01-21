@@ -14,6 +14,7 @@ import csv
 import time
 import calendar
 import datetime
+
 from io import BytesIO
 
 from perfmetrics import statsd_client
@@ -25,6 +26,8 @@ from pyramid.view import view_config
 from requests.structures import CaseInsensitiveDict
 
 import six
+
+from sqlalchemy import event
 
 from zope import component
 from zope import interface
@@ -39,8 +42,9 @@ from zope.schema.interfaces import ValidationError
 
 from nti.analytics.common import should_create_analytics
 
+from nti.analytics_database.sessions import Sessions
+
 from nti.analytics.interfaces import IAnalyticsSession
-from nti.analytics.interfaces import IAnalyticsSessions
 from nti.analytics.interfaces import IBatchResourceEvents
 from nti.analytics.interfaces import IAnalyticsProgressEvent
 from nti.analytics.interfaces import UserProcessedEventsEvent
@@ -52,11 +56,10 @@ from nti.analytics.model import AnalyticsClientParams
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_video_progress_for_course
 
-from nti.analytics.sessions import update_session
 from nti.analytics.sessions import get_user_sessions
-from nti.analytics.sessions import get_recent_user_sessions
 from nti.analytics.sessions import handle_end_session
 from nti.analytics.sessions import handle_new_session
+from nti.analytics.sessions import get_recent_user_sessions
 
 from nti.analytics.stats.interfaces import IActivitySource
 from nti.analytics.stats.interfaces import IActiveTimesStatsSource
@@ -124,6 +127,8 @@ from nti.ntiids.ntiids import find_object_with_ntiid
 from nti.traversal.traversal import find_interface
 
 from nti.securitypolicy.utils import is_impersonating
+
+from nti.transactions import transactions
 
 ITEMS = StandardExternalFields.ITEMS
 TOTAL = StandardExternalFields.TOTAL
@@ -322,6 +327,14 @@ class BatchEventParams(AbstractAuthenticatedView):
         return client_params
 
 
+@event.listens_for(Sessions, "after_insert")
+def _record_loaded_instances_on_load(unused_mapper, unused_connection, new_session):
+    # Capture our new session_id so we can attach to the request
+    # After a commit, sqlalchemy purges these potentially-stale
+    # attributes.
+    new_session._v_session_id = new_session.session_id
+
+
 @view_config(route_name='objects.generic.traversal',
              name=ANALYTICS_SESSION,
              context=ISessionsCollection,
@@ -342,9 +355,12 @@ class AnalyticsSession(AbstractAuthenticatedView,
                 # pylint: disable=no-member
                 handle_end_session(user.username, old_id)
 
-        request.response.set_cookie(ANALYTICS_SESSION_COOKIE_NAME,
-                                    value=str(new_session.session_id),
-                                    overwrite=True)
+        def do_set_cookie():
+            request.response.set_cookie(ANALYTICS_SESSION_COOKIE_NAME,
+                                        value=str(new_session._v_session_id),
+                                        overwrite=True)
+        # After committing, set the session_id into the response cookie
+        transactions.do_near_end(call=do_set_cookie)
 
     def _do_store_analytics(self):
         """
@@ -414,57 +430,11 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
         session_id = get_session_id_from_request(request)
         handle_end_session(user, session_id, timestamp=timestamp)
         request.response.delete_cookie(ANALYTICS_SESSION_COOKIE_NAME)
+
         # notify user last seen
         notify_lastseen_event(user, request)
         # request.response.status_code = 204
         return self.request.response
-
-    def __call__(self):
-        return self.store_analytics(self.request)
-
-
-@view_config(route_name='objects.generic.traversal',
-             context=ISessionsCollection,
-             renderer='rest',
-             request_method='POST',
-             permission=nauth.ACT_CREATE)
-class UpdateAnalyticsSessions(AbstractAuthenticatedView,
-                              ModeledContentUploadRequestUtilsMixin,
-                              AnalyticsUpdateMixin):
-
-    content_predicate = IAnalyticsSessions.providedBy
-
-    def _do_store_analytics(self):
-        """
-        Will accept one or many IAnalyticsSession objects, which we will synchronously
-        resolve the session_id for before returning.  If there is already a session_id,
-        we'll update the state (end_time) of the given session object.
-        """
-        request = self.request
-        user = request.remote_user
-
-        external_input = self.readInput()
-        factory = internalization.find_factory_for(external_input)
-        sessions = factory()
-        internalization.update_from_external_object(sessions, external_input)
-
-        ip_addr = getattr(request, 'remote_addr', None)
-        user_agent = getattr(request, 'user_agent', None)
-
-        results = []
-        for session in sessions.sessions:
-            try:
-                result = update_session(session, user,
-                                        user_agent=user_agent,
-                                        ip_addr=ip_addr)
-                results.append(result)
-            except ValueError as e:
-                # Append invalid session information.
-                # We still return a 200 though.
-                val = dict()
-                val['Error'] = e.message
-                results.append(val)
-        return results
 
     def __call__(self):
         return self.store_analytics(self.request)
