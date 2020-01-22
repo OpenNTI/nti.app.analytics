@@ -85,8 +85,6 @@ from nti.analytics.model import ResourceEvent
 from nti.analytics.model import SkipVideoEvent
 from nti.analytics.model import TopicViewEvent
 from nti.analytics.model import WatchVideoEvent
-from nti.analytics.model import AnalyticsSession
-from nti.analytics.model import AnalyticsSessions
 from nti.analytics.model import AssignmentViewEvent
 from nti.analytics.model import BatchResourceEvents
 from nti.analytics.model import CourseCatalogViewEvent
@@ -306,21 +304,21 @@ class TestBatchEvents(_AbstractTestViews):
     @fudge.patch('nti.analytics.resource_views.find_object_with_ntiid')
     @fudge.patch('nti.analytics.resource_views._get_root_context')
     @fudge.patch('nti.analytics.resource_views._get_course')
-    @fudge.patch('nti.analytics.database.resource_tags._get_note_id')
     @fudge.patch('nti.analytics.database.boards._get_forum_id_from_forum')
     @fudge.patch('nti.analytics.database.boards._get_topic_id_from_topic')
+    @fudge.patch('nti.analytics.database.resource_tags.get_root_context')
     def test_batch_event(self, mock_get_object, mock_root_context, mock_get_course,
-                         mock_get_note, mock_get_forum, mock_get_topic):
+                         mock_get_forum, mock_get_topic, mock_root_context2):
         mock_parent = mock_get_object.is_callable().returns_fake()
         mock_parent.has_attr(__parent__=201)
         mock_parent.has_attr(containerId=333)
         mock_parent.has_attr(description=u'x' * 100)
+        mock_parent.has_attr(body=u'x' * 100)
 
         course = CourseInstance()
         mock_root_context.is_callable().returns(course)
+        mock_root_context2.is_callable().returns(None)
         mock_get_course.is_callable().returns(course)
-
-        mock_get_note.is_callable().returns(2)
         mock_get_forum.is_callable().returns(3)
         mock_get_topic.is_callable().returns(4)
 
