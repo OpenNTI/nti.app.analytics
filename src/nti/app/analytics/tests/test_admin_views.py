@@ -96,7 +96,7 @@ class TestAnalytics(ApplicationLayerTest):
         body = res.json_body
         assert_that(body['AllowResearchCount'], is_(0))
         assert_that(body['DenyResearchCount'], is_(0))
-        assert_that(body['ToBePromptedCount'], is_(3))
+        assert_that(body['ToBePromptedCount'], is_(2))
 
         url = '/dataserver2/users/cald3307/' + SET_RESEARCH_VIEW
         # Set
@@ -108,7 +108,7 @@ class TestAnalytics(ApplicationLayerTest):
         body = res.json_body
         assert_that(body['AllowResearchCount'], is_(1))
         assert_that(body['DenyResearchCount'], is_(0))
-        assert_that(body['ToBePromptedCount'], is_(2))
+        assert_that(body['ToBePromptedCount'], is_(1))
 
         # Reverse
         data = {'allow_research': False}
@@ -119,7 +119,7 @@ class TestAnalytics(ApplicationLayerTest):
         body = res.json_body
         assert_that(body['AllowResearchCount'], is_(0))
         assert_that(body['DenyResearchCount'], is_(1))
-        assert_that(body['ToBePromptedCount'], is_(2))
+        assert_that(body['ToBePromptedCount'], is_(1))
 
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_research_status_link(self):
