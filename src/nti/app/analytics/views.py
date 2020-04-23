@@ -97,7 +97,7 @@ from nti.app.renderers.caching import default_cache_controller
 
 from nti.app.renderers.interfaces import IResponseCacheController
 
-from nti.app.users.utils import get_user_creation_sitename
+from nti.app.users.utils import get_user_creation_sitename, get_admins
 
 from nti.common.string import is_true
 
@@ -715,7 +715,6 @@ class AbstractHistoricalAnalyticsView(AbstractUserLocationView,
         not_after = self.not_after
 
         raw = self._get_raw(not_before, not_after)
-
         objects = [self._make_external(obj) for obj in raw]
         options = LocatedExternalDict()
         options.__parent__ = self.request.context
@@ -745,17 +744,20 @@ class UserRecentSessions(AbstractHistoricalAnalyticsView):
 
     def _get_raw(self, not_before, not_after):
         context = self._analytics_context()
+        # By default, exclude NT admins
+        nt_admins = get_admins()
         if not_before and not_after:
             sessions = get_user_sessions(context,
                                          timestamp=not_before,
-                                         max_timestamp=not_after)
+                                         max_timestamp=not_after,
+                                         excluded_users=nt_admins)
         else:
             limit = self._limit
             not_after = not_after or datetime.datetime.utcnow()
-
             sessions = get_recent_user_sessions(context,
                                                 limit=limit,
-                                                not_after=not_after)
+                                                not_after=not_after,
+                                                excluded_users=nt_admins)
         return sessions
 
 
