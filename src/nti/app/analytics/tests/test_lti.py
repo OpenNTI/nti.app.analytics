@@ -13,11 +13,9 @@ from hamcrest import is_
 
 from zope.event import notify
 
+from nti.analytics.tests import NTIAnalyticsApplicationTestLayer
+
 from nti.analytics.database.lti import get_launch_records_for_ntiid
-
-from nti.analytics_database.tests import AnalyticsDatabaseTest
-
-from nti.app.products.courseware.tests import InstructedCourseApplicationTestLayer
 
 from nti.app.products.courseware_ims.interfaces import LTILaunchEvent
 
@@ -38,9 +36,9 @@ from nti.dataserver.users import User
 logger = __import__('logging').getLogger(__name__)
 
 
-class TestLTIAnalytics(ApplicationLayerTest, AnalyticsDatabaseTest):
+class TestLTIAnalytics(ApplicationLayerTest):
 
-    layer = InstructedCourseApplicationTestLayer
+    layer = NTIAnalyticsApplicationTestLayer
 
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_asset_analytics(self):
