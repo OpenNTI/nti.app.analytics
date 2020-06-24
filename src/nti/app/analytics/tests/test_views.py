@@ -263,11 +263,11 @@ class _AbstractTestViews(ApplicationLayerTest):
     layer = LegacyInstructedCourseApplicationTestLayer
 
     def setUp(self):
-        self.db = AnalyticsDB(
+        self.analytics_db = AnalyticsDB(
             dburi='sqlite://', testmode=True, defaultSQLite=True)
-        component.getGlobalSiteManager().registerUtility(self.db,
+        component.getGlobalSiteManager().registerUtility(self.analytics_db,
                                                          IAnalyticsDB)
-        self.session = self.db.session
+        self.session = self.analytics_db.session
 
         gsm = component.getGlobalSiteManager()
         self.old_intid_util = gsm.getUtility(IAnalyticsIntidIdentifier)
@@ -284,7 +284,7 @@ class _AbstractTestViews(ApplicationLayerTest):
                             IAnalyticsRootContextIdentifier)
 
     def tearDown(self):
-        component.getGlobalSiteManager().unregisterUtility(self.db,
+        component.getGlobalSiteManager().unregisterUtility(self.analytics_db,
                                                            provided=IAnalyticsDB)
         self.session.close()
         component.getGlobalSiteManager().unregisterUtility(self.test_identifier)
@@ -628,7 +628,7 @@ class TestProgressView(_AbstractTestViews):
     def _create_course(self):
         content_unit = find_object_with_ntiid(course)
         course_obj = self.course = ICourseInstance(content_unit)
-        get_root_context_id(self.db, course_obj, create=True)
+        get_root_context_id(self.analytics_db, course_obj, create=True)
 
     def _create_video_event(self, user, resource_val, max_time_length=None, video_end_time=None):
         test_session_id = 1
@@ -878,7 +878,7 @@ class TestUserLocationView(_AbstractTestViews):
     def _store_locations(self, *locations):
         with mock_dataserver.mock_db_trans(self.ds):
             for location in locations:
-                self.db.session.add(location)
+                self.analytics_db.session.add(location)
 
     def set_up_test_locations(self):
         # Create test locations; validate unicode.
@@ -903,7 +903,7 @@ class TestUserLocationView(_AbstractTestViews):
 
         self._store_locations(location1, location2, location3)
         with mock_dataserver.mock_db_trans(self.ds):
-            location_results = self.db.session.query(Location).all()
+            location_results = self.analytics_db.session.query(Location).all()
             assert_that(location_results, has_length(3))
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
@@ -1347,7 +1347,7 @@ class TestAnalyticsContexts(_AbstractTestViews):
     def _create_course(self):
         content_unit = find_object_with_ntiid(course)
         course_obj = self.course = ICourseInstance(content_unit)
-        get_root_context_id(self.db, course_obj, create=True)
+        get_root_context_id(self.analytics_db, course_obj, create=True)
 
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_course_context(self):
