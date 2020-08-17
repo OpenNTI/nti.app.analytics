@@ -1257,13 +1257,15 @@ class TestUserLocationView(_AbstractTestViews):
             duration = 3600
             end = start2 + timedelta(seconds=duration)
 
-            # Test start = end
+            # Test start (zero period)
             _add_session(user2.username, '', '1.1.1.1',
                          start_time=start, end_time=start)
             # 30 seconds later, a longer session
+            # Start + 30s (one hour period)
             _add_session(user2.username, '', '1.1.1.1',
                           start_time=start2, end_time=end)
             # and a session a long time ago
+            # Start minus 60 days (one hour period)
             longago = start - timedelta(days=60)
             _add_session(user2.username, '', '1.1.1.1',
                          start_time=longago, end_time=longago + timedelta(hours=1))
@@ -1275,13 +1277,22 @@ class TestUserLocationView(_AbstractTestViews):
         ext_user = res['Items'][0]
         assert_that(ext_user, not_none())
 
-        notBefore = time.mktime((start - timedelta(days=30)).timetuple())
-        notAfter = time.mktime(start.timetuple())
+        # Start minus 30 days (30 day period)
+        notBefore = calendar.timegm((start - timedelta(days=30)).timetuple())
+        notAfter = calendar.timegm(start.timetuple())
 
         href = self.require_link_href_with_rel(ext_user, 'HistoricalSessions')
         res = self.testapp.get(href,
                                {'notBefore': notBefore,
                                'notAfter': notAfter})
+        res = res.json_body
+        assert_that(res['Items'], has_length(0))
+
+        # Start to start plus three days
+        not_before_plus_three = calendar.timegm((start + timedelta(days=3)).timetuple())
+        res = self.testapp.get(href,
+                               {'notBefore': calendar.timegm(start.timetuple()),
+                               'notAfter': not_before_plus_three})
         res = res.json_body
         assert_that(res['Items'], has_length(2))
 
@@ -1296,10 +1307,10 @@ class TestUserLocationView(_AbstractTestViews):
         # We can also fetch with notAfter and a limit
         href = self.require_link_href_with_rel(ext_user, 'HistoricalSessions')
         res = self.testapp.get(href,
-                               {'limit': 2,
-                               'notAfter': notAfter})
+                               {'limit': 1,
+                               'notAfter': not_before_plus_three})
         res = res.json_body
-        assert_that(res['Items'], has_length(2))
+        assert_that(res['Items'], has_length(1))
 
 
 class TestAnalyticsContexts(_AbstractTestViews):
