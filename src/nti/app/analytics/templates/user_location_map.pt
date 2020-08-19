@@ -11,7 +11,16 @@
 		<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script> 
 		<link rel="stylesheet" href="http://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css">
 
+		<style>
+			.header #logo-bar {
+				width: calc(100% - 10px);
+				max-width: 610px;
+				padding: 0 5px;
+				margin: 47px auto 20px;
+			}
+		</style>
 		<meta charset="UTF-8">
+	</head>
 		<body style="height:100%">
 
 			<div style="float:left; height:100%, width:470px;" border="1">
@@ -51,7 +60,7 @@
 
 			<div id="map_body" style="height:100%"></div>
 
-		<script type="text/javascript" 
+		<script type="text/javascript"
 				src="https://maps.googleapis.com/maps/api/js"></script>
 		<script>
 
@@ -78,21 +87,21 @@
 
 				// Create an InfoWindow
 				infowindows[key] = new google.maps.InfoWindow({
-					content: inputData[key][2] + ", " 
+					content: inputData[key][2] + ", "
 						+ getUserLabel(inputData[key][3])
 				});
 
 				// Create a marker
 				markers[key] = new google.maps.Marker({
 					position: {lat:inputData[key][0], lng:inputData[key][1]},
-					title: inputData[key][2] + ", " 
+					title: inputData[key][2] + ", "
 						+ getUserLabel(inputData[key][3]),
 					map: map
 				});
 
 				latlngbounds.extend(new google.maps.LatLng(inputData[key][0], inputData[key][1]));
 
-				// Add a listener to open the InfoWindow 
+				// Add a listener to open the InfoWindow
 				// when the marker is clicked.
 				markers[key].addListener('click', function(innerKey){
 					return function() {
@@ -122,7 +131,7 @@
 			}
 
 			function addMarkerToTable(data, tbody) {
-				
+
 				var row = tbody.insertRow(0);
 				var city_cell = row.insertCell(0);
 				var users_cell = row.insertCell(1);
@@ -136,5 +145,4 @@
 
 		</script>
 		</body>
-	</head>
 </html>
