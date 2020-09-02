@@ -251,6 +251,9 @@ def _process_batch_events(events, remote_user, request=None):
             notify(UserProgressUpdatedEvent(resource_obj,
                                             remote_user,
                                             completion_context))
+        else:
+            logger.info("Could not find course from (%s) (%s)",
+                        resource_ntiid, root_context_ntiid)
 
     for invalid_exc in invalid_exc_list:
         logger.warning('Invalid events received (%s)', invalid_exc)
@@ -295,8 +298,7 @@ class BatchEvents(AbstractAuthenticatedView,
         event_count, malformed_count, invalid_count = \
                     _process_batch_events(events, self.remoteUser, self.request)
         if event_count > 10 or malformed_count or invalid_count:
-            logger.info("""Received batched analytic events (count=%s)
-                        (total_count=%s) (malformed=%s) (invalid=%s)""",
+            logger.info("""Received batched analytic events (count=%s) (total_count=%s) (malformed=%s) (invalid=%s)""",
                         event_count, total_count, malformed_count, invalid_count)
 
         statsd = statsd_client()
