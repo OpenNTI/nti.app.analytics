@@ -12,6 +12,7 @@ import zope.i18nmessageid
 MessageFactory = zope.i18nmessageid.MessageFactory(__name__)
 
 VIEW_STATS = 'view_stats'
+REMOVE_ANALYTICS_DATA = 'remove_data'
 
 ANALYTICS = 'analytics'
 SYNC_PARAMS = 'sync_params'
