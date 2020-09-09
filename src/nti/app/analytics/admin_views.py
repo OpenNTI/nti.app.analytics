@@ -26,6 +26,8 @@ from pyramid import httpexceptions as hexc
 
 from zope import component
 
+from zope.cachedescriptors.property import Lazy
+
 from ZODB.POSException import POSError
 
 from nti.analytics import get_factory
@@ -34,6 +36,9 @@ from nti.analytics import QUEUE_NAMES
 from nti.analytics.assessments import get_self_assessments_for_course
 
 from nti.analytics.boards import get_topic_views
+
+from nti.analytics.database.resource_views import remove_video_data
+from nti.analytics.database.resource_views import remove_resource_data
 
 from nti.analytics.interfaces import IUserResearchStatus
 
@@ -45,6 +50,7 @@ from nti.analytics.resource_views import get_resource_views_for_ntiid
 from nti.analytics.stats.utils import get_time_stats
 
 from nti.app.analytics import VIEW_STATS
+from nti.app.analytics import REMOVE_ANALYTICS_DATA
 
 from nti.app.analytics.interfaces import IAnalyticsWorkspace
 
@@ -52,11 +58,13 @@ from nti.app.analytics.externalization import to_external_job
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
+from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
+
 from nti.app.products.courseware.views import CourseAdminPathAdapter
 
 from nti.common.string import is_true
 
-from nti.contentlibrary.interfaces import IContentUnit
+from nti.contentlibrary.interfaces import IContentUnit, IContentPackage
 
 from nti.contenttypes.courses.interfaces import ICourseCatalog
 from nti.contenttypes.courses.interfaces import ICourseInstance
@@ -65,6 +73,7 @@ from nti.contenttypes.courses.interfaces import ICourseCatalogEntry
 from nti.contenttypes.presentation.interfaces import IAssetRef
 from nti.contenttypes.presentation.interfaces import INTIVideo
 from nti.contenttypes.presentation.interfaces import INTIVideoRef
+from nti.contenttypes.presentation.interfaces import INTIRelatedWorkRef
 from nti.contenttypes.presentation.interfaces import IPresentationAsset
 
 from nti.dataserver.authorization import ACT_NTI_ADMIN
@@ -86,6 +95,7 @@ from nti.externalization.interfaces import StandardExternalFields
 from nti.namedfile.file import safe_filename
 
 from nti.ntiids.ntiids import find_object_with_ntiid
+
 
 CLASS = StandardExternalFields.CLASS
 ITEMS = StandardExternalFields.ITEMS
@@ -449,6 +459,67 @@ class VideoViewStats(AbstractViewStatsView):
     def _get_records(self, **kwargs):
         ntiid = self._get_context_ntiid()
         return get_video_views_for_ntiid(ntiid, **kwargs)
+
+
+@view_config(context=IAnalyticsWorkspace)
+@view_defaults(route_name='objects.generic.traversal',
+               name=REMOVE_ANALYTICS_DATA,
+               renderer='rest',
+               request_method='POST',
+               permission=ACT_NTI_ADMIN)
+class RemoveVideoViewsForUser(AbstractAuthenticatedView,
+                              ModeledContentUploadRequestUtilsMixin):
+    """
+    A view to remove analytics data for the given resource id and user.
+    This should hopefully only be used for testing purposes.
+
+    Used in conjunction with VIEW_STATS, this enables QA to validate a
+    user's video usage is aligned with interactive test cases before clearing
+    the data for future test runs.
+
+    This is only applicable for videos or readings.
+    """
+
+    @Lazy
+    def _params(self):
+        return CaseInsensitiveDict(self.readInput())
+
+    @Lazy
+    def _user(self):
+        user = None
+        username = self._params.get('user') \
+                or self._params.get('username')
+        if username is not None:
+            user = User.get_user(username)
+        if user is None:
+            raise hexc.HTTPUnprocessableEntity('Cannot find user %s' % username)
+        return user
+
+    @Lazy
+    def _resource(self):
+        resource = None
+        resource_ntiid = self._params.get('resource') \
+                      or self._params.get('resource_ntiid')
+        if resource_ntiid is not None:
+            resource = find_object_with_ntiid(resource_ntiid)
+        if resource is None:
+            raise hexc.HTTPUnprocessableEntity('Cannot find resource %s' % resource_ntiid)
+        return resource
+
+    def __call__(self):
+        result = LocatedExternalDict()
+        user = self._user
+        resource = self._resource
+        logger.info("Removing analytics usage for (user=%s) (resource=%s)",
+                    user.username,
+                    getattr(resource, 'ntiid', '') or getattr(resource, 'NTIID', ''))
+        if INTIVideo.providedBy(resource):
+            remove_video_data(user, resource)
+        elif INTIRelatedWorkRef or IContentPackage.providedBy(resource):
+            remove_resource_data(user, resource)
+        else:
+            raise hexc.HTTPUnprocessableEntity('Cannot remove analytics data for type %s' % resource)
+        return result
 
 
 @view_config(route_name='objects.generic.traversal',

@@ -13,9 +13,20 @@ from hamcrest import not_none
 from hamcrest import assert_that
 from hamcrest import less_than_or_equal_to
 
+import time
+
 from nti.analytics.interfaces import IUserResearchStatus
 
+from nti.analytics.model import SkipVideoEvent
+from nti.analytics.model import WatchVideoEvent
+from nti.analytics.model import BatchResourceEvents
+
+from nti.app.analytics import VIEW_STATS
+from nti.app.analytics import ANALYTICS_SESSION_HEADER
+
 from nti.app.analytics.views import SET_RESEARCH_VIEW
+
+from nti.app.products.courseware.tests import LegacyInstructedCourseApplicationTestLayer
 
 from nti.app.testing.application_webtest import ApplicationLayerTest
 
@@ -27,6 +38,8 @@ from nti.app.testing.webtest import TestApp
 from nti.dataserver.tests import mock_dataserver
 
 from nti.dataserver.users.users import User
+
+from nti.externalization.externalization import to_external_object
 
 
 class TestAnalytics(ApplicationLayerTest):
@@ -135,3 +148,117 @@ class TestAnalytics(ApplicationLayerTest):
         # Subsequent call does not have link
         href = self.forbid_link_with_rel(self.resolve_user(),
                                          SET_RESEARCH_VIEW)
+
+
+class TestStats(ApplicationLayerTest):
+    """
+    Validate we can retrieve a users stats on a resource
+    and clear the data. This flow is for QA.
+    """
+
+    layer = LegacyInstructedCourseApplicationTestLayer
+
+    default_origin = 'http://platform.ou.edu'
+
+    video_ntiid = u"tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_17.02"
+
+    def _store_video_data(self, username):
+        timestamp = time.time()
+        course = u'tag:nextthought.com,2011-10:OU-HTML-CLC3403_LawAndJustice.course_info'
+        context_path = [u'DASHBOARD', u'ntiid:tag_blah']
+        video_event = SkipVideoEvent(user=username,
+                                     timestamp=timestamp,
+                                     RootContextID=course,
+                                     context_path=context_path,
+                                     ResourceId=self.video_ntiid,
+                                     Duration=30,
+                                     video_start_time=29,
+                                     video_end_time=59,
+                                     with_transcript=True)
+        events = []
+        events.append(video_event)
+
+        # 760s of view time - 4 distinct events
+        data = [(0, 10, 10, timestamp),
+                (15, 35, 20, timestamp+1),
+                (60, 90, 30, timestamp+2),
+                (300, 1000, 700, timestamp+3)]
+        for start, end, duration, timestamp in data:
+            watch_video_event = WatchVideoEvent(user=username,
+                                                timestamp=timestamp,
+                                                RootContextID=course,
+                                                context_path=context_path,
+                                                ResourceId=self.video_ntiid,
+                                                Duration=duration,
+                                                video_start_time=start,
+                                                video_end_time=end,
+                                                with_transcript=True)
+            events.append(watch_video_event)
+        io = BatchResourceEvents(events=events)
+        ext_obj = to_external_object(io)
+        batch_url = '/dataserver2/analytics/batch_events'
+        headers = {ANALYTICS_SESSION_HEADER: str(9999)}
+        env = self._make_extra_environ(user=username)
+        self.testapp.post_json(batch_url,
+                               ext_obj,
+                               headers=headers,
+                               extra_environ=env)
+
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_user_stats(self):
+        with mock_dataserver.mock_db_trans(self.ds):
+            self._create_user(username='user_analytics_stats1')
+            self._create_user(username='user_analytics_stats2')
+        self._store_video_data('user_analytics_stats1')
+
+        user1_stats_url = '/dataserver2/Objects/%s/%s?username=%s' % (self.video_ntiid, VIEW_STATS, 'user_analytics_stats1')
+        user2_stats_url = '/dataserver2/Objects/%s/%s?username=%s' % (self.video_ntiid, VIEW_STATS, 'user_analytics_stats2')
+
+        reset_url = '/dataserver2/analytics/remove_data'
+        user1_reset_data = {'resource': self.video_ntiid,
+                            'user': 'user_analytics_stats1'}
+        user2_reset_data = {'resource': self.video_ntiid,
+                            'user': 'user_analytics_stats2'}
+
+        user1_environ = self._make_extra_environ(user='user_analytics_stats1')
+        user2_environ = self._make_extra_environ(user='user_analytics_stats2')
+
+        for user_env in (user1_environ, user2_environ):
+            self.testapp.get(user1_stats_url, extra_environ=user_env, status=403)
+            self.testapp.get(user2_stats_url, extra_environ=user_env, status=403)
+            self.testapp.post_json(reset_url, user1_reset_data,
+                                   extra_environ=user_env, status=403)
+
+        res1 = self.testapp.get(user1_stats_url).json_body
+        user1_stats = res1.get('Stats')
+        assert_that(user1_stats.get('Count'), is_(4))
+        assert_that(user1_stats.get('AggregateTime'), is_(760))
+        assert_that(user1_stats.get('AverageDuration'), is_(190.0))
+
+        res2 = self.testapp.get(user2_stats_url).json_body
+        user2_stats = res2.get('Stats')
+        assert_that(user2_stats.get('Count'), is_(0))
+        assert_that(user2_stats.get('AggregateTime'), is_(0))
+        assert_that(user2_stats.get('AverageDuration'), is_(0))
+
+        # Now reset
+        self.testapp.post_json(reset_url, user1_reset_data)
+        self.testapp.post_json(reset_url, user2_reset_data)
+
+        res1 = self.testapp.get(user1_stats_url).json_body
+        user1_stats = res1.get('Stats')
+        assert_that(user1_stats.get('Count'), is_(0))
+        assert_that(user1_stats.get('AggregateTime'), is_(0))
+        assert_that(user1_stats.get('AverageDuration'), is_(0))
+
+        res2 = self.testapp.get(user2_stats_url).json_body
+        user2_stats = res2.get('Stats')
+        assert_that(user2_stats.get('Count'), is_(0))
+        assert_that(user2_stats.get('AggregateTime'), is_(0))
+        assert_that(user2_stats.get('AverageDuration'), is_(0))
+
+        # Invalid
+        self.testapp.post_json(reset_url, {'resource': self.video_ntiid,
+                                           'user': "dne_user"}, status=422)
+        self.testapp.post_json(reset_url, {'resource': u'tag:nextthought.com,2011-10:dne_ntiid',
+                                           'user': "user_analytics_stats1"}, status=422)
