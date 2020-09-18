@@ -467,8 +467,8 @@ class VideoViewStats(AbstractViewStatsView):
                renderer='rest',
                request_method='POST',
                permission=ACT_NTI_ADMIN)
-class RemoveVideoViewsForUser(AbstractAuthenticatedView,
-                              ModeledContentUploadRequestUtilsMixin):
+class RemoveAssetDataForUserView(AbstractAuthenticatedView,
+                                 ModeledContentUploadRequestUtilsMixin):
     """
     A view to remove analytics data for the given resource id and user.
     This should hopefully only be used for testing purposes.
