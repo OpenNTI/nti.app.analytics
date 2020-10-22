@@ -74,6 +74,8 @@ from nti.dataserver.interfaces import IUser
 
 from nti.dataserver.users import User
 
+from nti.ims.lti.interfaces import ILTIUserLaunchStats
+
 logger = __import__('logging').getLogger(__name__)
 
 
@@ -208,7 +210,7 @@ def _unwrap_and_adapt_enrollment(enrollment, iface):
     return component.getMultiAdapter((user, course), iface)
 
 
-@interface.implementer(IBookResourceUsageStats)
+@interface.implementer(ILTIUserLaunchStats)
 @component.adapter(IUser, ICourseInstance, IExternalToolAsset)
 def _user_course_asset_lti_stats(user, course, asset):
     result = None

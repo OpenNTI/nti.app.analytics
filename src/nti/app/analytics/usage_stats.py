@@ -579,7 +579,6 @@ class UserCourseVideoUsageStats(CourseVideoUsageStats):
 class LTIUserLaunchStats(object):
     """
     Build user launch stats for a user, course, asset.
-    FIXME: last mod
     """
 
     def __init__(self, user, course, asset):
@@ -606,5 +605,8 @@ class LTIUserLaunchStats(object):
         result = None
         if self.events:
             last_mod = max(x.timestamp for x in self.events if x.timestamp)
-            result = datetime.utcfromtimestamp(last_mod)
+            try:
+                result = datetime.utcfromtimestamp(last_mod)
+            except TypeError:
+                result = last_mod
         return result

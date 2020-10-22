@@ -27,11 +27,8 @@ from nti.app.analytics.tests import NTIAnalyticsTestCase
 
 from nti.analytics.database import get_analytics_db
 from nti.analytics.database import boards as db_boards_view
-from nti.analytics.database import lti as db_lti_views
 from nti.analytics.database import resource_tags as db_tags_view
 from nti.analytics.database import resource_views as db_resource_views
-
-from nti.analytics.sessions import get_nti_session_id
 
 from nti.analytics.tests import TestIdentifier
 
@@ -40,9 +37,6 @@ from nti.analytics_database.interfaces import IAnalyticsNTIIDIdentifier
 from nti.analytics_database.interfaces import IAnalyticsRootContextIdentifier
 
 from nti.app.analytics.completion import content_progress
-from nti.app.analytics.completion import lti_external_tool_asset_progress
-
-from nti.app.products.courseware_ims.lti import LTIExternalToolAsset
 
 from nti.contentlibrary.contentunit import ContentUnit
 
@@ -55,8 +49,6 @@ from nti.dataserver.contenttypes.forums.post import GeneralForumComment
 from nti.dataserver.contenttypes.forums.topic import GeneralTopic as Topic
 
 from nti.dataserver.contenttypes.note import Note
-
-from nti.dataserver.tests import mock_dataserver
 
 from nti.dataserver.tests.mock_dataserver import WithMockDSTrans
 
@@ -350,30 +342,3 @@ class TestPagedProgress( NTIAnalyticsTestCase ):
         assert_that( result.AbsoluteProgress, is_( 2 ))
         assert_that( result.MaxPossibleProgress, is_( max_progress ))
         assert_that( result.HasProgress, is_( True ))
-
-
-class TestLTIProgress(NTIAnalyticsTestCase):
-
-    @WithMockDSTrans
-    @fudge.patch('nti.ntiids.ntiids.find_object_with_ntiid')
-    def test_lti_progress(self, mock_find_object):
-
-        user = User.create_user(username='test_user', dataserver=self.ds)
-        course = CourseInstance()
-        connection = mock_dataserver.current_transaction
-        connection.add(course)
-        asset = LTIExternalToolAsset()
-        asset.ntiid = u'tag:nextthought.com,2011:test'
-        mock_find_object.is_callable().returns(asset)
-
-        result = lti_external_tool_asset_progress(user, asset, course)
-        assert_that(result.AbsoluteProgress, is_(0))
-
-        db_lti_views.create_launch_record(user, course, asset, get_nti_session_id(), [course.ntiid], time.time())
-        result = lti_external_tool_asset_progress(user, asset, course)
-        assert_that(result.AbsoluteProgress, is_(1))
-
-        # Check that the progress doesn't increment
-        db_lti_views.create_launch_record(user, course, asset, get_nti_session_id(), [course.ntiid], time.time())
-        result = lti_external_tool_asset_progress(user, asset, course)
-        assert_that(result.AbsoluteProgress, is_(1))
