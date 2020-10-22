@@ -11,6 +11,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from datetime import datetime
+
 from six import integer_types
 
 from pyramid.threadlocal import get_current_request
@@ -37,6 +38,7 @@ from nti.analytics.stats.interfaces import IDailyActivityStatsSource
 
 from nti.app.analytics.interfaces import IAnalyticsContextACLProvider
 
+from nti.app.analytics.usage_stats import LTIUserLaunchStats
 from nti.app.analytics.usage_stats import CourseVideoUsageStats
 from nti.app.analytics.usage_stats import BookResourceUsageStats
 from nti.app.analytics.usage_stats import CourseResourceUsageStats
@@ -50,6 +52,8 @@ from nti.app.products.courseware.interfaces import IViewStats
 from nti.app.products.courseware.interfaces import IVideoUsageStats
 from nti.app.products.courseware.interfaces import ICourseInstanceEnrollment
 from nti.app.products.courseware.interfaces import IResourceUsageStats as ICourseResourceUsageStats
+
+from nti.app.products.courseware_ims.interfaces import IExternalToolAsset
 
 from nti.app.contentlibrary.interfaces import IResourceUsageStats as IBookResourceUsageStats
 
@@ -202,6 +206,15 @@ def _unwrap_and_adapt_enrollment(enrollment, iface):
     if not course or not user:
         return None
     return component.getMultiAdapter((user, course), iface)
+
+
+@interface.implementer(IBookResourceUsageStats)
+@component.adapter(IUser, ICourseInstance, IExternalToolAsset)
+def _user_course_asset_lti_stats(user, course, asset):
+    result = None
+    if has_analytics():
+        result = LTIUserLaunchStats(user, course, asset)
+    return result
 
 
 @interface.implementer(IActiveTimesStatsSource)

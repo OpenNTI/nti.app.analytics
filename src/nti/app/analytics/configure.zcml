@@ -79,12 +79,6 @@
                   nti.contenttypes.courses.interfaces.ICourseInstance"
              provides="nti.contenttypes.completion.interfaces.IProgress" />
 
-	<adapter factory=".completion.lti_external_tool_asset_progress"
-			 for="nti.dataserver.interfaces.IUser
-				  nti.app.products.courseware_ims.interfaces.IExternalToolAsset
-				  nti.contenttypes.courses.interfaces.ICourseInstance"
-			 provides="nti.contenttypes.completion.interfaces.IProgress" />
-
 	<!-- User Session Decorators -->
 	<subscriber factory=".decorators._UserSessionDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
@@ -121,6 +115,7 @@
 	<adapter factory=".adapters._topic_view_stats_for_user" />
 	<adapter factory=".adapters._book_resource_usage_stats" />
     <adapter factory=".adapters._user_resource_usage_stats" />
+    <adapter factory=".adapters._user_course_asset_lti_stats" />
     <adapter factory=".adapters._user_book_resource_usage_stats" />
 
 	<!-- Workspaces -->

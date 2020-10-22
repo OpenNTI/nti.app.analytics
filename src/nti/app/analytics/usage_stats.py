@@ -15,9 +15,13 @@ from heapq import nlargest
 from collections import namedtuple
 from collections import defaultdict
 
+from datetime import datetime
+
 from zope import interface
 
 from zope.cachedescriptors.property import Lazy
+
+from nti.analytics.database.lti import get_launch_records_for_ntiid
 
 from nti.analytics.resource_views import get_video_views
 from nti.analytics.resource_views import get_resource_views
@@ -32,6 +36,8 @@ from nti.app.products.courseware.interfaces import IUserResourceUsageStats
 from nti.dataserver.authorization import is_admin_or_content_admin_or_site_admin
 
 from nti.dataserver.interfaces import IEnumerableEntityContainer
+
+from nti.ims.lti.interfaces import ILTIUserLaunchStats
 
 from nti.ntiids.ntiids import find_object_with_ntiid
 
@@ -567,3 +573,38 @@ class UserCourseVideoUsageStats(CourseVideoUsageStats):
 
     def get_stats(self):
         return self._build_data_for_users((self.user.username.lower(),))
+
+
+@interface.implementer(ILTIUserLaunchStats)
+class LTIUserLaunchStats(object):
+    """
+    Build user launch stats for a user, course, asset.
+    FIXME: last mod
+    """
+
+    def __init__(self, user, course, asset):
+        self.user = user
+        self.course = course
+        self.asset = asset
+
+    @Lazy
+    def events(self):
+        ntiid = getattr(self.asset, 'ntiid', None)
+        result = ()
+        if ntiid:
+            result = get_launch_records_for_ntiid(self.asset.ntiid,
+                                                  user=self.user,
+                                                  root_context=self.course)
+        return result
+
+    @property
+    def LaunchCount(self):
+        return len(self.events)
+
+    @property
+    def LastLaunchDate(self):
+        result = None
+        if self.events:
+            last_mod = max(x.timestamp for x in self.events if x.timestamp)
+            result = datetime.utcfromtimestamp(last_mod)
+        return result
