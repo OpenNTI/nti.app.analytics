@@ -56,6 +56,7 @@ setup(
     install_requires=[
         'setuptools',
         'nti.app.asynchronous',
+        'nti.app.products.courseware_ims',
         'nti.analytics',
         'nti.assessment',
         'nti.common',
