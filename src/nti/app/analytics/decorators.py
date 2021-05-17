@@ -32,6 +32,8 @@ from nti.appserver.pyramid_authorization import has_permission
 
 from nti.contenttypes.courses.interfaces import ICourseInstance
 
+from nti.contenttypes.presentation.interfaces import INTIVideo
+
 from nti.dataserver import authorization as nauth
 
 from nti.dataserver.authorization import is_admin_or_site_admin
@@ -69,6 +71,28 @@ class _CourseVideoProgressLinkDecorator(_AnalyticsEnabledDecorator):
         link.__name__ = ''
         link.__parent__ = context
         links.append(link)
+
+@component.adapter(INTIVideo)
+@interface.implementer(IExternalMappingDecorator)
+class _CourseVideoWatchInfo(_AnalyticsEnabledDecorator):
+    """
+    Return links on videos to resume and segment data
+    when we have appropriate context
+    """
+
+    def _do_decorate_external(self, context, result):
+        course = ICourseInstance(self.request, None)
+        if not course:
+            return
+        
+        links = result.setdefault(LINKS, [])
+
+        for name in ('resume_info', 'watched_segments',):
+            link = Link(course, rel=name, elements=('assets', context.ntiid, '@@'+name,))
+            interface.alsoProvides(link, ILocation)
+            link.__name__ = ''
+            link.__parent__ = context
+            links.append(link)
 
 
 @component.adapter(ICourseInstance)

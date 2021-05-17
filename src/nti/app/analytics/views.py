@@ -21,6 +21,7 @@ from perfmetrics import statsd_client
 
 from pyramid import httpexceptions as hexc
 
+from pyramid.view import view_defaults
 from pyramid.view import view_config
 
 from requests.structures import CaseInsensitiveDict
@@ -55,6 +56,7 @@ from nti.analytics.model import AnalyticsClientParams
 
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_video_progress_for_course
+from nti.analytics.resource_views import get_video_views_for_ntiid
 
 from nti.analytics.sessions import get_user_sessions
 from nti.analytics.sessions import handle_end_session
@@ -99,7 +101,13 @@ from nti.app.renderers.interfaces import IResponseCacheController
 
 from nti.app.users.utils import get_user_creation_sitename, get_admins
 
+from nti.app.products.courseware.interfaces import ICourseInstanceEnrollment
+
+from nti.appserver.pyramid_authorization import has_permission
+
 from nti.common.string import is_true
+
+from nti.contenttypes.presentation.interfaces import INTIVideo
 
 from nti.contenttypes.completion.interfaces import ICompletionContextProvider
 from nti.contenttypes.completion.interfaces import UserProgressUpdatedEvent
@@ -114,6 +122,8 @@ from nti.dataserver import authorization as nauth
 from nti.dataserver.authorization import is_admin_or_site_admin
 
 from nti.dataserver.interfaces import IUser
+
+from nti.dataserver.users.users import User
 
 from nti.externalization import internalization
 
@@ -997,3 +1007,120 @@ class ActiveUsers(AbstractUserLocationView,
             cache_hint = _IHistoricalResults
         interface.alsoProvides(result, cache_hint)
         return result
+
+
+from collections import Counter
+
+from zope.security.permission import Permission
+_ACT_READ_VIDEO_USAGE_DETAILS=Permission('nti.actions.detailed_analytics_view')
+
+@view_defaults(route_name='objects.generic.traversal',
+               renderer='rest',
+               context=INTIVideo,
+               request_method='GET',
+               permission=nauth.ACT_READ) #How should we actually permission this
+class VideoResumeInfo(AbstractAuthenticatedView):
+
+    @Lazy
+    def course(self):
+        return ICourseInstance(self.request)
+
+    @Lazy
+    def user(self):
+        username_param = self.request.params.get('username', None)
+        if username_param:
+            return User.get_user(username_param)
+        return self.remoteUser
+
+    def make_result(self):
+        result = LocatedExternalDict()
+        result.__name__ = self.request.view_name
+        result.__parent__ = self.request.context
+        result['NTIID'] = self.context.ntiid
+        result['Course'] = self.course.ntiid
+        result['Username'] = self.user.username
+        return result
+
+    def _do_check_permission(self):
+        """
+        Our view callable predicate ensures read access to the
+        resource which is a good first pass, but we need something
+        slightly more complicated. Our full permission scheme is that
+        users can always get this information for themselves, but to
+        get this information for someone else you need an appropriate
+        permission on the user and course (which we can represent by
+        the enrollment record)
+        """
+
+        if not self.user:
+            raise hexc.HTTPNotFound()
+
+        # We check the user first, and then the enrollment record. The
+        # idea being that someone that can manage some subset of users
+        # might have this permission managed at a user level ("manager
+        # role", "site admin", etc.), while instructors would get it
+        # at the enrollment record level.
+        if has_permission(_ACT_READ_VIDEO_USAGE_DETAILS, self.user):
+            return True
+
+        if has_permission(_ACT_READ_VIDEO_USAGE_DETAILS, self.course):
+            return True
+        
+        enrollment = component.queryMultiAdapter((self.course, self.user),
+                                                 ICourseInstanceEnrollment)
+        if enrollment and has_permission(_ACT_READ_VIDEO_USAGE_DETAILS, enrollment):
+            return True
+
+        raise hexc.HTTPForbidden()
+        
+
+    @view_config(name='resume_info')
+    def get_resume_info(self):
+        self._do_check_permission()
+        
+        # As a generalization we could adapt the video and enrollment
+        # record (user x course) to some sort of IVideoResumeInformation
+        # and encapsulate this logic there. Do we need to do this sort
+        # of thing in other contexts?
+        events = get_video_views_for_ntiid(self.context.ntiid,
+                                           user=self.user,
+                                           course=self.course,
+                                           order_by='timestamp',
+                                           limit=1)
+
+        event = events[0] if events else None
+        
+        result = self.make_result()
+
+        if event:
+            result['MaxDuration'] = event.MaxDuration
+            result['ResumeSeconds'] = event.video_end_time
+
+        return result
+
+    @view_config(name="watched_segments")
+    def get_watched_segments(self):
+        self._do_check_permission()
+        
+        # TODO use a specific query for this so we can aggregate
+        # inside the db. There are some combinations of user/course/video
+        # that have 10000 rows that match here.
+        events = get_video_views_for_ntiid(self.context.ntiid,
+                                           user=self.user,
+                                           course=self.course)
+
+        ranges = Counter((e.video_start_time, e.video_end_time) for e in events)
+
+        result = self.make_result()
+
+        def _make_segment(segment, count):
+            return {
+                'video_start_time': segment[0],
+                'video_end_time': segment[1],
+                'Count': count
+            }
+        result['WatchedSegments'] = [_make_segment(s, c) for s,c in ranges.iteritems()]
+
+        return result
+
+        

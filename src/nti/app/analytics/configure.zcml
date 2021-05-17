@@ -50,6 +50,11 @@
     <adapter factory=".adapters._daily_activity_for_enrollment" />
     <adapter factory=".adapters._activity_source_for_enrollment" />
 
+    <subscriber factory=".decorators._CourseVideoWatchInfo"
+		provides="nti.externalization.interfaces.IExternalObjectDecorator"
+		for="nti.contenttypes.presentation.interfaces.INTIVideo
+		     pyramid.interfaces.IRequest"  />
+
 	<!-- Progress -->
 	<subscriber factory=".decorators._CourseVideoProgressLinkDecorator"
 				provides="nti.externalization.interfaces.IExternalObjectDecorator"
