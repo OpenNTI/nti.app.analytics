@@ -41,6 +41,8 @@ from zope.event import notify
 
 from zope.schema.interfaces import ValidationError
 
+from zope.security.permission import Permission
+
 from nti.analytics.common import should_create_analytics
 
 from nti.analytics_database.sessions import Sessions
@@ -57,6 +59,7 @@ from nti.analytics.model import AnalyticsClientParams
 from nti.analytics.resource_views import handle_events
 from nti.analytics.resource_views import get_video_progress_for_course
 from nti.analytics.resource_views import get_video_views_for_ntiid
+from nti.analytics.resource_views import get_watched_segments_for_ntiid
 
 from nti.analytics.sessions import get_user_sessions
 from nti.analytics.sessions import handle_end_session
@@ -1008,17 +1011,13 @@ class ActiveUsers(AbstractUserLocationView,
         interface.alsoProvides(result, cache_hint)
         return result
 
-
-from collections import Counter
-
-from zope.security.permission import Permission
 _ACT_READ_VIDEO_USAGE_DETAILS=Permission('nti.actions.detailed_analytics_view')
 
 @view_defaults(route_name='objects.generic.traversal',
                renderer='rest',
                context=INTIVideo,
                request_method='GET',
-               permission=nauth.ACT_READ) #How should we actually permission this
+               permission=nauth.ACT_READ)
 class VideoResumeInfo(AbstractAuthenticatedView):
 
     @Lazy
@@ -1048,10 +1047,9 @@ class VideoResumeInfo(AbstractAuthenticatedView):
         slightly more complicated. Our full permission scheme is that
         users can always get this information for themselves, but to
         get this information for someone else you need an appropriate
-        permission on the user and course (which we can represent by
+        permission on the user, course, or user and course (which we can represent by
         the enrollment record)
         """
-
         if not self.user:
             raise hexc.HTTPNotFound()
 
@@ -1102,24 +1100,19 @@ class VideoResumeInfo(AbstractAuthenticatedView):
     def get_watched_segments(self):
         self._do_check_permission()
         
-        # TODO use a specific query for this so we can aggregate
-        # inside the db. There are some combinations of user/course/video
-        # that have 10000 rows that match here.
-        events = get_video_views_for_ntiid(self.context.ntiid,
-                                           user=self.user,
-                                           course=self.course)
-
-        ranges = Counter((e.video_start_time, e.video_end_time) for e in events)
+        segments = get_watched_segments_for_ntiid(self.context.ntiid,
+                                                  user=self.user,
+                                                  course=self.course)
 
         result = self.make_result()
-
-        def _make_segment(segment, count):
+        
+        def _make_segment(start, end, count):
             return {
-                'video_start_time': segment[0],
-                'video_end_time': segment[1],
+                'video_start_time': start,
+                'video_end_time': end,
                 'Count': count
             }
-        result['WatchedSegments'] = [_make_segment(s, c) for s,c in ranges.iteritems()]
+        result['WatchedSegments'] = [_make_segment(*s) for s in segments]
 
         return result
 
