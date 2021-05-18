@@ -1805,3 +1805,19 @@ class VideoSegmentInfoTests(_AbstractTestViews):
                                      'NTIID', self.video_ntiid,
                                      'WatchedSegments', has_length(4)))
 
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_links_decorated(self):
+
+        base_url = '/dataserver2/++etc++hostsites/platform.ou.edu/++etc++site/Courses/Fall2015/CS 1323/assets/%s' % self.video_ntiid
+
+        res = self.testapp.get(base_url, status=200).json
+
+        self.require_link_href_with_rel(res, 'resume_info')
+        self.require_link_href_with_rel(res, 'watched_segments')
+
+        res = self.testapp.get('/dataserver2/Objects/%s' % self.video_ntiid,
+                               status=200).json
+
+        self.forbid_link_with_rel(res, 'resume_info')
+        self.forbid_link_with_rel(res, 'watched_segments')
+
