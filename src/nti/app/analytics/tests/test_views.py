@@ -1672,6 +1672,7 @@ class VideoSegmentInfoTests(_AbstractTestViews):
         user2_environ = self._make_extra_environ(user='user_analytics_stats2')
         user3_environ = self._make_extra_environ(user='user_analytics_stats3')
         inst_environ = self._make_extra_environ(user='tryt3968')
+        inst2_environ = self._make_extra_environ(user='harp4162')
 
         base_url = '/dataserver2/++etc++hostsites/platform.ou.edu/++etc++site/Courses/Fall2015/CS 1323/assets/%s' % self.video_ntiid
 
@@ -1703,14 +1704,20 @@ class VideoSegmentInfoTests(_AbstractTestViews):
                          extra_environ=user2_environ,
                          status=403)
 
-        # # Instructors can fetch the information for their students
-        # res = self.testapp.get('%s?username=user_analytics_stats1' % resume_info_url,
-        #                        extra_environ=inst_environ,
-        #                        status=200).json
-        # assert_that(res, has_entries('Username', 'user_analytics_stats1',
-        #                              'Course', course_ntiid,
-        #                              'NTIID', self.video_ntiid,
-        #                              'ResumeSeconds', 35))
+        # Instructors can fetch the information for their students
+        res = self.testapp.get('%s?username=user_analytics_stats1' % resume_info_url,
+                               extra_environ=inst_environ,
+                               status=200).json
+        assert_that(res, has_entries('Username', 'user_analytics_stats1',
+                                     'Course', course_ntiid,
+                                     'NTIID', self.video_ntiid,
+                                     'ResumeSeconds', 35))
+
+
+        # Instructors can't fetch student details from other courses
+        self.testapp.get('%s?username=user_analytics_stats1' % resume_info_url,
+                         extra_environ=inst2_environ,
+                         status=403)
 
         # Admins can also fetch the information for users
         res = self.testapp.get('%s?username=user_analytics_stats1' % resume_info_url,
@@ -1742,6 +1749,7 @@ class VideoSegmentInfoTests(_AbstractTestViews):
         user2_environ = self._make_extra_environ(user='user_analytics_stats2')
         user3_environ = self._make_extra_environ(user='user_analytics_stats3')
         inst_environ = self._make_extra_environ(user='tryt3968')
+        inst2_environ = self._make_extra_environ(user='harp4162')
 
         base_url = '/dataserver2/++etc++hostsites/platform.ou.edu/++etc++site/Courses/Fall2015/CS 1323/assets/%s' % self.video_ntiid
 
@@ -1788,15 +1796,20 @@ class VideoSegmentInfoTests(_AbstractTestViews):
                          extra_environ=user2_environ,
                          status=403)
 
-        # # Instructors can fetch the information for their students
-        # res = self.testapp.get('%s?username=user_analytics_stats1' % watched_url,
-        #                        extra_environ=inst_environ,
-        #                        status=200).json
-        # assert_that(res, has_entries('Username', 'user_analytics_stats1',
-        #                              'Course', course_ntiid,
-        #                              'NTIID', self.video_ntiid,
-        #                              'ResumeSeconds', 35))
+        # Instructors can fetch the information for their students
+        res = self.testapp.get('%s?username=user_analytics_stats1' % watched_url,
+                               extra_environ=inst_environ,
+                               status=200).json
+        assert_that(res, has_entries('Username', 'user_analytics_stats1',
+                                     'Course', course_ntiid,
+                                     'NTIID', self.video_ntiid,
+                                     'WatchedSegments', has_length(4)))
 
+        # Instructors can't fetch student details from other courses
+        self.testapp.get('%s?username=user_analytics_stats1' % watched_url,
+                         extra_environ=inst2_environ,
+                         status=403)
+                                     
         # Admins can also fetch the information for users
         res = self.testapp.get('%s?username=user_analytics_stats1' % watched_url,
                                status=200).json
@@ -1808,6 +1821,8 @@ class VideoSegmentInfoTests(_AbstractTestViews):
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_links_decorated(self):
 
+        # When we fetch an asset in the context of a course we
+        # get resume_info and watched_segments links
         base_url = '/dataserver2/++etc++hostsites/platform.ou.edu/++etc++site/Courses/Fall2015/CS 1323/assets/%s' % self.video_ntiid
 
         res = self.testapp.get(base_url, status=200).json
@@ -1815,6 +1830,7 @@ class VideoSegmentInfoTests(_AbstractTestViews):
         self.require_link_href_with_rel(res, 'resume_info')
         self.require_link_href_with_rel(res, 'watched_segments')
 
+        # If we have no course context we don't get those links
         res = self.testapp.get('/dataserver2/Objects/%s' % self.video_ntiid,
                                status=200).json
 

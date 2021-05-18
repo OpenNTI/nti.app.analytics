@@ -41,8 +41,6 @@ from zope.event import notify
 
 from zope.schema.interfaces import ValidationError
 
-from zope.security.permission import Permission
-
 from nti.analytics.common import should_create_analytics
 
 from nti.analytics_database.sessions import Sessions
@@ -115,6 +113,7 @@ from nti.contenttypes.presentation.interfaces import INTIVideo
 from nti.contenttypes.completion.interfaces import ICompletionContextProvider
 from nti.contenttypes.completion.interfaces import UserProgressUpdatedEvent
 
+from nti.contenttypes.courses.interfaces import ACT_VIEW_DETAILED_CONTENT_USAGE
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseCatalogEntry
 
@@ -1011,8 +1010,6 @@ class ActiveUsers(AbstractUserLocationView,
         interface.alsoProvides(result, cache_hint)
         return result
 
-_ACT_READ_VIDEO_USAGE_DETAILS=Permission('nti.actions.detailed_analytics_view')
-
 @view_defaults(route_name='objects.generic.traversal',
                renderer='rest',
                context=INTIVideo,
@@ -1040,7 +1037,7 @@ class VideoResumeInfo(AbstractAuthenticatedView):
         result['Username'] = self.user.username
         return result
 
-    def _do_check_permission(self):
+    def _do_check_permission(self, perm=ACT_VIEW_DETAILED_CONTENT_USAGE):
         """
         Our view callable predicate ensures read access to the
         resource which is a good first pass, but we need something
@@ -1058,15 +1055,15 @@ class VideoResumeInfo(AbstractAuthenticatedView):
         # might have this permission managed at a user level ("manager
         # role", "site admin", etc.), while instructors would get it
         # at the enrollment record level.
-        if has_permission(_ACT_READ_VIDEO_USAGE_DETAILS, self.user):
+        if has_permission(perm, self.user):
             return True
 
-        if has_permission(_ACT_READ_VIDEO_USAGE_DETAILS, self.course):
+        if has_permission(perm, self.course):
             return True
         
         enrollment = component.queryMultiAdapter((self.course, self.user),
                                                  ICourseInstanceEnrollment)
-        if enrollment and has_permission(_ACT_READ_VIDEO_USAGE_DETAILS, enrollment):
+        if enrollment and has_permission(perm, enrollment):
             return True
 
         raise hexc.HTTPForbidden()
