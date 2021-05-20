@@ -13,6 +13,7 @@ from hamcrest import contains
 from hamcrest import contains_inanyorder
 from hamcrest import ends_with
 from hamcrest import is_
+from hamcrest import is_not
 from hamcrest import none
 from hamcrest import has_key
 from hamcrest import has_item
@@ -106,6 +107,7 @@ from nti.app.analytics import ACTIVE_TIMES_SUMMARY
 from nti.app.analytics import ACTIVITY_SUMMARY_BY_DATE
 from nti.app.analytics import ANALYTICS_SESSION_HEADER
 
+from nti.app.products.courseware.tests import InstructedCourseApplicationTestLayer
 from nti.app.products.courseware.tests import LegacyInstructedCourseApplicationTestLayer
 
 from nti.app.analytics.utils import get_session_id_from_request
@@ -138,6 +140,9 @@ from nti.assessment.submission import AssignmentSubmission
 from nti.contenttypes.courses.courses import CourseInstance
 from nti.contenttypes.courses.courses import ContentCourseSubInstance
 
+from nti.contenttypes.courses.interfaces import ICourseCatalog
+from nti.contenttypes.courses.interfaces import ICourseEnrollmentManager
+
 from nti.contenttypes.courses.interfaces import ICourseInstance
 from nti.contenttypes.courses.interfaces import ICourseEnrollmentManager
 
@@ -154,6 +159,7 @@ from nti.dataserver.users.users import User
 from nti.externalization import internalization
 
 from nti.externalization.externalization import toExternalObject
+from nti.externalization.externalization import to_external_object
 
 from nti.fakestatsd import FakeStatsDClient
 
@@ -1590,3 +1596,244 @@ class TestBookViews(ApplicationLayerTest):
         usernames = [x[u'Username'] for x in items]
         assert_that(usernames, contains_inanyorder('test_book_view1',
                                                    'test_book_view2'))
+
+class VideoSegmentInfoTests(_AbstractTestViews):
+    """
+    Validate video segment data
+    """
+
+    layer = InstructedCourseApplicationTestLayer
+
+    default_origin = 'http://platform.ou.edu'
+
+    video_ntiid = u"tag:nextthought.com,2011-10:OU-NTIVideo-CS1323_F_2015_Intro_to_Computer_Programming.ntivideo.video_janux_videos"
+
+    def _store_video_data(self, course, username):
+        timestamp = time.time()
+        context_path = [u'DASHBOARD', u'ntiid:tag_blah']
+        video_event = SkipVideoEvent(user=username,
+                                     timestamp=timestamp,
+                                     RootContextID=course,
+                                     context_path=context_path,
+                                     ResourceId=self.video_ntiid,
+                                     Duration=30,
+                                     video_start_time=29,
+                                     video_end_time=59,
+                                     with_transcript=True)
+        events = []
+        events.append(video_event)
+
+        # 760s of view time - 4 distinct events
+        data = [(0, 10, 10, timestamp),
+                (15, 35, 20, timestamp+1),
+                (60, 90, 30, timestamp+2),
+                (300, 1000, 700, timestamp+3),
+                (15, 35, 20, timestamp+4)]
+        for start, end, duration, timestamp in data:
+            watch_video_event = WatchVideoEvent(user=username,
+                                                timestamp=timestamp,
+                                                RootContextID=course,
+                                                context_path=context_path,
+                                                ResourceId=self.video_ntiid,
+                                                Duration=duration,
+                                                video_start_time=start,
+                                                video_end_time=end,
+                                                with_transcript=True)
+            events.append(watch_video_event)
+        io = BatchResourceEvents(events=events)
+        ext_obj = to_external_object(io)
+        batch_url = '/dataserver2/analytics/batch_events'
+        headers = {ANALYTICS_SESSION_HEADER: str(9999)}
+        env = self._make_extra_environ(user=username)
+        self.testapp.post_json(batch_url,
+                               ext_obj,
+                               headers=headers,
+                               extra_environ=env)
+
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_resume_info(self):
+        with mock_dataserver.mock_db_trans(self.ds):
+            user1 = self._create_user(username='user_analytics_stats1')
+            user2 = self._create_user(username='user_analytics_stats2')
+            user3 = self._create_user(username='user_analytics_stats3')
+
+            sm = self.ds.root['++etc++hostsites']['platform.ou.edu'].getSiteManager()
+            course = sm.getUtility(ICourseCatalog)['Fall2015']['CS 1323']
+
+            em = ICourseEnrollmentManager(course)
+            em.enroll(user1)
+            em.enroll(user2)
+
+            course_ntiid = course.ntiid
+
+        self._store_video_data(course_ntiid, 'user_analytics_stats1')
+
+        user1_environ = self._make_extra_environ(user='user_analytics_stats1')
+        user2_environ = self._make_extra_environ(user='user_analytics_stats2')
+        user3_environ = self._make_extra_environ(user='user_analytics_stats3')
+        inst_environ = self._make_extra_environ(user='tryt3968')
+        inst2_environ = self._make_extra_environ(user='harp4162')
+
+        base_url = '/dataserver2/++etc++hostsites/platform.ou.edu/++etc++site/Courses/Fall2015/CS 1323/assets/%s' % self.video_ntiid
+
+        resume_info_url = '%s/@@resume_info' % base_url
+
+        # You can fetch your own resume data and we resume at the last playhead end
+        res = self.testapp.get(resume_info_url, extra_environ=user1_environ, status=200).json
+        assert_that(res, has_entries('Username', 'user_analytics_stats1',
+                                     'Course', course_ntiid,
+                                     'NTIID', self.video_ntiid,
+                                     'ResumeSeconds', 35))
+
+        # This enrolled student has no resume data
+        res = self.testapp.get(resume_info_url,
+                               extra_environ=user2_environ,
+                               status=200).json
+        assert_that(res, has_entries('Username', 'user_analytics_stats2',
+                                     'Course', course_ntiid,
+                                     'NTIID', self.video_ntiid))
+        assert_that(res, is_not(has_key('ResumeSeconds')))
+
+        # This student isn't even enrolled so they don't have permission\
+        self.testapp.get(resume_info_url,
+                         extra_environ=user3_environ,
+                         status=403)
+
+        # Of course students can't fetch other students resume data
+        self.testapp.get('%s?username=user_analytics_stats1' % resume_info_url,
+                         extra_environ=user2_environ,
+                         status=403)
+
+        # Instructors can fetch the information for their students
+        res = self.testapp.get('%s?username=user_analytics_stats1' % resume_info_url,
+                               extra_environ=inst_environ,
+                               status=200).json
+        assert_that(res, has_entries('Username', 'user_analytics_stats1',
+                                     'Course', course_ntiid,
+                                     'NTIID', self.video_ntiid,
+                                     'ResumeSeconds', 35))
+
+
+        # Instructors can't fetch student details from other courses
+        self.testapp.get('%s?username=user_analytics_stats1' % resume_info_url,
+                         extra_environ=inst2_environ,
+                         status=403)
+
+        # Admins can also fetch the information for users
+        res = self.testapp.get('%s?username=user_analytics_stats1' % resume_info_url,
+                               status=200).json
+        assert_that(res, has_entries('Username', 'user_analytics_stats1',
+                                     'Course', course_ntiid,
+                                     'NTIID', self.video_ntiid,
+                                     'ResumeSeconds', 35))
+
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_watched_segments(self):
+        with mock_dataserver.mock_db_trans(self.ds):
+            user1 = self._create_user(username='user_analytics_stats1')
+            user2 = self._create_user(username='user_analytics_stats2')
+            user3 = self._create_user(username='user_analytics_stats3')
+
+            sm = self.ds.root['++etc++hostsites']['platform.ou.edu'].getSiteManager()
+            course = sm.getUtility(ICourseCatalog)['Fall2015']['CS 1323']
+
+            em = ICourseEnrollmentManager(course)
+            em.enroll(user1)
+            em.enroll(user2)
+
+            course_ntiid = course.ntiid
+
+        self._store_video_data(course_ntiid, 'user_analytics_stats1')
+
+        user1_environ = self._make_extra_environ(user='user_analytics_stats1')
+        user2_environ = self._make_extra_environ(user='user_analytics_stats2')
+        user3_environ = self._make_extra_environ(user='user_analytics_stats3')
+        inst_environ = self._make_extra_environ(user='tryt3968')
+        inst2_environ = self._make_extra_environ(user='harp4162')
+
+        base_url = '/dataserver2/++etc++hostsites/platform.ou.edu/++etc++site/Courses/Fall2015/CS 1323/assets/%s' % self.video_ntiid
+
+        watched_url = '%s/@@watched_segments' % base_url
+
+        # You can fetch your own resume data and we resume at the last playhead end
+        res = self.testapp.get(watched_url, extra_environ=user1_environ, status=200).json
+        assert_that(res, has_entries('Username', 'user_analytics_stats1',
+                                     'Course', course_ntiid,
+                                     'NTIID', self.video_ntiid,
+                                     'WatchedSegments', has_length(4)))
+        segments = res['WatchedSegments']
+        assert_that(segments,
+                    contains_inanyorder(
+                        has_entries('Count', 2,
+                                    'video_start_time', 15,
+                                    'video_end_time', 35),
+                        has_entries('Count', 1,
+                                    'video_start_time', 300,
+                                    'video_end_time', 1000),
+                        has_entries('Count', 1,
+                                    'video_start_time', 0,
+                                    'video_end_time', 10),
+                        has_entries('Count', 1,
+                                    'video_start_time', 60,
+                                    'video_end_time', 90)))
+
+        # This enrolled student has no resume data
+        res = self.testapp.get(watched_url,
+                               extra_environ=user2_environ,
+                               status=200).json
+        assert_that(res, has_entries('Username', 'user_analytics_stats2',
+                                     'Course', course_ntiid,
+                                     'NTIID', self.video_ntiid,
+                                     'WatchedSegments', has_length(0)))
+
+        # This student isn't even enrolled so they don't have permission\
+        self.testapp.get(watched_url,
+                         extra_environ=user3_environ,
+                         status=403)
+
+        # Of course students can't fetch other students resume data
+        self.testapp.get('%s?username=user_analytics_stats1' % watched_url,
+                         extra_environ=user2_environ,
+                         status=403)
+
+        # Instructors can fetch the information for their students
+        res = self.testapp.get('%s?username=user_analytics_stats1' % watched_url,
+                               extra_environ=inst_environ,
+                               status=200).json
+        assert_that(res, has_entries('Username', 'user_analytics_stats1',
+                                     'Course', course_ntiid,
+                                     'NTIID', self.video_ntiid,
+                                     'WatchedSegments', has_length(4)))
+
+        # Instructors can't fetch student details from other courses
+        self.testapp.get('%s?username=user_analytics_stats1' % watched_url,
+                         extra_environ=inst2_environ,
+                         status=403)
+                                     
+        # Admins can also fetch the information for users
+        res = self.testapp.get('%s?username=user_analytics_stats1' % watched_url,
+                               status=200).json
+        assert_that(res, has_entries('Username', 'user_analytics_stats1',
+                                     'Course', course_ntiid,
+                                     'NTIID', self.video_ntiid,
+                                     'WatchedSegments', has_length(4)))
+
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_links_decorated(self):
+
+        # When we fetch an asset in the context of a course we
+        # get resume_info and watched_segments links
+        base_url = '/dataserver2/++etc++hostsites/platform.ou.edu/++etc++site/Courses/Fall2015/CS 1323/assets/%s' % self.video_ntiid
+
+        res = self.testapp.get(base_url, status=200).json
+
+        self.require_link_href_with_rel(res, 'resume_info')
+        self.require_link_href_with_rel(res, 'watched_segments')
+
+        # If we have no course context we don't get those links
+        res = self.testapp.get('/dataserver2/Objects/%s' % self.video_ntiid,
+                               status=200).json
+
+        self.forbid_link_with_rel(res, 'resume_info')
+        self.forbid_link_with_rel(res, 'watched_segments')
+

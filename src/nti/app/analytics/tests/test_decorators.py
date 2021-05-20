@@ -22,7 +22,6 @@ from nti.app.testing.application_webtest import ApplicationLayerTest
 
 from nti.contenttypes.courses.courses import CourseInstance
 
-
 class TestDecorators(ApplicationLayerTest):
 
     layer = NTIAnalyticsApplicationTestLayer
