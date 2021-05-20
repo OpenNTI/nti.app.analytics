@@ -1089,7 +1089,18 @@ class VideoResumeInfo(AbstractAuthenticatedView):
 
         if event:
             result['MaxDuration'] = event.MaxDuration
-            result['ResumeSeconds'] = event.video_end_time
+            # When a user starts watching a video we get an initial watch
+            # event with a video_start_time, but no duration, and no video_end_time.
+            # if they close the window or we don't get any updates for that event
+            # the resume_info is that starting point.
+            #
+            # Then we start getting heartbeats. We still don't have an end_time
+            # but we do get a Duration (time_length) that is the offset from the start
+            # time to the playhead.
+            playhead = event.video_end_time
+            if not playhead:
+                playhead = event.video_start_time + (event.time_length or 0)
+            result['ResumeSeconds'] = playhead
 
         return result
 
