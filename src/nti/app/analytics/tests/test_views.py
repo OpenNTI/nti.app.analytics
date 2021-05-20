@@ -1608,48 +1608,125 @@ class VideoSegmentInfoTests(_AbstractTestViews):
 
     video_ntiid = u"tag:nextthought.com,2011-10:OU-NTIVideo-CS1323_F_2015_Intro_to_Computer_Programming.ntivideo.video_janux_videos"
 
-    def _store_video_data(self, course, username):
-        timestamp = time.time()
-        context_path = [u'DASHBOARD', u'ntiid:tag_blah']
-        video_event = SkipVideoEvent(user=username,
-                                     timestamp=timestamp,
-                                     RootContextID=course,
-                                     context_path=context_path,
-                                     ResourceId=self.video_ntiid,
-                                     Duration=30,
-                                     video_start_time=29,
-                                     video_end_time=59,
-                                     with_transcript=True)
-        events = []
-        events.append(video_event)
+    context_path = [u'DASHBOARD', u'ntiid:tag_blah']
 
-        # 760s of view time - 4 distinct events
-        data = [(0, 10, 10, timestamp),
-                (15, 35, 20, timestamp+1),
-                (60, 90, 30, timestamp+2),
-                (300, 1000, 700, timestamp+3),
-                (15, 35, 20, timestamp+4)]
-        for start, end, duration, timestamp in data:
-            watch_video_event = WatchVideoEvent(user=username,
-                                                timestamp=timestamp,
-                                                RootContextID=course,
-                                                context_path=context_path,
-                                                ResourceId=self.video_ntiid,
-                                                Duration=duration,
-                                                video_start_time=start,
-                                                video_end_time=end,
-                                                with_transcript=True)
-            events.append(watch_video_event)
+    def _send_events(self, events, username):
         io = BatchResourceEvents(events=events)
         ext_obj = to_external_object(io)
         batch_url = '/dataserver2/analytics/batch_events'
         headers = {ANALYTICS_SESSION_HEADER: str(9999)}
         env = self._make_extra_environ(user=username)
-        self.testapp.post_json(batch_url,
-                               ext_obj,
-                               headers=headers,
-                               extra_environ=env)
+        return self.testapp.post_json(batch_url,
+                                      ext_obj,
+                                      headers=headers,
+                                      extra_environ=env,
+                                      status=200)
 
+    def _make_event(self, course, username, factory, **kwargs):
+        event = factory(user=username,
+                        RootContextID=course,
+                        **kwargs)
+        return event
+
+    def _store_video_data(self, course, username):
+        context_path = self.context_path
+        video_event = self._make_event(course, username, SkipVideoEvent,
+                                       timestamp=time.time(),
+                                       context_path=context_path,
+                                       ResourceId=self.video_ntiid,
+                                       Duration=30,
+                                       video_start_time=29,
+                                       video_end_time=59,
+                                       with_transcript=True)
+        events = []
+        events.append(video_event)
+
+        data = [(0, 10, 10),
+                (15, 35, 20),
+                (60, 90, 30),
+                (300, 1000, 700),
+                (15, 35, 20)]
+        for start, end, duration in data:
+            watch_video_event = self._make_event(course, username, WatchVideoEvent,
+                                                 timestamp=time.time(),
+                                                 context_path=context_path,
+                                                 ResourceId=self.video_ntiid,
+                                                 MaxDuration=1000,
+                                                 Duration=duration,
+                                                 video_start_time=start,
+                                                 video_end_time=end,
+                                                 with_transcript=True)
+            events.append(watch_video_event)
+        self._send_events(events, username)
+
+    @time_monotonically_increases
+    @WithSharedApplicationMockDS(testapp=True, users=True)
+    def test_abandoned_events(self):
+        username='user_analytics_stats1'
+        user1_environ = self._make_extra_environ(user=username)
+        base_url = '/dataserver2/++etc++hostsites/platform.ou.edu/++etc++site/Courses/Fall2015/CS 1323/assets/%s' % self.video_ntiid
+
+        resume_info_url = '%s/@@resume_info' % base_url
+        watched_segments_url = '%s/@@watched_segments' % base_url
+        
+        with mock_dataserver.mock_db_trans(self.ds):
+            user1 = self._create_user(username=username)
+            sm = self.ds.root['++etc++hostsites']['platform.ou.edu'].getSiteManager()
+            course = sm.getUtility(ICourseCatalog)['Fall2015']['CS 1323']
+
+            em = ICourseEnrollmentManager(course)
+            em.enroll(user1)
+
+            course_ntiid = course.ntiid
+
+        # When a user starts watching a video we get an initial watch
+        # event with a video_start_time, but no duration, and no video_end_time.
+        # if they close the window or we don't get any updates for that event
+        # the resume_info is that starting point and the watched segment is
+        # (start, start)
+        timestamp = time.time()
+        event = self._make_event(course_ntiid, username, WatchVideoEvent,
+                                 timestamp=timestamp,
+                                 context_path=self.context_path,
+                                 ResourceId=self.video_ntiid,
+                                 MaxDuration=1000,
+                                 video_start_time=10,
+                                 with_transcript=True)
+        self._send_events([event], username)
+
+        res = self.testapp.get(resume_info_url, extra_environ=user1_environ, status=200).json
+        assert_that(res, has_entry('ResumeSeconds', 10))
+
+        res = self.testapp.get(watched_segments_url, extra_environ=user1_environ, status=200).json
+        assert_that(res, has_entry('WatchedSegments',
+                                   has_item(has_entries('video_start_time', 10,
+                                                        'video_end_time', 10))))
+
+        # Then they begin sending heart beats for the watch event. We
+        # don't get a video_end_time because the event is still
+        # ongoing, but we do start getting a Duration (time_length)
+        # which in this case is the delta between the video_start_time
+        # and the current play head.
+        heartbeat = self._make_event(course_ntiid, username, WatchVideoEvent,
+                                     timestamp=timestamp,
+                                     context_path=self.context_path,
+                                     ResourceId=self.video_ntiid,
+                                     MaxDuration=1000,
+                                     video_start_time=10,
+                                     Duration=20,
+                                     with_transcript=True)
+        self._send_events([heartbeat], username)
+        
+        res = self.testapp.get(resume_info_url, extra_environ=user1_environ, status=200).json
+        assert_that(res, has_entry('ResumeSeconds', 30))
+
+        res = self.testapp.get(watched_segments_url, extra_environ=user1_environ, status=200).json
+        assert_that(res, has_entry('WatchedSegments',
+                                   has_item(has_entries('video_start_time', 10,
+                                                        'video_end_time', 30))))
+    
+
+    @time_monotonically_increases
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_resume_info(self):
         with mock_dataserver.mock_db_trans(self.ds):
@@ -1726,7 +1803,9 @@ class VideoSegmentInfoTests(_AbstractTestViews):
                                      'Course', course_ntiid,
                                      'NTIID', self.video_ntiid,
                                      'ResumeSeconds', 35))
+        
 
+    @time_monotonically_increases
     @WithSharedApplicationMockDS(testapp=True, users=True)
     def test_watched_segments(self):
         with mock_dataserver.mock_db_trans(self.ds):
