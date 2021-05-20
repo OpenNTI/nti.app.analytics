@@ -1719,6 +1719,11 @@ class VideoSegmentInfoTests(_AbstractTestViews):
         
         res = self.testapp.get(resume_info_url, extra_environ=user1_environ, status=200).json
         assert_that(res, has_entry('ResumeSeconds', 30))
+
+        res = self.testapp.get(watched_segments_url, extra_environ=user1_environ, status=200).json
+        assert_that(res, has_entry('WatchedSegments',
+                                   has_item(has_entries('video_start_time', 10,
+                                                        'video_end_time', 30))))
     
 
     @time_monotonically_increases
