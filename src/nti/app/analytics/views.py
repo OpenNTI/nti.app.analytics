@@ -54,8 +54,9 @@ from nti.analytics.locations import get_location_list
 
 from nti.analytics.model import AnalyticsClientParams
 
+from nti.analytics.progress import get_video_progress_for_course
+
 from nti.analytics.resource_views import handle_events
-from nti.analytics.resource_views import get_video_progress_for_course
 from nti.analytics.resource_views import get_video_views_for_ntiid
 from nti.analytics.resource_views import get_watched_segments_for_ntiid
 

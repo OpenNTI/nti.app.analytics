@@ -640,7 +640,7 @@ class TestProgressView(_AbstractTestViews):
         test_session_id = 1
         time_length = 30
         video_event_type = 'WATCH'
-        video_start_time = 30
+        video_start_time = 0
         video_end_time = video_end_time
         with_transcript = True
         event_time = time.time()
@@ -742,7 +742,7 @@ class TestProgressView(_AbstractTestViews):
         user_id = 'sjohnson@nextthought.com'
         user = self._install_user(user_id)
 
-        # Now a video event
+        # Now a video event, video length = 120, start=30, end=30
         max_progress = 120
         with mock_dataserver.mock_db_trans(self.ds):
             user = User.get_user(user_id)
@@ -760,7 +760,7 @@ class TestProgressView(_AbstractTestViews):
         video_progress = result.get(video1)
         assert_that(video_progress,
                     has_entry('MaxPossibleProgress', max_progress))
-        assert_that(video_progress, has_entry('AbsoluteProgress', 30))
+        assert_that(video_progress, has_entry('AbsoluteProgress', 31))
         assert_that(video_progress, has_entry('HasProgress', True))
         assert_that(video_progress, has_entry('MostRecentEndTime', 30))
 
@@ -770,7 +770,7 @@ class TestProgressView(_AbstractTestViews):
         assert_that(result, has_length(1))
         assert_that(result, contains(video1))
 
-        # Same video event
+        # Same video event (our progress wont advance by watching the same section)
         with mock_dataserver.mock_db_trans(self.ds):
             user = User.get_user(user_id)
             self._create_video_event(user=user, resource_val=video1)
@@ -783,9 +783,31 @@ class TestProgressView(_AbstractTestViews):
         video_progress = result.get(video1)
         assert_that(video_progress,
                     has_entry('MaxPossibleProgress', max_progress))
-        assert_that(video_progress, has_entry('AbsoluteProgress', 60))
+        assert_that(video_progress, has_entry('AbsoluteProgress', 31))
         assert_that(video_progress, has_entry('HasProgress', True))
         assert_that(video_progress, has_entry('MostRecentEndTime', None))
+
+        video_response = self._get_video_progress()
+        result = video_response.json_body['Items']
+        assert_that(result, has_length(1))
+        assert_that(result, contains(video1))
+
+        # But we can watch more of it and get more progress
+        with mock_dataserver.mock_db_trans(self.ds):
+            user = User.get_user(user_id)
+            self._create_video_event(user=user, resource_val=video1, video_end_time=60)
+        response = self._get_progress(response=response)
+
+        result = response.json_body['Items']
+        assert_that(result, has_length(1))
+        assert_that(result, has_key(video1))
+
+        video_progress = result.get(video1)
+        assert_that(video_progress,
+                    has_entry('MaxPossibleProgress', max_progress))
+        assert_that(video_progress, has_entry('AbsoluteProgress', 61))
+        assert_that(video_progress, has_entry('HasProgress', True))
+        assert_that(video_progress, has_entry('MostRecentEndTime', 60))
 
         video_response = self._get_video_progress()
         result = video_response.json_body['Items']
@@ -805,9 +827,9 @@ class TestProgressView(_AbstractTestViews):
         video_progress = result.get(video1)
         assert_that(video_progress,
                     has_entry('MaxPossibleProgress', max_progress))
-        assert_that(video_progress, has_entry('AbsoluteProgress', 60))
+        assert_that(video_progress, has_entry('AbsoluteProgress', 61))
         assert_that(video_progress, has_entry('HasProgress', True))
-        assert_that(video_progress, has_entry('MostRecentEndTime', None))
+        assert_that(video_progress, has_entry('MostRecentEndTime', 60))
 
         video_response = self._get_video_progress()
         result = video_response.json_body['Items']
