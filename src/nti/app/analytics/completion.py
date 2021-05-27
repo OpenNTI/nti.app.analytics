@@ -56,9 +56,7 @@ def _is_page_container(node):
 @component.adapter(IUser, INTIVideo, ICourseInstance)
 @interface.implementer(IProgress)
 def video_progress(user, video, course):
-    resource_views = get_video_views_for_ntiid(video.ntiid, user, course)
     result = get_progress_for_video_views(video.ntiid,
-                                          resource_views,
                                           video,
                                           user,
                                           course)
