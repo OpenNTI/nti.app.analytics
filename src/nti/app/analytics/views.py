@@ -1068,11 +1068,14 @@ class VideoResumeInfo(AbstractAuthenticatedView):
             return True
 
         raise hexc.HTTPForbidden()
-        
+
 
     @view_config(name='resume_info')
     def get_resume_info(self):
         self._do_check_permission()
+        return self._do_get_resume_info()
+
+    def _do_get_resume_info(self):
         
         # As a generalization we could adapt the video and enrollment
         # record (user x course) to some sort of IVideoResumeInformation
@@ -1113,7 +1116,7 @@ class VideoResumeInfo(AbstractAuthenticatedView):
                                                   user=self.user,
                                                   course=self.course)
 
-        result = self.make_result()
+        result = self._do_get_resume_info()
         
         def _make_segment(start, end, count):
             return {
