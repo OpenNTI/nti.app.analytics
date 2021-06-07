@@ -1861,6 +1861,8 @@ class VideoSegmentInfoTests(_AbstractTestViews):
         assert_that(res, has_entries('Username', 'user_analytics_stats1',
                                      'Course', course_ntiid,
                                      'NTIID', self.video_ntiid,
+                                     'MaxDuration', 1000,
+                                     'ResumeSeconds', 35,
                                      'WatchedSegments', has_length(4)))
         segments = res['WatchedSegments']
         assert_that(segments,
