@@ -389,7 +389,7 @@ class AnalyticsSession(AbstractAuthenticatedView,
             new_session = handle_new_session(user, request)
             self._set_cookie(request, new_session)
             # notify last seen
-            notify_lastseen_event(user, request)
+            notify_lastseen_event(self.remoteUser, request)
         return request.response
 
     def __call__(self):
@@ -448,7 +448,7 @@ class EndAnalyticsSession(AbstractAuthenticatedView,
         request.response.delete_cookie(ANALYTICS_SESSION_COOKIE_NAME)
 
         # notify user last seen
-        notify_lastseen_event(user, request)
+        notify_lastseen_event(self.remoteUser, request)
         # request.response.status_code = 204
         return self.request.response
 
