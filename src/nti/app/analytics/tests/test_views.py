@@ -556,9 +556,12 @@ class TestAnalyticsSession(_AbstractTestViews):
 
     @WithSharedApplicationMockDS(users=True, testapp=True, default_authenticate=True)
     def test_session(self):
+        hour_ago_ts = time.time() - 3600
         with mock_dataserver.mock_db_trans(self.ds):
             results = self.session.query(Sessions).all()
             assert_that(results, has_length(0))
+            user = User.get_user(self.default_username)
+            user.update_last_seen_time(hour_ago_ts)
 
         # New session
         session_url = '/dataserver2/analytics/sessions/@@analytics_session'
@@ -572,6 +575,9 @@ class TestAnalyticsSession(_AbstractTestViews):
             assert_that(results, has_length(1))
             assert_that(results[0].session_id, first_session_id)
             assert_that(results[0].end_time, none())
+            # Last seen updated
+            user = User.get_user(self.default_username)
+            assert_that(user.lastSeenTime, greater_than(hour_ago_ts))
 
         with mock_dataserver.mock_db_trans(self.ds):
             user = User.get_user(self.extra_environ_default_user)
