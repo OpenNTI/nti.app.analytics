@@ -21,6 +21,8 @@ from nti.analytics.model import SkipVideoEvent
 from nti.analytics.model import WatchVideoEvent
 from nti.analytics.model import BatchResourceEvents
 
+from nti.analytics.tests import NTIAnalyticsApplicationTestLayer
+
 from nti.app.analytics import VIEW_STATS
 from nti.app.analytics import ANALYTICS_SESSION_HEADER
 
@@ -43,6 +45,8 @@ from nti.externalization.externalization import to_external_object
 
 
 class TestAnalytics(ApplicationLayerTest):
+
+    layer = NTIAnalyticsApplicationTestLayer
 
     default_origin = 'http://platform.ou.edu'
 
