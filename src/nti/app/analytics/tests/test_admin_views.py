@@ -15,6 +15,8 @@ from hamcrest import less_than_or_equal_to
 
 import time
 
+from zope import component
+
 from nti.analytics.interfaces import IUserResearchStatus
 
 from nti.analytics.model import SkipVideoEvent
@@ -22,6 +24,10 @@ from nti.analytics.model import WatchVideoEvent
 from nti.analytics.model import BatchResourceEvents
 
 from nti.analytics.tests import NTIAnalyticsApplicationTestLayer
+
+from nti.analytics_database.database import AnalyticsDB
+
+from nti.analytics_database.interfaces import IAnalyticsDB
 
 from nti.app.analytics import VIEW_STATS
 from nti.app.analytics import ANALYTICS_SESSION_HEADER
@@ -165,6 +171,13 @@ class TestStats(ApplicationLayerTest):
     default_origin = 'http://platform.ou.edu'
 
     video_ntiid = u"tag:nextthought.com,2011-10:OU-NTIVideo-CLC3403_LawAndJustice.ntivideo.video_17.02"
+
+    def setUp(self):
+        self.db = AnalyticsDB(dburi='sqlite://', autocommit=True)
+        component.getGlobalSiteManager().registerUtility(self.db, IAnalyticsDB)
+
+    def tearDown(self):
+        component.getGlobalSiteManager().unregisterUtility(self.db)
 
     def _store_video_data(self, username):
         timestamp = time.time()
